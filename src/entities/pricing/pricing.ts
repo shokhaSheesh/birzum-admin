@@ -1,10 +1,15 @@
 import { createStore } from '@/shared/lib/createStore'
 
-/** Installment lengths in months, the same set the client and merchant apps offer. */
-export const TERMS = [3, 6, 9, 12, 18, 24] as const
-export type Term = (typeof TERMS)[number]
+/** An installment length in months. The admin adds and removes them on the Ustama page. */
+export type Term = number
 
-/** The markup for one term: added once to the financed sum, then split into monthly payments. */
+/** Shortest and longest term the admin may add. */
+export const TERM_RANGE = { min: 1, max: 60 }
+
+/**
+ * One installment term the apps offer, with its markup: added once to the financed sum, then
+ * split into monthly payments. One rate for every merchant and category.
+ */
 export type TermRate = {
   id: string
   term: Term
@@ -27,6 +32,8 @@ export const ratesStore = createStore<TermRate>([
 export type RateChange =
   | { term: Term; field: 'markup'; from: number; to: number }
   | { term: Term; field: 'enabled'; to: boolean }
+  | { term: Term; field: 'added'; to: number }
+  | { term: Term; field: 'removed' }
 
 /** One save on the Ustama page: who, when, and every term it changed. */
 export type RateRevision = { id: string; date: Date; admin: string; changes: RateChange[] }

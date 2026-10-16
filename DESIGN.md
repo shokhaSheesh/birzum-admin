@@ -30,8 +30,9 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 ## Settings pages (Ustama)
 
 - The same `ActionBar` fixed on top as a form, with the group as its eyebrow. "Bekor qilish" and "Saqlash" stay disabled until something changes; then "N ta oʻzgarish saqlanmagan" shows beside them.
-- Values edited in place in a table (percent inputs, a `Switch` per row), checked as you type. Ustama rules: 0–300%, a longer term never cheaper than a shorter open one, at least one term open.
-- A sticky preview on the right shows what a shopper pays at the unsaved rates. A note says new rates apply to new arizalar only. Every save is kept in "Oʻzgarishlar tarixi" with date, admin and each change.
+- Values edited in place in a table (percent inputs, a `Switch` per row, a bin to remove), checked as you type. "+ Muddat qoʻshish" adds a row whose month count is editable until saved. Ustama rules: one rate for every merchant and category; 0–300%; terms 1–60 months, no duplicates; a longer term never cheaper than a shorter open one; at least one term open.
+- Limit va skoring uses `FormSection` cards instead of a table: Asosiy limit (income multiplier per income source, min and max limit, how long a limit stays valid), Muddatlar boʻyicha ulush (one tile per Ustama term, closed ones muted), Rad etish qoidalari (age range, allowed lateness in KATM, a switch for debt overdue elsewhere). The terms come from Ustama, so adding or removing one there shows here.
+- A sticky preview on the right shows the result of the unsaved values: what a shopper pays (Ustama), or a test shopper's limit per term or the reason they are turned down (Limit va skoring). A note says new rates apply to new arizalar only. Every save is kept in "Oʻzgarishlar tarixi" with date, admin and each change.
 - A failed save marks every bad field in red and shows a red toast; nothing is saved.
 
 ## Pages to come

@@ -14,12 +14,18 @@ type Props<T extends string | number> = {
   options: Choice<T>[]
   value: T | null
   onChange: (value: T) => void
-  columns: 2 | 3 | 5 | 6
+  columns: 2 | 3 | 4 | 5 | 6
   error?: string
   hint?: string
 }
 
-const grids = { 2: 'grid-cols-2', 3: 'grid-cols-3', 5: 'grid-cols-5', 6: 'grid-cols-6' }
+const grids = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+}
 
 /**
  * Pick one of a few short options that should all stay visible, such as a payment day. The

@@ -4,11 +4,15 @@ import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPag
 import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
+import { ScoringPage } from '@/features/scoring/pages/ScoringPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
 import { AdminLayout } from './layouts/AdminLayout'
 import { NAV_ITEMS } from './nav'
 import { RequireAdmin } from './RequireAdmin'
+
+/** Sidebar pages that have their own design; the rest show a placeholder. */
+const DESIGNED: string[] = [ROUTES.merchants, ROUTES.pricing, ROUTES.scoring]
 
 export const router = createBrowserRouter([
   { path: ROUTES.login, element: <LoginPage /> },
@@ -24,9 +28,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
           { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
           { path: ROUTES.pricing, element: <PricingPage /> },
-          ...NAV_ITEMS.filter(
-            (item) => item.to !== ROUTES.merchants && item.to !== ROUTES.pricing,
-          ).map((item) => ({
+          { path: ROUTES.scoring, element: <ScoringPage /> },
+          ...NAV_ITEMS.filter((item) => !DESIGNED.includes(item.to)).map((item) => ({
             path: item.to,
             element: <StubPage item={item} />,
           })),

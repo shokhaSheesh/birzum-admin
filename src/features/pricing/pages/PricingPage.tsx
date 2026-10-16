@@ -1,9 +1,10 @@
-import { History, Info } from 'lucide-react'
+import { History, Info, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import {
   quote,
   ratesStore,
   revisionsStore,
+  TERM_RANGE,
   type RateChange,
   type TermRate,
 } from '@/entities/pricing/pricing'
@@ -20,12 +21,15 @@ import { Switch } from '@/shared/ui/Switch'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
-/** A row as it is being edited: the percent stays text until it is saved. */
-type Draft = { id: string; term: TermRate['term']; markup: string; enabled: boolean }
+/** A row as it is being edited: numbers stay text until saved. A new row's term is editable. */
+type Draft = { id: string; term: string; markup: string; enabled: boolean; isNew?: boolean }
 
 const toDraft = (rates: TermRate[]): Draft[] =>
-  rates.map((rate) => ({ ...rate, markup: String(rate.markup) }))
+  [...rates]
+    .sort((a, b) => a.term - b.term)
+    .map((rate) => ({ ...rate, term: String(rate.term), markup: String(rate.markup) }))
 const percentOf = (draft: Draft) => Number(draft.markup.replace(',', '.'))
+const monthsOf = (draft: Draft) => Number(draft.term)
 
 /**
  * Ustama: the markup for every installment term, and whether shoppers can pick the term.
@@ -42,37 +46,70 @@ export function PricingPage() {
   const edit = (id: string, patch: Partial<Draft>) =>
     setDrafts(drafts.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)))
 
-  const changes: RateChange[] = drafts.flatMap((draft) => {
-    const before = saved.find((rate) => rate.id === draft.id)!
-    const list: RateChange[] = []
-    if (draft.enabled !== before.enabled)
-      list.push({ term: draft.term, field: 'enabled', to: draft.enabled })
-    if (percentOf(draft) !== before.markup)
-      list.push({ term: draft.term, field: 'markup', from: before.markup, to: percentOf(draft) })
-    return list
-  })
+  const add = () =>
+    setDrafts([...drafts, { id: newId(), term: '', markup: '', enabled: true, isNew: true }])
+  const drop = (id: string) => setDrafts(drafts.filter((draft) => draft.id !== id))
+
+  const changes: RateChange[] = [
+    ...saved
+      .filter((rate) => !drafts.some((draft) => draft.id === rate.id))
+      .map((rate): RateChange => ({ term: rate.term, field: 'removed' })),
+    ...drafts.flatMap((draft): RateChange[] => {
+      const before = saved.find((rate) => rate.id === draft.id)
+      if (!before) return [{ term: monthsOf(draft), field: 'added', to: percentOf(draft) }]
+      const list: RateChange[] = []
+      if (draft.enabled !== before.enabled)
+        list.push({ term: before.term, field: 'enabled', to: draft.enabled })
+      if (percentOf(draft) !== before.markup)
+        list.push({ term: before.term, field: 'markup', from: before.markup, to: percentOf(draft) })
+      return list
+    }),
+  ]
   const dirty = changes.length > 0
 
+  const termErrors = new Map<string, string>()
+  for (const draft of drafts.filter((item) => item.isNew)) {
+    const months = monthsOf(draft)
+    if (!(Number.isInteger(months) && months >= TERM_RANGE.min && months <= TERM_RANGE.max))
+      termErrors.set(draft.id, t('pricing.error.term', { max: String(TERM_RANGE.max) }))
+    else if (drafts.some((other) => other.id !== draft.id && monthsOf(other) === months))
+      termErrors.set(draft.id, t('pricing.error.duplicate'))
+  }
   // A longer term must not cost less than a shorter one
   const errors = new Map<string, string>()
   let floor = 0
-  for (const draft of drafts) {
+  const ordered = [...drafts]
+    .filter((draft) => !termErrors.has(draft.id))
+    .sort((a, b) => monthsOf(a) - monthsOf(b))
+  for (const draft of ordered) {
     const percent = percentOf(draft)
     if (draft.markup.trim() === '' || !(percent >= 0 && percent <= 300))
       errors.set(draft.id, t('pricing.error.range'))
     else if (draft.enabled && percent < floor) errors.set(draft.id, t('pricing.error.order'))
     if (draft.enabled && percent >= floor) floor = percent
   }
+  for (const draft of drafts)
+    if (!errors.has(draft.id) && (draft.markup.trim() === '' || !(percentOf(draft) >= 0)))
+      errors.set(draft.id, t('pricing.error.range'))
   const noneEnabled = !drafts.some((draft) => draft.enabled)
 
   const save = () => {
-    if (errors.size > 0 || noneEnabled) {
+    if (errors.size > 0 || termErrors.size > 0 || noneEnabled) {
       toast(t('pricing.error.form'), 'error')
       return
     }
+    saved
+      .filter((rate) => !drafts.some((draft) => draft.id === rate.id))
+      .forEach((rate) => ratesStore.remove(rate.id))
     drafts.forEach((draft) =>
-      ratesStore.update(draft.id, { markup: percentOf(draft), enabled: draft.enabled }),
+      ratesStore.save({
+        id: draft.id,
+        term: monthsOf(draft),
+        markup: percentOf(draft),
+        enabled: draft.enabled,
+      }),
     )
+    setDrafts(toDraft(ratesStore.getAll()))
     revisionsStore.save({
       id: newId(),
       date: new Date(),
@@ -82,10 +119,19 @@ export function PricingPage() {
     toast(t('pricing.saved'))
   }
 
-  const describe = (change: RateChange) =>
-    change.field === 'markup'
-      ? `${t('term.months', { count: String(change.term) })}: ${change.from}% → ${change.to}%`
-      : `${t('term.months', { count: String(change.term) })}: ${t(change.to ? 'pricing.turnedOn' : 'pricing.turnedOff')}`
+  const describe = (change: RateChange) => {
+    const term = t('term.months', { count: String(change.term) })
+    switch (change.field) {
+      case 'markup':
+        return `${term}: ${change.from}% → ${change.to}%`
+      case 'enabled':
+        return `${term}: ${t(change.to ? 'pricing.turnedOn' : 'pricing.turnedOff')}`
+      case 'added':
+        return `${term}: ${t('pricing.added', { percent: String(change.to) })}`
+      case 'removed':
+        return `${term}: ${t('pricing.removed')}`
+    }
+  }
 
   return (
     <div className="flex min-h-full flex-col">
@@ -124,12 +170,15 @@ export function PricingPage() {
                     <th className={th}>{t('nav.pricing')}</th>
                     <th className={th}>{t('pricing.col.perMonth')}</th>
                     <th className={`${th} text-right`}>{t('pricing.col.offered')}</th>
+                    <th className="w-14" />
                   </tr>
                 </thead>
                 <tbody>
                   {drafts.map((draft) => {
                     const error = errors.get(draft.id)
+                    const termError = termErrors.get(draft.id)
                     const percent = percentOf(draft)
+                    const months = monthsOf(draft)
                     return (
                       <tr
                         key={draft.id}
@@ -139,24 +188,54 @@ export function PricingPage() {
                         )}
                       >
                         <td className="px-4 py-4">
-                          <p
-                            className={cn(
-                              'pt-2.5 font-semibold',
-                              !draft.enabled && 'text-ink-muted',
-                            )}
-                          >
-                            {t('term.months', { count: String(draft.term) })}
-                          </p>
+                          {draft.isNew ? (
+                            <>
+                              <label
+                                className={cn(
+                                  'flex h-11 items-center gap-1 rounded-control border-[1.5px] bg-canvas px-3 focus-within:border-primary focus-within:ring-3 focus-within:ring-green-200 w-28',
+                                  termError ? 'border-danger' : 'border-line',
+                                )}
+                              >
+                                <span className="sr-only">{t('pricing.col.term')}</span>
+                                <input
+                                  inputMode="numeric"
+                                  autoFocus
+                                  placeholder="15"
+                                  value={draft.term}
+                                  aria-invalid={!!termError || undefined}
+                                  onChange={(e) =>
+                                    edit(draft.id, {
+                                      term: e.target.value.replace(/\D/g, '').slice(0, 2),
+                                    })
+                                  }
+                                  className="min-w-0 flex-1 bg-transparent font-semibold tabular-nums outline-none"
+                                />
+                                <span className="text-ink-muted">{t('pricing.monthsUnit')}</span>
+                              </label>
+                              {termError && (
+                                <p className="max-w-40 pt-1.5 text-sm text-danger">{termError}</p>
+                              )}
+                            </>
+                          ) : (
+                            <p
+                              className={cn(
+                                'pt-2.5 font-semibold',
+                                !draft.enabled && 'text-ink-muted',
+                              )}
+                            >
+                              {t('term.months', { count: draft.term })}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-4">
                           <label
                             className={cn(
-                              'flex h-11 w-32 items-center gap-1 rounded-control border-[1.5px] bg-canvas px-3 focus-within:border-primary focus-within:ring-3 focus-within:ring-green-200',
+                              'flex h-11 items-center gap-1 rounded-control border-[1.5px] bg-canvas px-3 focus-within:border-primary focus-within:ring-3 focus-within:ring-green-200 w-28',
                               error ? 'border-danger' : 'border-line',
                             )}
                           >
                             <span className="sr-only">
-                              {t('nav.pricing')}, {t('term.months', { count: String(draft.term) })}
+                              {t('nav.pricing')}, {t('term.months', { count: draft.term })}
                             </span>
                             <input
                               inputMode="decimal"
@@ -175,8 +254,8 @@ export function PricingPage() {
                         </td>
                         <td className="px-4 py-4">
                           <p className="pt-2.5 text-ink-muted tabular-nums">
-                            {Number.isFinite(percent)
-                              ? `≈ ${(percent / draft.term).toFixed(1).replace('.0', '')}%`
+                            {Number.isFinite(percent) && months > 0
+                              ? `≈ ${(percent / months).toFixed(1).replace('.0', '')}%`
                               : '—'}
                           </p>
                         </td>
@@ -189,11 +268,28 @@ export function PricingPage() {
                             />
                           </div>
                         </td>
+                        <td className="py-4 pr-3">
+                          <button
+                            type="button"
+                            onClick={() => drop(draft.id)}
+                            aria-label={t('common.delete')}
+                            title={t('common.delete')}
+                            className="mt-0.5 grid size-10 place-items-center rounded-full text-ink-subtle hover:bg-danger-soft hover:text-danger"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
+            </div>
+            <div className="border-t border-line px-3 py-2">
+              <Button size="sm" variant="ghost" onClick={add}>
+                <Plus size={18} />
+                {t('pricing.add')}
+              </Button>
             </div>
             {noneEnabled && (
               <p className="border-t border-line px-5 py-3 text-sm text-danger">
@@ -245,18 +341,16 @@ export function PricingPage() {
             suffix="UZS"
           />
           <ul className="flex flex-col rounded-control bg-surface px-4">
-            {drafts
+            {ordered
               .filter((draft) => draft.enabled && !errors.has(draft.id))
               .map((draft) => {
-                const { total, monthly } = quote(amount ?? 0, draft.term, percentOf(draft))
+                const { total, monthly } = quote(amount ?? 0, monthsOf(draft), percentOf(draft))
                 return (
                   <li
                     key={draft.id}
                     className="flex items-center justify-between gap-3 border-b border-line py-3 last:border-b-0"
                   >
-                    <span className="font-semibold">
-                      {t('term.months', { count: String(draft.term) })}
-                    </span>
+                    <span className="font-semibold">{t('term.months', { count: draft.term })}</span>
                     <span className="flex flex-col items-end">
                       <span className="font-bold tabular-nums">
                         {t('pricing.perMonth', { sum: formatSum(monthly) })}
