@@ -1,6 +1,7 @@
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { filialsStore } from '@/entities/merchants/filials'
 import {
   MERCHANT_STATUSES,
   merchantsStore,
@@ -8,7 +9,7 @@ import {
 } from '@/entities/merchants/merchants'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { merchantPath } from '@/shared/config/routes'
+import { merchantPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { Button } from '@/shared/ui/Button'
@@ -25,6 +26,7 @@ export function MerchantsPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const all = merchantsStore.useAll()
+  const filials = filialsStore.useAll()
   const [status, setStatus] = useState<'all' | MerchantStatus>('all')
   const [query, setQuery] = useState('')
 
@@ -47,7 +49,7 @@ export function MerchantsPage() {
         title={t('nav.merchants')}
         description={t('merchants.description')}
         actions={
-          <Button onClick={() => navigate(merchantPath('new'))}>
+          <Button onClick={() => navigate(ROUTES.merchantNew)}>
             <Plus size={20} />
             {t('merchants.add')}
           </Button>
@@ -92,14 +94,13 @@ export function MerchantsPage() {
           <EmptyState title={t('merchants.empty')} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-t border-line">
+            <table className="w-full min-w-[680px] border-t border-line">
               <thead>
                 <tr className="border-b border-line">
                   <th className={th}>{t('merchants.col.merchant')}</th>
                   <th className={th}>{t('merchants.col.filials')}</th>
                   <th className={th}>{t('merchants.col.products')}</th>
                   <th className={`${th} text-right`}>{t('merchants.col.sales')}</th>
-                  <th className={`${th} text-right`}>{t('merchants.col.commission')}</th>
                   <th className={th}>{t('merchants.status')}</th>
                   <th className="w-10" />
                 </tr>
@@ -122,12 +123,13 @@ export function MerchantsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 tabular-nums">{merchant.filials}</td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {filials.filter((filial) => filial.merchantId === merchant.id).length}
+                    </td>
                     <td className="px-4 py-3 tabular-nums">{merchant.products}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">
                       {formatSum(merchant.salesThisMonth)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{merchant.commission}%</td>
                     <td className="px-4 py-3">
                       <StatusBadge tone={merchantStatusTone[merchant.status]}>
                         {t(`merchant.status.${merchant.status}`)}

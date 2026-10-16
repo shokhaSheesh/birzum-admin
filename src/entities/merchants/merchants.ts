@@ -27,15 +27,13 @@ export type Merchant = {
   }
   bank: { name: string; mfo: string; account: string }
   contract: { number: string; date: string }
-  /** Birzum's share of each sale, in percent. */
-  commission: number
+  /** How often Birzum pays the merchant for its nasiya sales, in full. */
   payoutSchedule: PayoutSchedule
   /** The first merchant-app account, the shop's owner. */
   owner: { name: string; phone: string; login: string }
   status: MerchantStatus
   createdAt: Date
   // Figures the backend counts. Sample values.
-  filials: number
   products: number
   salesThisMonth: number
   activeNasiya: number
@@ -62,12 +60,10 @@ export const merchantsStore = createStore<Merchant>([
     },
     bank: { name: 'Kapitalbank', mfo: '01088', account: '20208000905478219001' },
     contract: { number: 'BZ-M-0001', date: '12.03.2026' },
-    commission: 4,
     payoutSchedule: 'weekly',
     owner: { name: 'Aziz Karimov', phone: '901112233', login: 'aziz.karimov' },
     status: 'active',
     createdAt: new Date(2026, 2, 12),
-    filials: 3,
     products: 128,
     salesThisMonth: 173_600_000,
     activeNasiya: 214,
@@ -89,12 +85,10 @@ export const merchantsStore = createStore<Merchant>([
     },
     bank: { name: 'Ipak Yoʻli banki', mfo: '00444', account: '20208000306112874001' },
     contract: { number: 'BZ-M-0002', date: '02.04.2026' },
-    commission: 3.5,
     payoutSchedule: 'weekly',
     owner: { name: 'Nodira Yusupova', phone: '935551020', login: 'nodira.y' },
     status: 'active',
     createdAt: new Date(2026, 3, 2),
-    filials: 2,
     products: 64,
     salesThisMonth: 241_900_000,
     activeNasiya: 168,
@@ -113,12 +107,10 @@ export const merchantsStore = createStore<Merchant>([
     },
     bank: { name: 'Hamkorbank', mfo: '00083', account: '20208000307845120001' },
     contract: { number: 'BZ-M-0003', date: '20.05.2026' },
-    commission: 4,
     payoutSchedule: 'monthly',
     owner: { name: 'Bekzod Qodirov', phone: '977004455', login: 'bekzod.q' },
     status: 'active',
     createdAt: new Date(2026, 4, 20),
-    filials: 1,
     products: 41,
     salesThisMonth: 58_300_000,
     activeNasiya: 47,
@@ -136,12 +128,10 @@ export const merchantsStore = createStore<Merchant>([
     },
     bank: { name: 'Asakabank', mfo: '00873', account: '20208000308211963001' },
     contract: { number: 'BZ-M-0004', date: '01.08.2026' },
-    commission: 4.5,
     payoutSchedule: 'weekly',
     owner: { name: 'Sherzod Aliyev', phone: '909990011', login: 'sherzod.a' },
     status: 'paused',
     createdAt: new Date(2026, 7, 1),
-    filials: 2,
     products: 37,
     salesThisMonth: 0,
     activeNasiya: 22,
@@ -159,12 +149,10 @@ export const merchantsStore = createStore<Merchant>([
     },
     bank: { name: 'Agrobank', mfo: '00394', account: '20208000309004517001' },
     contract: { number: 'BZ-M-0005', date: '10.10.2026' },
-    commission: 4,
     payoutSchedule: 'monthly',
     owner: { name: 'Gulnora Abdullayeva', phone: '914443322', login: 'gulnora.a' },
     status: 'onboarding',
     createdAt: new Date(2026, 9, 10),
-    filials: 0,
     products: 0,
     salesThisMonth: 0,
     activeNasiya: 0,

@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Package, ReceiptText, Store } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -9,13 +9,12 @@ import {
   type PayoutSchedule,
 } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { ROUTES } from '@/shared/config/routes'
+import { merchantPath, ROUTES } from '@/shared/config/routes'
 import type { LocalizedText } from '@/shared/i18n/dictionaries'
 import { emptyText } from '@/shared/i18n/localized'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { newId } from '@/shared/lib/createStore'
-import { formatSum, groupDigits } from '@/shared/lib/format'
 import { PHONE_DIGITS } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -33,7 +32,6 @@ const grid = 'grid gap-4 sm:grid-cols-2'
 const fresh = () => ({
   id: newId(),
   createdAt: new Date(),
-  filials: 0,
   products: 0,
   salesThisMonth: 0,
   activeNasiya: 0,
@@ -60,13 +58,11 @@ export function MerchantFormPage() {
   )
   const [bank, setBank] = useState(existing?.bank ?? { name: '', mfo: '', account: '' })
   const [contract, setContract] = useState(existing?.contract ?? { number: '', date: '' })
-  const [commission, setCommission] = useState(existing ? String(existing.commission) : '4')
   const [schedule, setSchedule] = useState<PayoutSchedule>(existing?.payoutSchedule ?? 'weekly')
   const [owner, setOwner] = useState(existing?.owner ?? { name: '', phone: '', login: '' })
   const [status, setStatus] = useState<MerchantStatus>(existing?.status ?? 'onboarding')
   const [submitted, setSubmitted] = useState(false)
 
-  const rate = Number(commission.replace(',', '.'))
   const problems = {
     name: !name.trim(),
     phone: phone.length < PHONE_DIGITS,
@@ -79,7 +75,6 @@ export function MerchantFormPage() {
     account: bank.account.length !== 20,
     contract: !contract.number.trim(),
     date: !/^\d{2}\.\d{2}\.\d{4}$/.test(contract.date),
-    commission: !(rate >= 0 && rate <= 30),
     ownerName: !owner.name.trim(),
     ownerPhone: owner.phone.length < PHONE_DIGITS,
     login: !/^[a-z0-9._]{3,}$/.test(owner.login),
@@ -103,31 +98,46 @@ export function MerchantFormPage() {
       legal,
       bank,
       contract,
-      commission: rate,
       payoutSchedule: schedule,
       owner,
       status,
     }
     merchantsStore.save(merchant)
     toast(t(existing ? 'toast.saved' : 'merchant.created'))
-    navigate(ROUTES.merchants)
+    navigate(merchantPath(merchant.id))
   }
+  const back = existing ? merchantPath(existing.id) : ROUTES.merchants
 
   return (
     <form onSubmit={save} noValidate className="flex min-h-full flex-col">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
-        <div className="flex flex-col gap-3">
+      <header className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3 lg:px-8">
           <button
             type="button"
-            onClick={() => navigate(ROUTES.merchants)}
-            className="flex items-center gap-1.5 self-start text-sm font-semibold text-ink-muted hover:text-ink"
+            onClick={() => navigate(back)}
+            aria-label={t('common.back')}
+            className="grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
           >
-            <ArrowLeft size={18} />
-            {t('nav.merchants')}
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold">{existing ? existing.name : t('merchant.new')}</h1>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <p className="truncate text-sm text-ink-muted">
+              {existing ? t('common.edit') : t('nav.merchants')}
+            </p>
+            <h1 className="truncate text-lg leading-tight font-bold">
+              {existing ? existing.name : t('merchant.new')}
+            </h1>
+          </div>
+          <Button size="sm" variant="ghost" className="px-4!" onClick={() => navigate(back)}>
+            {t('common.cancel')}
+          </Button>
+          <Button size="sm" type="submit" className="px-4!">
+            {t(existing ? 'common.save' : 'merchant.create')}
+          </Button>
         </div>
+      </header>
 
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-6">
             <FormSection title={t('merchant.section.shop')} hint={t('merchant.section.shop.hint')}>
@@ -236,15 +246,6 @@ export function MerchantFormPage() {
                   onChange={(e) => setContract({ ...contract, date: e.target.value })}
                   error={show('date', t('merchant.error.date'))}
                 />
-                <TextField
-                  label={t('merchant.commission')}
-                  inputMode="decimal"
-                  value={commission}
-                  onChange={(e) => setCommission(e.target.value.replace(/[^\d.,]/g, ''))}
-                  trailing={<span className="text-ink-muted">%</span>}
-                  hint={t('merchant.commission.hint')}
-                  error={show('commission', t('merchant.error.commission'))}
-                />
                 <ChoiceGrid
                   label={t('merchant.schedule')}
                   columns={2}
@@ -289,7 +290,7 @@ export function MerchantFormPage() {
             </FormSection>
           </div>
 
-          <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
             <div
               role="radiogroup"
               aria-label={t('merchants.status')}
@@ -344,50 +345,9 @@ export function MerchantFormPage() {
                 </div>
               </div>
             </div>
-            {existing && (
-              <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-canvas p-5">
-                {[
-                  {
-                    icon: Building2,
-                    label: t('merchants.col.filials'),
-                    value: String(existing.filials),
-                  },
-                  {
-                    icon: Package,
-                    label: t('merchants.col.products'),
-                    value: String(existing.products),
-                  },
-                  {
-                    icon: ReceiptText,
-                    label: t('merchants.stat.nasiya'),
-                    value: groupDigits(existing.activeNasiya),
-                  },
-                  {
-                    icon: Store,
-                    label: t('merchants.col.sales'),
-                    value: formatSum(existing.salesThisMonth),
-                  },
-                ].map((item) => (
-                  <div key={item.label} className="flex min-w-0 flex-col gap-1">
-                    <item.icon size={18} className="text-brand" />
-                    <p className="truncate text-xs text-ink-muted">{item.label}</p>
-                    <p className="truncate font-bold">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </aside>
         </div>
       </div>
-
-      <footer className="sticky bottom-0 mt-auto border-t border-line bg-canvas/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl justify-end gap-2 px-4 py-3 lg:px-8">
-          <Button variant="ghost" onClick={() => navigate(ROUTES.merchants)}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit">{t(existing ? 'common.save' : 'merchant.create')}</Button>
-        </div>
-      </footer>
     </form>
   )
 }

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
 import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
@@ -18,7 +19,9 @@ export const router = createBrowserRouter([
         // Every sidebar page is empty for now; each one is filled in as it gets designed
         children: [
           { path: ROUTES.merchants, element: <MerchantsPage /> },
-          { path: ROUTES.merchant, element: <MerchantFormPage /> },
+          { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
+          { path: ROUTES.merchant, element: <MerchantDetailPage /> },
+          { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
           ...NAV_ITEMS.filter((item) => item.to !== ROUTES.merchants).map((item) => ({
             path: item.to,
             element: <StubPage item={item} />,
