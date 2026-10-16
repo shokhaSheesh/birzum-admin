@@ -1,0 +1,205 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Design tokens for the signed-off direction: Light surfaces, Source Sans 3,
+ * upright titles. Change values here only, never hardcode them in components.
+ */
+@theme {
+  /* Stand-in for the brandbook's Myriad until licensed font files are supplied */
+  --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Brand: Color 001 and 002 from the brandbook, with its tint scale */
+  --color-navy-950: #072a3c;
+  --color-navy-900: #0b3d57;
+  --color-navy-700: #3c6479;
+  --color-navy-400: #9db1bc;
+  --color-navy-200: #ced8dd;
+  --color-navy-100: #e7ecee;
+  --color-green-600: #74af04;
+  --color-green-500: #85c905;
+  --color-green-300: #cee99b;
+  --color-green-200: #e7f4cd;
+  --color-green-100: #f3fae6;
+
+  /* Roles. Components use these, not the raw navy and green, so the dark theme can swap them. */
+  --color-primary: #0b3d57;
+  --color-primary-pressed: #072a3c;
+  --color-on-primary: #ffffff;
+  --color-brand: #0b3d57;
+  --color-tile: #0b3d57;
+  --color-on-tile: #ffffff;
+
+  /* Surfaces and text: white screens, grey cards */
+  --color-canvas: #ffffff;
+  --color-surface: #f2f5f6;
+  --color-line: #dfe6e9;
+  --color-ink: #072a3c;
+  --color-ink-muted: #56707f;
+  --color-ink-subtle: #8499a4;
+
+  /* Status */
+  --color-success: #1e8e4a;
+  --color-success-soft: #e2f5e9;
+  --color-warning: #b26a00;
+  --color-warning-soft: #fdf0d8;
+  --color-danger: #c93b3b;
+  --color-danger-soft: #fbe6e6;
+
+  --radius-control: 14px;
+  --radius-card: 20px;
+}
+
+/* Dark theme: the same tokens with dark values. Set by ThemeProvider on <html>. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-canvas: #0c1e28;
+  --color-surface: #14303d;
+  --color-line: #27485a;
+  --color-ink: #eaf1f4;
+  --color-ink-muted: #a3b8c2;
+  --color-ink-subtle: #7391a0;
+
+  /* On dark, green carries the actions and navy text becomes a pale blue-grey */
+  --color-primary: #85c905;
+  --color-primary-pressed: #74af04;
+  --color-on-primary: #072a3c;
+  --color-brand: #d3e4ec;
+  --color-tile: #1d4a61;
+
+  --color-navy-700: #b1c7d1;
+  --color-navy-400: #5f8192;
+  --color-navy-200: #2c4f60;
+  --color-navy-100: #1b3b4a;
+  --color-green-100: #14303d;
+  --color-green-200: #223f14;
+  --color-green-300: #2b4f19;
+
+  --color-success: #6fd197;
+  --color-success-soft: #133a24;
+  --color-warning: #f2b955;
+  --color-warning-soft: #3d2c0b;
+  --color-danger: #f49090;
+  --color-danger-soft: #431c1c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-navy-950);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Bottom space that lets a tab screen's content scroll clear of the floating tab bar */
+@utility pb-tabbar {
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+
+/* Liquid glass: a translucent, blurred surface with a bright rim. Used by the tab bar only. */
+.glass {
+  background: color-mix(in srgb, var(--color-canvas) 58%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    0 14px 34px -12px rgb(7 42 60 / 0.3),
+    0 2px 6px rgb(7 42 60 / 0.06),
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 -1px 0 rgb(255 255 255 / 0.25);
+}
+
+:root[data-theme='dark'] .glass {
+  border-color: rgb(255 255 255 / 0.14);
+  box-shadow:
+    0 14px 34px -12px rgb(0 0 0 / 0.7),
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(255 255 255 / 0.04);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.toast {
+  animation: toast-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes pin-shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+.pin-shake {
+  animation: pin-shake 360ms ease-in-out;
+}
+@keyframes scoring-needle {
+  0%,
+  100% {
+    transform: rotate(-55deg);
+  }
+  50% {
+    transform: rotate(50deg);
+  }
+}
+.scoring-needle {
+  animation: scoring-needle 1.6s ease-in-out infinite;
+}
+@keyframes scoring-lens {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-70px, -40px);
+  }
+}
+.scoring-lens {
+  animation: scoring-lens 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scoring-needle,
+  .scoring-lens {
+    animation: none;
+  }
+}
+.sheet-panel {
+  animation: sheet-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sheet-backdrop {
+  animation: fade-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel,
+  .sheet-backdrop {
+    animation: none;
+  }
+}
