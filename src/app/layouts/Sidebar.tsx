@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { applicationsStore } from '@/entities/applications/applications'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import logoOnDark from '@/shared/assets/logo-on-dark.svg'
 import logo from '@/shared/assets/logo.svg'
@@ -19,6 +20,10 @@ type Props = {
 /** The left navigation: the logo, then the pages in titled groups, then the collapse button. */
 export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const { t } = useI18n()
+  // Arizalar counts the ones waiting for a merchant to take them
+  const pending = applicationsStore
+    .useAll()
+    .filter((application) => application.status === 'pending').length
 
   return (
     <nav aria-label={t('common.menu')} className="flex h-full flex-col">
@@ -45,45 +50,48 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
                   {t(group.title)}
                 </p>
               ))}
-            {group.items.map(({ to, icon: Icon, label, badge }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === ROUTES.dashboard}
-                onClick={onNavigate}
-                title={collapsed ? t(label) : undefined}
-                aria-label={collapsed ? t(label) : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'relative flex h-10 items-center gap-3 rounded-control text-[15px] font-medium transition-colors',
-                    collapsed ? 'justify-center' : 'px-3',
-                    isActive
-                      ? 'bg-primary text-on-primary'
-                      : 'text-ink-muted hover:bg-surface hover:text-ink',
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={19} className="shrink-0" />
-                    {!collapsed && <span className="min-w-0 flex-1 truncate">{t(label)}</span>}
-                    {!!badge &&
-                      (collapsed ? (
-                        <span className="absolute top-1.5 right-2 size-2 rounded-full bg-green-500" />
-                      ) : (
-                        <span
-                          className={cn(
-                            'grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold',
-                            isActive ? 'bg-on-primary/20' : 'bg-green-500 text-navy-950',
-                          )}
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                  </>
-                )}
-              </NavLink>
-            ))}
+            {group.items.map(({ to, icon: Icon, label, badge: fixed }) => {
+              const badge = to === ROUTES.applications ? pending : fixed
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === ROUTES.dashboard}
+                  onClick={onNavigate}
+                  title={collapsed ? t(label) : undefined}
+                  aria-label={collapsed ? t(label) : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'relative flex h-10 items-center gap-3 rounded-control text-[15px] font-medium transition-colors',
+                      collapsed ? 'justify-center' : 'px-3',
+                      isActive
+                        ? 'bg-primary text-on-primary'
+                        : 'text-ink-muted hover:bg-surface hover:text-ink',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={19} className="shrink-0" />
+                      {!collapsed && <span className="min-w-0 flex-1 truncate">{t(label)}</span>}
+                      {!!badge &&
+                        (collapsed ? (
+                          <span className="absolute top-1.5 right-2 size-2 rounded-full bg-green-500" />
+                        ) : (
+                          <span
+                            className={cn(
+                              'grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold',
+                              isActive ? 'bg-on-primary/20' : 'bg-green-500 text-navy-950',
+                            )}
+                          >
+                            {badge}
+                          </span>
+                        ))}
+                    </>
+                  )}
+                </NavLink>
+              )
+            })}
           </div>
         ))}
       </div>

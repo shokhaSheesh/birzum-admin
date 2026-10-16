@@ -47,12 +47,20 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - Status: "Yashirilgan" when the merchant switched it off, else "Tugagan" when no filial has any, else "Sotuvda".
 - The detail page: name and status, brand and category path; photos (thumbnails beside the main one); "Variantlar va qoldiq", a table of every variant with its price and stock in each of the merchant's filials and the total (zero greyed, a sold-out total in amber); the description in both languages; characteristics. On the right: the merchant (opens its page) and the key figures.
 
+## Arizalar
+
+- Read-only, like Mahsulotlar: merchants and shoppers create and move arizalar in their apps. Statuses and reject reasons are the same as in the mobile apps.
+- The list: figures (this month, waiting, handed over this month, rejected share), status tabs with counts, then a search (number, client name or phone) and dropdowns for merchant, filial (enabled once a merchant is picked) and period. Rows: number and time, client and phone, merchant and filial, the first product ("+1 ta mahsulot" for more), total and term, status. The sidebar badge counts the arizalar waiting for a merchant.
+- The detail page: number, status, time and where it started (client app or merchant app); a red banner with the reject reason and comment, or a grey one for a cancellation; products; nasiya terms in two columns; the change history, newest first, with who did it. On the right: the client, the merchant and filial (opens the merchant), how the goods are collected, and for a handed-over ariza whether Birzum has paid the merchant (the payout, or "Toʻlanishi kerak").
+- The sample payouts are worked out from the sample arizalar, so numbers and sums agree across pages.
+
 ## Payouts (Merchantlarga oʻtkazmalar)
 
 - Birzum pays merchants the full financed sum of each handed-over sale (no commission). A sale is owed until a payout covers it.
 - The list page: figures (owed, Jarayonda, paid this month, last payout), then two tabs. **Toʻlanishi kerak**: one row per merchant still owed, with its schedule (weekly on Tuesday, monthly on the 5th), how many arizalar, the oldest one, the next payout day ("Kechikkan" in red when an ariza should already have been paid) and the sum; a row opens a new payout for that merchant. **Oʻtkazmalar**: every payout with reference, merchant, date, arizalar, sum and state, filtered by search, merchant and state; "Oʻtkazildi" sits in the row actions of one still in progress.
 - Creating a payout is a full page (it picks from a list): merchant (only those owed, with the sum), an optional note, then the owed arizalar with checkboxes, all ticked to start with. A sticky summary shows the merchant, the total for the ticked arizalar, today's date and the bank details the money goes to.
-- A payout is created "Jarayonda" and marked "Oʻtkazildi" once the bank has sent it (with a confirm). While in progress it can be cancelled, which puts its arizalar back among what is owed. A paid payout cannot change.
+- A payout is created "Jarayonda" and marked "Oʻtkazildi" by hand once the bank has sent it (with a confirm); there is no bank integration for now.
+- The merchant's detail page has a second tab, "Oʻtkazmalar": what is owed now (with "Oʻtkazma yaratish") and its payouts. While in progress it can be cancelled, which puts its arizalar back among what is owed. A paid payout cannot change.
 
 ## Settings pages (Ustama)
 

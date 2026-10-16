@@ -52,7 +52,6 @@ export const NAV: NavGroup[] = [
         icon: ReceiptText,
         label: 'nav.applications',
         about: 'about.applications',
-        badge: 12,
       },
       { to: ROUTES.customers, icon: Users, label: 'nav.customers', about: 'about.customers' },
       {

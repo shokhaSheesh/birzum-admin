@@ -1,4 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { ApplicationDetailPage } from '@/features/applications/pages/ApplicationDetailPage'
+import { ApplicationsPage } from '@/features/applications/pages/ApplicationsPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -19,6 +21,7 @@ import { RequireAdmin } from './RequireAdmin'
 
 /** Sidebar pages that have their own design; the rest show a placeholder. */
 const DESIGNED: string[] = [
+  ROUTES.applications,
   ROUTES.merchants,
   ROUTES.payouts,
   ROUTES.products,
@@ -36,6 +39,8 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         // Every sidebar page is empty for now; each one is filled in as it gets designed
         children: [
+          { path: ROUTES.applications, element: <ApplicationsPage /> },
+          { path: ROUTES.application, element: <ApplicationDetailPage /> },
           { path: ROUTES.merchants, element: <MerchantsPage /> },
           { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },

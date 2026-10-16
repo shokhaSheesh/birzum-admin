@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useFilialsOf } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
+import { payoutsStore } from '@/entities/payouts/payouts'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { merchantEditPath, ROUTES } from '@/shared/config/routes'
@@ -13,7 +14,9 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
+import { MerchantPayouts } from '../components/MerchantPayouts'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -45,6 +48,8 @@ export function MerchantDetailPage() {
   const merchant = merchantsStore.useAll().find((item) => item.id === id)
   const filials = useFilialsOf(id)
   const [deleting, setDeleting] = useState(false)
+  const [tab, setTab] = useState<'filials' | 'payouts'>('filials')
+  const payoutCount = payoutsStore.useAll().filter((payout) => payout.merchantId === id).length
 
   const back = (
     <button
@@ -114,11 +119,20 @@ export function MerchantDetailPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex flex-col rounded-card border border-line bg-canvas">
-          <div className="flex flex-col gap-1 p-5">
-            <h2 className="text-lg font-bold">{t('merchant.filials')}</h2>
-            <p className="text-sm text-ink-muted">{t('merchant.filials.hint')}</p>
+          <div className="px-5 pt-2">
+            <UnderlineTabs
+              label={merchant.name}
+              options={[
+                { value: 'filials', label: t('merchant.filials'), count: filials.length },
+                { value: 'payouts', label: t('merchant.payouts'), count: payoutCount },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
           </div>
-          {filials.length === 0 ? (
+          {tab === 'payouts' ? (
+            <MerchantPayouts merchant={merchant} />
+          ) : filials.length === 0 ? (
             <EmptyState
               title={t('merchant.filials.empty')}
               hint={t('merchant.filials.emptyHint')}

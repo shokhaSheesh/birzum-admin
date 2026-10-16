@@ -2,6 +2,7 @@ export const ROUTES = {
   login: '/login',
   dashboard: '/',
   applications: '/applications',
+  application: '/applications/:id',
   customers: '/customers',
   collections: '/collections',
   merchants: '/merchants',
@@ -37,3 +38,6 @@ export const newPayoutPath = (merchantId?: string) =>
   merchantId ? `/payouts/new?merchant=${merchantId}` : '/payouts/new'
 /** A payout's detail page. */
 export const payoutPath = (id: string) => `/payouts/${id}`
+
+/** An ariza's read-only detail page. */
+export const applicationPath = (id: string) => `/applications/${id}`

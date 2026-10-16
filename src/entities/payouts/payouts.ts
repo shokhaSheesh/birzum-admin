@@ -1,4 +1,5 @@
 import { createStore } from '@/shared/lib/createStore'
+import { applicationsStore, financedOf, handedAtOf } from '../applications/applications'
 import type { Merchant } from '../merchants/merchants'
 
 /**
@@ -55,34 +56,9 @@ export function nextDueDate(merchant: Pick<Merchant, 'payoutSchedule'>, today: D
   return new Date(today.getFullYear(), today.getMonth(), today.getDate() + ahead)
 }
 
-// Invented sample sales and payouts, worked out from a few rules so they add up: weekly
-// merchants are paid on the Tuesday after each week, monthly ones on the 5th. The last
-// weekly payout of Mediapark is still being sent; this week's sales are still owed.
-// Replace with the API.
-const CLIENTS = [
-  'Dilnoza Rahimova',
-  'Jasur Toshmatov',
-  'Malika Yusupova',
-  'Otabek Karimov',
-  'Nigora Saidova',
-  'Sardor Aliyev',
-  'Kamola Ergasheva',
-  'Bekzod Mirzayev',
-  'Shahnoza Qodirova',
-  'Ulugʻbek Nazarov',
-]
-const PRODUCTS: Record<string, string[]> = {
-  m1: ['iPhone 18 Pro', 'Televizor 43', 'Artel kir yuvish mashinasi', 'Xiaomi Redmi 15'],
-  m2: ['LG kir yuvish mashinasi', 'Lenovo IdeaPad noutbuk', 'iPhone 18 Pro Max'],
-  m3: ['iPhone 18', 'Televizor 55 Smart', 'HP 15 noutbuk', 'iPhone 18 Pro'],
-  m4: ['Samsung muzlatgich'],
-}
-const FILIALS: Record<string, string[]> = {
-  m1: ['f1', 'f2', 'f3'],
-  m2: ['f4', 'f5'],
-  m3: ['f6'],
-  m4: ['f7', 'f8'],
-}
+// Sample payouts worked out from the sample arizalar: weekly merchants are paid on the
+// Tuesday after each week, monthly ones on the 5th. Mediapark's last weekly payout is still
+// being sent; this week's sales are still owed. Replace with the API.
 const SCHEDULE: Record<string, 'weekly' | 'monthly'> = {
   m1: 'weekly',
   m2: 'weekly',
@@ -91,32 +67,19 @@ const SCHEDULE: Record<string, 'weekly' | 'monthly'> = {
 }
 
 function seed() {
-  // A fixed pseudo-random sequence, so the samples are the same on every load
-  let state = 7
-  const next = () => (state = (state * 48271) % 2147483647) / 2147483647
-  const sales: Sale[] = []
-  let number = 231000
-  const start = new Date(2026, 8, 1)
-  const end = new Date(2026, 9, 16)
-  for (let day = start.getTime(); day <= end.getTime(); day += DAY) {
-    for (const merchantId of Object.keys(PRODUCTS)) {
-      // Texno Dunyo stopped selling at the end of September
-      if (merchantId === 'm4' && day >= new Date(2026, 9, 1).getTime()) continue
-      if (next() > (merchantId === 'm4' ? 0.15 : 0.45)) continue
-      const products = PRODUCTS[merchantId]
-      const filials = FILIALS[merchantId]
-      sales.push({
-        id: String(number),
-        number: number++,
-        merchantId,
-        filialId: filials[Math.floor(next() * filials.length)],
-        client: CLIENTS[Math.floor(next() * CLIENTS.length)],
-        product: products[Math.floor(next() * products.length)],
-        handedAt: new Date(day + (10 + Math.floor(next() * 9)) * 60 * 60 * 1000),
-        amount: Math.round((2 + next() * 16) * 10) * 100_000,
-      })
-    }
-  }
+  const sales: Sale[] = applicationsStore
+    .getAll()
+    .filter((application) => application.status === 'handed' || application.status === 'closed')
+    .map((application) => ({
+      id: application.id,
+      number: application.number,
+      merchantId: application.merchantId,
+      filialId: application.filialId,
+      client: application.client.name,
+      product: application.lines.map((line) => line.name).join(', '),
+      handedAt: handedAtOf(application)!,
+      amount: financedOf(application),
+    }))
 
   const payouts: Payout[] = []
   const lastMonday = new Date(2026, 9, 12)
@@ -136,7 +99,7 @@ function seed() {
       paidAt: state === 'paid' ? new Date(date.getTime() + 3 * 60 * 60 * 1000) : undefined,
     })
   }
-  for (const merchantId of Object.keys(PRODUCTS)) {
+  for (const merchantId of Object.keys(SCHEDULE)) {
     const own = sales.filter((sale) => sale.merchantId === merchantId)
     if (SCHEDULE[merchantId] === 'monthly') {
       // September, paid on 5 October; October is still owed
