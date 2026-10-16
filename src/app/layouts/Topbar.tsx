@@ -1,4 +1,6 @@
-import { Bell, Menu, Moon, Search, Sun } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
+import { useState } from 'react'
+import { session, useAdmin } from '@/entities/session/session'
 import { LANG_NAMES, LANGS } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -12,6 +14,8 @@ const iconButton =
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { t, lang, setLang } = useI18n()
   const { theme, setTheme } = useTheme()
+  const admin = useAdmin()
+  const [menu, setMenu] = useState(false)
   const dark =
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -71,12 +75,41 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           <Bell size={20} />
           <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-green-500 ring-2 ring-canvas" />
         </button>
-        <div className="ml-2 flex items-center gap-2.5 border-l border-line pl-3">
-          <Avatar initials="SS" />
-          <div className="hidden flex-col leading-tight md:flex">
-            <span className="text-sm font-semibold">Sardor Saidov</span>
-            <span className="text-xs text-ink-muted">{t('topbar.role')}</span>
-          </div>
+        <div className="relative ml-2 border-l border-line pl-3">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={menu}
+            onClick={() => setMenu((open) => !open)}
+            className="flex items-center gap-2.5 rounded-full py-1 pr-2 pl-1 hover:bg-surface"
+          >
+            <Avatar initials={admin?.initials ?? ''} />
+            <span className="hidden flex-col text-left leading-tight md:flex">
+              <span className="text-sm font-semibold">{admin?.name}</span>
+              <span className="text-xs text-ink-muted">{t('topbar.role')}</span>
+            </span>
+            <ChevronDown size={16} className="hidden text-ink-subtle md:block" />
+          </button>
+          {menu && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMenu(false)} />
+              <div
+                role="menu"
+                className="absolute top-full right-0 z-40 mt-2 w-56 rounded-card border border-line bg-canvas p-1.5 shadow-xl"
+              >
+                <p className="truncate px-3 py-2 text-sm text-ink-muted">@{admin?.username}</p>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={session.signOut}
+                  className="flex h-10 w-full items-center gap-2.5 rounded-control px-3 text-sm font-semibold text-danger hover:bg-danger-soft"
+                >
+                  <LogOut size={18} />
+                  {t('topbar.logout')}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

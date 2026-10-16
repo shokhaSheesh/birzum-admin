@@ -10,5 +10,10 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - **Page**: a light grey ground, content up to 1152px wide, 32px from the sides. It starts with `PageHeader`: the title, one line about the page, and its actions on the right (the primary action is "+ Qoʻshish").
 - Below 1024px the sidebar becomes a drawer opened from a menu button in the top bar. The admin must still work on a laptop at 1280px; phones are not a target.
 
+## Sign-in
+- Username and password only. The form sits on the left half (logo and UZ / RU on top, "Admin panelga kirish", the two fields, "Kirish", a line saying a forgotten password goes through the main admin); the right half is a navy brand panel with a few floating cards hinting at the panel.
+- A wrong login or password shows a red `Alert` above the fields. Below 1024px the brand panel is hidden.
+- Every page of the panel needs a signed-in admin; the account menu in the top bar has "Chiqish".
+
 ## Pages to come
 Each sidebar entry starts as a placeholder (`StubPage`) naming what the page will hold, and is replaced as it gets designed.
