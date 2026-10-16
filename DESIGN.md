@@ -25,7 +25,13 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 
 - A row opens the record's detail page, not its form. Top: a back link, the logo or picture, the name with its status badge, one line of identifiers, and "Oʻchirish" (red, quiet) and "Tahrirlash" on the right.
 - Then the figures as `StatCard`s, then a wide column with the record's related lists (a merchant's filials, read-only) and a 360px column of detail cards: a title and label/value rows.
-- Delete always asks in a `ConfirmDialog`, saying what disappears and what stays (a merchant's active nasiyas keep being paid).
+- Delete always asks in a `ConfirmDialog`, saying what disappears. A merchant with active nasiyas cannot be deleted: the dialog says so and offers "Toʻxtatish" instead (or only "Tushunarli" when it is already paused). Deleting opens once the last nasiya is closed.
+
+## Settings pages (Ustama)
+
+- The same `ActionBar` fixed on top as a form, with the group as its eyebrow. "Bekor qilish" and "Saqlash" stay disabled until something changes; then "N ta oʻzgarish saqlanmagan" shows beside them.
+- Values edited in place in a table (percent inputs, a `Switch` per row), checked as you type. Ustama rules: 0–300%, a longer term never cheaper than a shorter open one, at least one term open.
+- A sticky preview on the right shows what a shopper pays at the unsaved rates. A note says new rates apply to new arizalar only. Every save is kept in "Oʻzgarishlar tarixi" with date, admin and each change.
 - A failed save marks every bad field in red and shows a red toast; nothing is saved.
 
 ## Pages to come

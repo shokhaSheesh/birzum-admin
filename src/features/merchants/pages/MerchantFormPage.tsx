@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -17,6 +16,7 @@ import { cn } from '@/shared/lib/cn'
 import { newId } from '@/shared/lib/createStore'
 import { PHONE_DIGITS } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
+import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { FormSection } from '@/shared/ui/FormSection'
@@ -110,32 +110,18 @@ export function MerchantFormPage() {
 
   return (
     <form onSubmit={save} noValidate className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3 lg:px-8">
-          <button
-            type="button"
-            onClick={() => navigate(back)}
-            aria-label={t('common.back')}
-            className="grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <p className="truncate text-sm text-ink-muted">
-              {existing ? t('common.edit') : t('nav.merchants')}
-            </p>
-            <h1 className="truncate text-lg leading-tight font-bold">
-              {existing ? existing.name : t('merchant.new')}
-            </h1>
-          </div>
-          <Button size="sm" variant="ghost" className="px-4!" onClick={() => navigate(back)}>
-            {t('common.cancel')}
-          </Button>
-          <Button size="sm" type="submit" className="px-4!">
-            {t(existing ? 'common.save' : 'merchant.create')}
-          </Button>
-        </div>
-      </header>
+      <ActionBar
+        eyebrow={existing ? t('common.edit') : t('nav.merchants')}
+        title={existing ? existing.name : t('merchant.new')}
+        onBack={() => navigate(back)}
+      >
+        <Button size="sm" variant="ghost" className="px-4!" onClick={() => navigate(back)}>
+          {t('common.cancel')}
+        </Button>
+        <Button size="sm" type="submit" className="px-4!">
+          {t(existing ? 'common.save' : 'merchant.create')}
+        </Button>
+      </ActionBar>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

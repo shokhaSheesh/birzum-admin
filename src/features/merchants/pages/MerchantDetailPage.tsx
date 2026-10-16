@@ -74,6 +74,12 @@ export function MerchantDetailPage() {
     navigate(ROUTES.merchants, { replace: true })
   }
 
+  const pause = () => {
+    merchantsStore.update(merchant.id, { status: 'paused' })
+    setDeleting(false)
+    toast(t('merchant.paused'))
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
       {back}
@@ -214,20 +220,41 @@ export function MerchantDetailPage() {
         </div>
       </div>
 
-      <ConfirmDialog
-        open={deleting}
-        onClose={() => setDeleting(false)}
-        title={t('merchant.delete.title')}
-        confirmLabel={t('common.delete')}
-        onConfirm={remove}
-      >
-        <p>{t('merchant.delete.message', { name: merchant.name })}</p>
-        {merchant.activeNasiya > 0 && (
-          <p className="font-semibold text-ink">
-            {t('merchant.delete.nasiya', { count: groupDigits(merchant.activeNasiya) })}
+      {merchant.activeNasiya > 0 ? (
+        <ConfirmDialog
+          open={deleting}
+          onClose={() => setDeleting(false)}
+          title={t('merchant.delete.blocked')}
+          tone="primary"
+          cancelLabel={merchant.status === 'paused' ? t('common.understood') : undefined}
+          confirmLabel={merchant.status === 'paused' ? undefined : t('merchant.pause')}
+          onConfirm={pause}
+        >
+          <p>
+            {t('merchant.delete.blockedHint', {
+              name: merchant.name,
+              count: groupDigits(merchant.activeNasiya),
+            })}
           </p>
-        )}
-      </ConfirmDialog>
+          <p>
+            {t(
+              merchant.status === 'paused'
+                ? 'merchant.delete.alreadyPaused'
+                : 'merchant.delete.pauseHint',
+            )}
+          </p>
+        </ConfirmDialog>
+      ) : (
+        <ConfirmDialog
+          open={deleting}
+          onClose={() => setDeleting(false)}
+          title={t('merchant.delete.title')}
+          confirmLabel={t('common.delete')}
+          onConfirm={remove}
+        >
+          <p>{t('merchant.delete.message', { name: merchant.name })}</p>
+        </ConfirmDialog>
+      )}
     </div>
   )
 }

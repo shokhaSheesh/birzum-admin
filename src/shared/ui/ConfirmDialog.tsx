@@ -7,13 +7,29 @@ type Props = {
   onClose: () => void
   title: string
   children: ReactNode
-  /** Label of the red button, e.g. "Oʻchirish". */
-  confirmLabel: string
-  onConfirm: () => void
+  /** Label of the main button, e.g. "Oʻchirish". Leave out for a dialog that only explains. */
+  confirmLabel?: string
+  /** Red for what cannot be undone, navy for a safe way out. */
+  tone?: 'danger' | 'primary'
+  /** Label of the quiet button, when "Bekor qilish" would be wrong. */
+  cancelLabel?: string
+  onConfirm?: () => void
 }
 
-/** Asks before something that cannot be undone. Every delete in the admin goes through this. */
-export function ConfirmDialog({ open, onClose, title, children, confirmLabel, onConfirm }: Props) {
+/**
+ * Asks before something that cannot be undone, or explains why it cannot be done yet. Every
+ * delete in the admin goes through this.
+ */
+export function ConfirmDialog({
+  open,
+  onClose,
+  title,
+  children,
+  confirmLabel,
+  tone = 'danger',
+  cancelLabel,
+  onConfirm,
+}: Props) {
   const { t } = useI18n()
 
   useEffect(() => {
@@ -41,11 +57,18 @@ export function ConfirmDialog({ open, onClose, title, children, confirmLabel, on
         <div className="flex flex-col gap-2 text-ink-muted">{children}</div>
         <div className="flex justify-end gap-2 pt-2">
           <Button size="sm" variant="ghost" className="px-4!" onClick={onClose}>
-            {t('common.cancel')}
+            {cancelLabel ?? t('common.cancel')}
           </Button>
-          <Button size="sm" variant="danger" className="px-4!" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
+          {confirmLabel && (
+            <Button
+              size="sm"
+              variant={tone === 'danger' ? 'danger' : 'primary'}
+              className="px-4!"
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </Button>
+          )}
         </div>
       </div>
     </div>

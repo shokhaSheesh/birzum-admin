@@ -3,6 +3,7 @@ import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
 import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
+import { PricingPage } from '@/features/pricing/pages/PricingPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -22,7 +23,10 @@ export const router = createBrowserRouter([
           { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
           { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
-          ...NAV_ITEMS.filter((item) => item.to !== ROUTES.merchants).map((item) => ({
+          { path: ROUTES.pricing, element: <PricingPage /> },
+          ...NAV_ITEMS.filter(
+            (item) => item.to !== ROUTES.merchants && item.to !== ROUTES.pricing,
+          ).map((item) => ({
             path: item.to,
             element: <StubPage item={item} />,
           })),
