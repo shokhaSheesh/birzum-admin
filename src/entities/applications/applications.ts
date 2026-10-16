@@ -1,5 +1,6 @@
 import { createStore } from '@/shared/lib/createStore'
 import { productsStore } from '../catalog/products'
+import { clientsStore, fullName } from '../clients/clients'
 import { ratesStore } from '../pricing/pricing'
 
 /** The same statuses as the merchant and client apps. */
@@ -35,6 +36,8 @@ export type Application = {
   filialId: string
   /** Where it started: a shopper in the client app, or a seller in the merchant app. */
   source: 'client' | 'merchant'
+  clientId: string
+  /** The shopper's name and phone as they were on the ariza. */
   client: { name: string; phone: string; pinfl: string }
   createdAt: Date
   status: ApplicationStatus
@@ -67,20 +70,6 @@ export const handedAtOf = (application: Application) =>
 // Invented sample arizalar from 1 September to today, worked out from a few rules so
 // statuses, history and payouts agree. Replace with the API.
 const DAY = 24 * 60 * 60 * 1000
-const CLIENTS: [string, string][] = [
-  ['Dilnoza Rahimova', '901234567'],
-  ['Jasur Toshmatov', '935557711'],
-  ['Malika Yusupova', '977001122'],
-  ['Otabek Karimov', '909876543'],
-  ['Nigora Saidova', '881112233'],
-  ['Sardor Aliyev', '946663344'],
-  ['Kamola Ergasheva', '998887766'],
-  ['Bekzod Mirzayev', '915554433'],
-  ['Shahnoza Qodirova', '933332211'],
-  ['Ulugʻbek Nazarov', '971239876'],
-  ['Feruza Abdullayeva', '903334455'],
-  ['Javohir Rasulov', '950001199'],
-]
 const STAFF: Record<string, string[]> = {
   m1: ['Aziz Karimov', 'Laylo Sobirova', 'Rustam Olimov'],
   m2: ['Nodira Yusupova', 'Timur Ahmedov'],
@@ -114,6 +103,7 @@ function seed(): Application[] {
   const pick = <T>(items: T[]) => items[Math.floor(rand() * items.length)]
   const rates = ratesStore.getAll().filter((rate) => rate.enabled)
   const products = productsStore.getAll()
+  const people = clientsStore.getAll().filter((client) => client.limit)
   const out: Application[] = []
   let number = 231000
   const end = new Date(2026, 9, 16, 15).getTime()
@@ -149,7 +139,10 @@ function seed(): Application[] {
         rand() > 0.6 ? Math.round((goodsTotal * (0.1 + rand() * 0.2)) / 100_000) * 100_000 : 0
       const rate = pick(rates)
       const installmentTotal = Math.round((goodsTotal - downPayment) * (1 + rate.markup / 100))
-      const [name, phone] = pick(CLIENTS)
+      const person = pick(people)
+      // A blocked shopper cannot start a new nasiya
+      if (person.block && createdAt > person.block.at) continue
+      const name = fullName(person)
       const source = rand() > 0.55 ? 'client' : 'merchant'
       const staff: Actor = { kind: 'staff', name: pick(STAFF[merchantId]) }
       const customer: Actor = { kind: 'customer', name }
@@ -200,7 +193,8 @@ function seed(): Application[] {
         merchantId,
         filialId: pick(FILIALS[merchantId]),
         source,
-        client: { name, phone, pinfl: `3${String(number).padStart(13, '0').slice(-13)}` },
+        clientId: person.id,
+        client: { name, phone: person.phone, pinfl: person.pinfl },
         createdAt,
         status,
         lines,

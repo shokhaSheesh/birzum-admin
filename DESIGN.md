@@ -55,6 +55,13 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - Status: "Yashirilgan" when the merchant switched it off, else "Tugagan" when no filial has any, else "Sotuvda".
 - The detail page: name and status, brand and category path; photos (thumbnails beside the main one); "Variantlar va qoldiq", a table of every variant with its price and stock in each of the merchant's filials and the total (zero greyed, a sold-out total in amber); the description in both languages; characteristics. On the right: the merchant (opens its page) and the key figures.
 
+## Klientlar
+
+- Read-only apart from blocking: MyID data comes from MyID, the limit from FlexSoft.
+- The list: figures (total, with a running nasiya and how much is left, late and how much, blocked), status tabs (Faol nasiyasi bor, Qarzdor, Bloklangan, Nasiyasiz), then a search (name, phone, JSHSHIR, passport), a limit filter (bor, muddati tugagan, yoʻq) and the sign-up period. Rows: photo or initials, name and phone, JSHSHIR, limit and until when (struck through when expired), running nasiyas, what is left ("N kun kechikkan" in red when late), status; row actions view and block / unblock.
+- The detail page: photo, full name, status, phone and since when, and "Bloklash" (red, quiet) or "Blokdan chiqarish". A blocked client gets a red banner with the reason, comment, when and who. Figures: limit, running nasiyas, left to pay with the next payment day, overdue. Tabs: Xaridlar (every ariza with months paid of the term; a row opens the ariza) and Kartalar. On the right: MyID details.
+- Blocking is a small modal: what blocking does, a reason (fraud suspicion, the client's request, not paying, other) and a required comment. A blocked shopper can still sign in and pay but cannot start a new nasiya. Unblocking asks first.
+
 ## Arizalar
 
 - Read-only, like Mahsulotlar: merchants and shoppers create and move arizalar in their apps. Statuses and reject reasons are the same as in the mobile apps.

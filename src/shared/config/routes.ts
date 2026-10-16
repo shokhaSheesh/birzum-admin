@@ -4,6 +4,7 @@ export const ROUTES = {
   applications: '/applications',
   application: '/applications/:id',
   customers: '/customers',
+  customer: '/customers/:id',
   collections: '/collections',
   merchants: '/merchants',
   payouts: '/payouts',
@@ -41,3 +42,6 @@ export const payoutPath = (id: string) => `/payouts/${id}`
 
 /** An ariza's read-only detail page. */
 export const applicationPath = (id: string) => `/applications/${id}`
+
+/** A shopper's detail page. */
+export const clientPath = (id: string) => `/customers/${id}`
