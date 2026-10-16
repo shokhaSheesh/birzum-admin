@@ -6,6 +6,9 @@ export const ROUTES = {
   collections: '/collections',
   merchants: '/merchants',
   payouts: '/payouts',
+  products: '/products',
+  reviews: '/reviews',
+  merchant: '/merchants/:id',
   categories: '/categories',
   brands: '/brands',
   pricing: '/pricing',
@@ -16,3 +19,6 @@ export const ROUTES = {
   documents: '/documents',
   admins: '/admins',
 } as const
+
+/** A merchant's form. Pass "new" as the id to create one. */
+export const merchantPath = (id: string) => `/merchants/${id}`

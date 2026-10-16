@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { session, useAdmin } from '@/entities/session/session'
 import { LANG_NAMES, LANGS } from '@/shared/i18n/dictionaries'
@@ -10,7 +10,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 const iconButton =
   'grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-surface hover:text-ink'
 
-/** Across the top of every page: global search, language, theme, notifications and the admin. */
+/** Across the top of every page: global search, language, theme and the admin. */
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { t, lang, setLang } = useI18n()
   const { theme, setTheme } = useTheme()
@@ -66,14 +66,6 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           className={iconButton}
         >
           {dark ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-        <button
-          type="button"
-          aria-label={t('topbar.notifications')}
-          className={cn(iconButton, 'relative')}
-        >
-          <Bell size={20} />
-          <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-green-500 ring-2 ring-canvas" />
         </button>
         <div className="relative ml-2 border-l border-line pl-3">
           <button

@@ -12,9 +12,8 @@ import { Button } from '@/shared/ui/Button'
 import { PasswordField } from '@/shared/ui/PasswordField'
 import { TextField } from '@/shared/ui/TextField'
 import { signIn } from '../api/mockAuth'
-import { BrandPanel } from '../components/BrandPanel'
 
-/** Sign-in for Birzum staff: username and password, the form on the left and the brand on the right. */
+/** Sign-in for Birzum staff: username and password in one card in the middle of the page. */
 export function LoginPage() {
   const { t, lang, setLang } = useI18n()
   const admin = useAdmin()
@@ -41,38 +40,44 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full bg-canvas">
-      <div className="flex min-w-0 flex-1 flex-col px-6 py-6 sm:px-12">
-        <div className="flex items-center justify-between">
-          <img src={logo} alt="Birzum nasiya" className="h-9 dark:hidden" />
-          <img src={logoOnDark} alt="Birzum nasiya" className="hidden h-9 dark:block" />
-          <div className="flex gap-0.5 rounded-lg bg-surface p-0.5" role="tablist">
-            {LANGS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={value === lang}
-                aria-label={LANG_NAMES[value]}
-                onClick={() => setLang(value)}
-                className={cn(
-                  'h-8 rounded-md px-2.5 text-xs font-bold uppercase',
-                  value === lang ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
-                )}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
+    <div className="flex min-h-full flex-col items-center bg-surface px-4 py-8">
+      <div className="flex w-full max-w-md justify-end">
+        <div className="flex gap-0.5 rounded-lg bg-canvas p-0.5" role="tablist">
+          {LANGS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={value === lang}
+              aria-label={LANG_NAMES[value]}
+              onClick={() => setLang(value)}
+              className={cn(
+                'h-8 rounded-md px-2.5 text-xs font-bold uppercase',
+                value === lang ? 'bg-primary text-on-primary' : 'text-ink-muted',
+              )}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex w-full max-w-md flex-1 flex-col justify-center gap-8 py-10">
+        <div className="flex items-center justify-center gap-2">
+          <img src={logo} alt="Birzum nasiya" className="h-10 dark:hidden" />
+          <img src={logoOnDark} alt="Birzum nasiya" className="hidden h-10 dark:block" />
+          <span className="rounded-md bg-canvas px-1.5 py-0.5 text-xs font-bold tracking-wide text-ink-muted uppercase">
+            Admin
+          </span>
         </div>
 
         <form
           onSubmit={(e) => void submit(e)}
           noValidate
-          className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 py-10"
+          className="flex flex-col gap-6 rounded-[24px] border border-line bg-canvas p-8 shadow-[0_12px_40px_-20px_rgb(7_42_60/0.25)]"
         >
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-3xl font-bold">{t('login.title')}</h1>
+            <h1 className="text-2xl font-bold">{t('login.title')}</h1>
             <p className="text-ink-muted">{t('login.subtitle')}</p>
           </div>
           {failed && <Alert message={t('login.error')} />}
@@ -96,12 +101,11 @@ export function LoginPage() {
           <Button type="submit" block loading={loading}>
             {t('login.submit')}
           </Button>
-          <p className="text-center text-sm text-ink-muted">{t('login.help')}</p>
         </form>
-
-        <p className="text-sm text-ink-subtle">© 2026 Birzum</p>
+        <p className="text-center text-sm text-ink-muted">{t('login.help')}</p>
       </div>
-      <BrandPanel />
+
+      <p className="text-sm text-ink-subtle">© 2026 Birzum</p>
     </div>
   )
 }

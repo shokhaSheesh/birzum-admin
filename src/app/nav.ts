@@ -8,8 +8,10 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageCircleQuestion,
+  Package,
   ReceiptText,
   ShieldCheck,
+  Star,
   Store,
   Tags,
   Users,
@@ -67,11 +69,13 @@ export const NAV: NavGroup[] = [
     items: [
       { to: ROUTES.merchants, icon: Store, label: 'nav.merchants', about: 'about.merchants' },
       { to: ROUTES.payouts, icon: HandCoins, label: 'nav.payouts', about: 'about.payouts' },
+      { to: ROUTES.reviews, icon: Star, label: 'nav.reviews', about: 'about.reviews' },
     ],
   },
   {
     title: 'navGroup.catalog',
     items: [
+      { to: ROUTES.products, icon: Package, label: 'nav.products', about: 'about.products' },
       {
         to: ROUTES.categories,
         icon: FolderTree,
