@@ -7,6 +7,7 @@ export const ROUTES = {
   merchants: '/merchants',
   payouts: '/payouts',
   products: '/products',
+  product: '/products/:id',
   reviews: '/reviews',
   merchantNew: '/merchants/new',
   merchant: '/merchants/:id',
@@ -25,3 +26,6 @@ export const ROUTES = {
 export const merchantPath = (id: string) => `/merchants/${id}`
 /** A merchant's edit form. */
 export const merchantEditPath = (id: string) => `/merchants/${id}/edit`
+
+/** A product's read-only detail page. */
+export const productPath = (id: string) => `/products/${id}`

@@ -1,9 +1,10 @@
 import { cn } from '@/shared/lib/cn'
 import { initialsOf, type Merchant } from '../merchants'
 
-type Props = { merchant: Pick<Merchant, 'name' | 'logo'>; size?: 'sm' | 'md' | 'lg' }
+type Props = { merchant: Pick<Merchant, 'name' | 'logo'>; size?: 'xs' | 'sm' | 'md' | 'lg' }
 
 const sizes = {
+  xs: 'size-7 rounded-md text-[10px]',
   sm: 'size-9 rounded-lg text-xs',
   md: 'size-11 rounded-control text-sm',
   lg: 'size-20 rounded-card text-xl',

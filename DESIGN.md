@@ -29,10 +29,18 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 
 ## Small directories (Kategoriyalar, Brendlar)
 
-- A list page whose rows open a `Drawer` from the right to edit; the header button opens the same drawer empty. The drawer has the picture (`ImageField`), the fields, and at the bottom "Oʻchirish" on the left (edit only), then "Bekor qilish" and "Qoʻshish" / "Saqlash".
-- Categories: name in Uzbek and Russian (two fields, both required, no duplicates), a picture, and "Klient ilovasida koʻrsatish". Their order is the client app's order; up and down arrows in the first column move a row.
+- **How big a record is decides where it is created.** A big record (a merchant: many sections) gets its own page with the fixed `ActionBar`. A small one (a category, a brand: a few fields) opens in a centred `Modal` over the list, never a side panel. Rows open the same modal to edit.
+- The modal has the fields, and at the bottom "Oʻchirish" on the left (edit only), then "Bekor qilish" and "Qoʻshish" / "Saqlash". Esc or the backdrop closes it.
+- Categories: one level of subcategories. A subcategory row sits under its category, indented with a corner arrow; each category row has "+ Subkategoriya". The modal starts with "Asosiy kategoriya" (none, or a top-level category; locked for a category that has subcategories), then the picture, the name in Uzbek and Russian (both required, no duplicates among siblings), and "Klient ilovasida koʻrsatish". A hidden category hides its subcategories. Order is the client app's order; the arrows move a row among its siblings. A category's product count includes its subcategories'.
 - Brands: one name for both languages, a logo (initials until uploaded), listed A to Z with a search.
-- A category or brand with products cannot be deleted: the dialog says how many products are in it and that merchants must move them first. A category can be hidden instead.
+- A category with subcategories, or a category or brand with products, cannot be deleted: the dialog says how many products are in it and that merchants must move them first. A category can be hidden instead.
+
+## Read-only pages (Mahsulotlar)
+
+- Merchants own their products, so the admin has no create, edit, hide or delete. The page description and a line on the detail page say so.
+- The list: figures (total, Sotuvda, Tugagan, Yashirilgan), status tabs with counts, then a search and dropdowns for merchant, category (subcategories indented under their category; picking a category includes them) and brand. Rows show the cover, name and brand, merchant, "Category › Subcategory", price ("… dan" when variants differ), total stock and status. A row opens the detail page.
+- Status: "Yashirilgan" when the merchant switched it off, else "Tugagan" when no filial has any, else "Sotuvda".
+- The detail page: name and status, brand and category path; photos (thumbnails beside the main one); "Variantlar va qoldiq", a table of every variant with its price and stock in each of the merchant's filials and the total (zero greyed, a sold-out total in amber); the description in both languages; characteristics. On the right: the merchant (opens its page) and the key figures.
 
 ## Settings pages (Ustama)
 
