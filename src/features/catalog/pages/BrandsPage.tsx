@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { BrandDrawer } from '../components/BrandDrawer'
+import { BrandModal } from '../components/BrandModal'
 import { BrandLogo } from '../components/BrandLogo'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -104,7 +104,7 @@ export function BrandsPage() {
       </div>
 
       {editing !== undefined && (
-        <BrandDrawer
+        <BrandModal
           key={editing?.id ?? 'new'}
           brand={editing}
           onClose={() => setEditing(undefined)}

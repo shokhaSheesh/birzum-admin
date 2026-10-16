@@ -5,7 +5,7 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
-import { Drawer } from '@/shared/ui/Drawer'
+import { Modal } from '@/shared/ui/Modal'
 import { ImageField } from '@/shared/ui/ImageField'
 import { TextField } from '@/shared/ui/TextField'
 import { BrandLogo } from './BrandLogo'
@@ -18,7 +18,7 @@ type Props = {
 }
 
 /** Create or edit a brand: its logo and its name, which is the same in both languages. */
-export function BrandDrawer({ brand, onClose, onDelete }: Props) {
+export function BrandModal({ brand, onClose, onDelete }: Props) {
   const { t } = useI18n()
   const [logo, setLogo] = useState(brand?.logo)
   const [name, setName] = useState(brand?.name ?? '')
@@ -51,7 +51,7 @@ export function BrandDrawer({ brand, onClose, onDelete }: Props) {
   }
 
   return (
-    <Drawer
+    <Modal
       open
       onClose={onClose}
       eyebrow={t(brand ? 'common.edit' : 'nav.brands')}
@@ -94,6 +94,6 @@ export function BrandDrawer({ brand, onClose, onDelete }: Props) {
         error={error}
         autoFocus={!brand}
       />
-    </Drawer>
+    </Modal>
   )
 }

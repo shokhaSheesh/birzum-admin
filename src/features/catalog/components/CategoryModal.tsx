@@ -1,13 +1,14 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { categoriesStore, type Category } from '@/entities/catalog/categories'
+import { categoriesStore, childrenOf, rootsOf, type Category } from '@/entities/catalog/categories'
 import type { Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
-import { Drawer } from '@/shared/ui/Drawer'
 import { ImageField } from '@/shared/ui/ImageField'
+import { Modal } from '@/shared/ui/Modal'
+import { SelectField } from '@/shared/ui/SelectField'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 import { CategoryThumb } from './CategoryThumb'
@@ -15,26 +16,35 @@ import { CategoryThumb } from './CategoryThumb'
 type Props = {
   /** The category to edit, or null to create one. */
   category: Category | null
+  /** For a new subcategory: the category it goes under. */
+  parentId?: string
   onClose: () => void
   onDelete: (category: Category) => void
 }
 
-/** Create or edit a category: its picture, its name in both languages, and whether shoppers see it. */
-export function CategoryDrawer({ category, onClose, onDelete }: Props) {
+/**
+ * Create or edit a category or subcategory: where it sits, its picture, its name in both
+ * languages, and whether shoppers see it.
+ */
+export function CategoryModal({ category, parentId: presetParent, onClose, onDelete }: Props) {
   const { t, tl } = useI18n()
+  const all = categoriesStore.useAll()
+  const [parentId, setParentId] = useState(category?.parentId ?? presetParent ?? '')
+  // A category that has subcategories cannot itself become one: only one level deep
+  const hasChildren = !!category && childrenOf(all, category.id).length > 0
   const [image, setImage] = useState(category?.image)
   const [name, setName] = useState(category?.name ?? { uz: '', ru: '' })
   const [visible, setVisible] = useState(category?.visible ?? true)
   const [submitted, setSubmitted] = useState(false)
 
+  // Names only need to differ among siblings: two parents may each have "Aksessuarlar"
   const taken = (lang: Lang) =>
-    categoriesStore
-      .getAll()
-      .some(
-        (other) =>
-          other.id !== category?.id &&
-          other.name[lang].trim().toLowerCase() === name[lang].trim().toLowerCase(),
-      )
+    all.some(
+      (other) =>
+        other.id !== category?.id &&
+        (other.parentId ?? '') === parentId &&
+        other.name[lang].trim().toLowerCase() === name[lang].trim().toLowerCase(),
+    )
   const errorOf = (lang: Lang) => {
     if (!name[lang].trim()) return submitted ? t('error.required') : undefined
     if (taken(lang)) return t('category.error.taken')
@@ -44,6 +54,7 @@ export function CategoryDrawer({ category, onClose, onDelete }: Props) {
     setSubmitted(true)
     if (!name.uz.trim() || !name.ru.trim() || taken('uz') || taken('ru')) return
     const record = {
+      parentId: parentId || undefined,
       name: { uz: name.uz.trim(), ru: name.ru.trim() },
       image,
       visible,
@@ -53,21 +64,18 @@ export function CategoryDrawer({ category, onClose, onDelete }: Props) {
       toast(t('toast.saved'))
     } else {
       // A new category goes to the end of the list
-      categoriesStore.replaceAll([
-        ...categoriesStore.getAll(),
-        { id: newId(), products: 0, ...record },
-      ])
-      toast(t('category.created'))
+      categoriesStore.replaceAll([...all, { id: newId(), products: 0, ...record }])
+      toast(t(parentId ? 'subcategory.created' : 'category.created'))
     }
     onClose()
   }
 
   return (
-    <Drawer
+    <Modal
       open
       onClose={onClose}
       eyebrow={t(category ? 'common.edit' : 'nav.categories')}
-      title={category ? tl(category.name) : t('category.new')}
+      title={category ? tl(category.name) : t(parentId ? 'subcategory.new' : 'category.new')}
       footer={
         <>
           {category && (
@@ -90,6 +98,19 @@ export function CategoryDrawer({ category, onClose, onDelete }: Props) {
         </>
       }
     >
+      <SelectField
+        label={t('category.parent')}
+        options={[
+          { value: '', label: t('category.parent.none') },
+          ...rootsOf(all)
+            .filter((root) => root.id !== category?.id)
+            .map((root) => ({ value: root.id, label: tl(root.name) })),
+        ]}
+        value={parentId}
+        onChange={setParentId}
+        disabled={hasChildren}
+        hint={t(hasChildren ? 'category.parent.locked' : 'category.parent.hint')}
+      />
       <ImageField
         label={t('category.image')}
         hint={t('category.image.hint')}
@@ -117,6 +138,6 @@ export function CategoryDrawer({ category, onClose, onDelete }: Props) {
         </div>
         <Switch checked={visible} onChange={setVisible} label={t('category.visible')} />
       </div>
-    </Drawer>
+    </Modal>
   )
 }

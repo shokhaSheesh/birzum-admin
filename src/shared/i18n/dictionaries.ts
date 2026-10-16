@@ -153,7 +153,8 @@ const uz = {
   'categories.add': 'Kategoriya qoʻshish',
   'categories.empty': 'Hali kategoriya yoʻq',
   'categories.order': 'Tartib',
-  'categories.orderHint': 'Klient ilovasida shu tartibda koʻrinadi. Oʻqchalar bilan suring.',
+  'categories.orderHint':
+    'Klient ilovasida shu tartibda koʻrinadi. Oʻqchalar bilan suring, subkategoriyalar oʻz kategoriyasi ichida.',
   'categories.up': '{name}: yuqoriga',
   'categories.down': '{name}: pastga',
   'categories.col.name': 'Kategoriya',
@@ -193,6 +194,16 @@ const uz = {
   'brand.delete.message': '{name} brendi butunlay oʻchiriladi.',
   'brand.delete.blockedHint':
     '{name} brendida {count} ta mahsulot bor. Merchantlar ularni boshqa brendga oʻtkazgach, oʻchirish mumkin.',
+  'categories.addSub': 'Subkategoriya',
+  'categories.subCount': '{count} ta subkategoriya',
+  'subcategory.new': 'Yangi subkategoriya',
+  'subcategory.created': 'Subkategoriya qoʻshildi',
+  'category.parent': 'Asosiy kategoriya',
+  'category.parent.none': 'Yoʻq, bu asosiy kategoriya',
+  'category.parent.hint': 'Tanlansa, bu uning subkategoriyasi boʻladi.',
+  'category.parent.locked': 'Subkategoriyalari bor, shuning uchun asosiy boʻlib qoladi.',
+  'category.delete.hasChildren':
+    '{name} ichida {count} ta subkategoriya bor. Avval ularni oʻchiring yoki boshqa kategoriyaga oʻtkazing.',
   'merchant.error.login': 'Kichik lotin harflari, raqam, nuqta; kamida 3 ta belgi',
   'password.show': 'Parolni koʻrsatish',
   'password.hide': 'Parolni yashirish',
@@ -439,6 +450,16 @@ const ru: Record<TranslationKey, string> = {
   'brand.delete.message': 'Бренд {name} будет удалён навсегда.',
   'brand.delete.blockedHint':
     'У бренда {name} {count} товаров. Удалить можно, когда мерчанты перенесут их на другой бренд.',
+  'categories.addSub': 'Подкатегория',
+  'categories.subCount': 'подкатегорий: {count}',
+  'subcategory.new': 'Новая подкатегория',
+  'subcategory.created': 'Подкатегория добавлена',
+  'category.parent': 'Родительская категория',
+  'category.parent.none': 'Нет, это основная категория',
+  'category.parent.hint': 'Если выбрать, станет её подкатегорией.',
+  'category.parent.locked': 'Есть подкатегории, поэтому остаётся основной.',
+  'category.delete.hasChildren':
+    'В «{name}» {count} подкатегорий. Сначала удалите их или перенесите в другую категорию.',
   'merchant.error.login': 'Строчные латинские буквы, цифры, точка; от 3 символов',
   'password.show': 'Показать пароль',
   'password.hide': 'Скрыть пароль',
