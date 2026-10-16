@@ -224,7 +224,7 @@ export function MerchantDetailPage() {
         <ConfirmDialog
           open={deleting}
           onClose={() => setDeleting(false)}
-          title={t('merchant.delete.blocked')}
+          title={t('common.cantDelete')}
           tone="primary"
           cancelLabel={merchant.status === 'paused' ? t('common.understood') : undefined}
           confirmLabel={merchant.status === 'paused' ? undefined : t('merchant.pause')}

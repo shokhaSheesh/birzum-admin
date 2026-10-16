@@ -20,10 +20,10 @@ import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { FormSection } from '@/shared/ui/FormSection'
+import { ImageField } from '@/shared/ui/ImageField'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { PhoneField } from '@/shared/ui/PhoneField'
 import { TextField } from '@/shared/ui/TextField'
-import { LogoField } from '../components/LogoField'
 
 const digits = (value: string, max: number) => value.replace(/\D/g, '').slice(0, max)
 const grid = 'grid gap-4 sm:grid-cols-2'
@@ -127,7 +127,13 @@ export function MerchantFormPage() {
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-6">
             <FormSection title={t('merchant.section.shop')} hint={t('merchant.section.shop.hint')}>
-              <LogoField name={name} logo={logo} onChange={setLogo} />
+              <ImageField
+                label={t('merchant.logo')}
+                hint={t('merchant.logo.hint')}
+                preview={<MerchantLogo merchant={{ name: name || '?', logo }} size="lg" />}
+                value={logo}
+                onChange={setLogo}
+              />
               <div className={grid}>
                 <TextField
                   label={t('merchant.name')}

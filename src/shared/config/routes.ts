@@ -14,7 +14,6 @@ export const ROUTES = {
   categories: '/categories',
   brands: '/brands',
   pricing: '/pricing',
-  scoring: '/scoring',
   support: '/support',
   broadcasts: '/broadcasts',
   faq: '/faq',

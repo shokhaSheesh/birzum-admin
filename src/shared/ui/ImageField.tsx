@@ -1,31 +1,34 @@
 import { ImageUp, Trash2 } from 'lucide-react'
-import { useRef } from 'react'
-import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
+import { useRef, type ReactNode } from 'react'
 import { useI18n } from '@/shared/i18n/useI18n'
-import { Button } from '@/shared/ui/Button'
+import { Button } from './Button'
 
 type Props = {
-  name: string
-  logo?: string
-  onChange: (logo: string | undefined) => void
+  label: string
+  /** What file works best, e.g. "Kvadrat PNG yoki JPG, kamida 400×400." */
+  hint: string
+  /** The current picture, or a stand-in when there is none. */
+  preview: ReactNode
+  value?: string
+  onChange: (url: string | undefined) => void
 }
 
-/** The shop's square logo: a preview, then upload and remove, and what file works best. */
-export function LogoField({ name, logo, onChange }: Props) {
+/** One picture of a record (a logo, a category image): a preview, then upload and remove. */
+export function ImageField({ label, hint, preview, value, onChange }: Props) {
   const { t } = useI18n()
   const input = useRef<HTMLInputElement>(null)
 
   return (
     <div className="flex items-center gap-5">
-      <MerchantLogo merchant={{ name: name || '?', logo }} size="lg" />
+      {preview}
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-ink-muted">{t('merchant.logo')}</p>
+        <p className="text-sm font-medium text-ink-muted">{label}</p>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => input.current?.click()}>
             <ImageUp size={18} />
-            {t(logo ? 'merchant.logo.replace' : 'merchant.logo.upload')}
+            {t(value ? 'image.replace' : 'image.upload')}
           </Button>
-          {logo && (
+          {value && (
             <Button
               size="sm"
               variant="ghost"
@@ -37,7 +40,7 @@ export function LogoField({ name, logo, onChange }: Props) {
             </Button>
           )}
         </div>
-        <p className="text-sm text-ink-subtle">{t('merchant.logo.hint')}</p>
+        <p className="text-sm text-ink-subtle">{hint}</p>
       </div>
       <input
         ref={input}

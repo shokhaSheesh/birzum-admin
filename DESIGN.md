@@ -27,12 +27,18 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - Then the figures as `StatCard`s, then a wide column with the record's related lists (a merchant's filials, read-only) and a 360px column of detail cards: a title and label/value rows.
 - Delete always asks in a `ConfirmDialog`, saying what disappears. A merchant with active nasiyas cannot be deleted: the dialog says so and offers "Toʻxtatish" instead (or only "Tushunarli" when it is already paused). Deleting opens once the last nasiya is closed.
 
+## Small directories (Kategoriyalar, Brendlar)
+
+- A list page whose rows open a `Drawer` from the right to edit; the header button opens the same drawer empty. The drawer has the picture (`ImageField`), the fields, and at the bottom "Oʻchirish" on the left (edit only), then "Bekor qilish" and "Qoʻshish" / "Saqlash".
+- Categories: name in Uzbek and Russian (two fields, both required, no duplicates), a picture, and "Klient ilovasida koʻrsatish". Their order is the client app's order; up and down arrows in the first column move a row.
+- Brands: one name for both languages, a logo (initials until uploaded), listed A to Z with a search.
+- A category or brand with products cannot be deleted: the dialog says how many products are in it and that merchants must move them first. A category can be hidden instead.
+
 ## Settings pages (Ustama)
 
 - The same `ActionBar` fixed on top as a form, with the group as its eyebrow. "Bekor qilish" and "Saqlash" stay disabled until something changes; then "N ta oʻzgarish saqlanmagan" shows beside them.
 - Values edited in place in a table (percent inputs, a `Switch` per row, a bin to remove), checked as you type. "+ Muddat qoʻshish" adds a row whose month count is editable until saved. Ustama rules: one rate for every merchant and category; 0–300%; terms 1–60 months, no duplicates; a longer term never cheaper than a shorter open one; at least one term open.
-- Limit va skoring uses `FormSection` cards instead of a table: Asosiy limit (income multiplier per income source, min and max limit, how long a limit stays valid), Muddatlar boʻyicha ulush (one tile per Ustama term, closed ones muted), Rad etish qoidalari (age range, allowed lateness in KATM, a switch for debt overdue elsewhere). The terms come from Ustama, so adding or removing one there shows here.
-- A sticky preview on the right shows the result of the unsaved values: what a shopper pays (Ustama), or a test shopper's limit per term or the reason they are turned down (Limit va skoring). A note says new rates apply to new arizalar only. Every save is kept in "Oʻzgarishlar tarixi" with date, admin and each change.
+- A sticky preview on the right shows the result of the unsaved values: what a shopper pays. A note says new rates apply to new arizalar only. Every save is kept in "Oʻzgarishlar tarixi" with date, admin and each change.
 - A failed save marks every bad field in red and shows a red toast; nothing is saved.
 
 ## Pages to come

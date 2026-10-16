@@ -2,7 +2,6 @@ import {
   BadgePercent,
   FileText,
   FolderTree,
-  Gauge,
   HandCoins,
   Headset,
   LayoutDashboard,
@@ -89,7 +88,6 @@ export const NAV: NavGroup[] = [
     title: 'navGroup.rules',
     items: [
       { to: ROUTES.pricing, icon: BadgePercent, label: 'nav.pricing', about: 'about.pricing' },
-      { to: ROUTES.scoring, icon: Gauge, label: 'nav.scoring', about: 'about.scoring' },
     ],
   },
   {

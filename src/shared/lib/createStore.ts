@@ -25,6 +25,8 @@ export function createStore<T extends { id: string }>(seed: T[]) {
     update: (id: string, patch: Partial<T>) =>
       change(items.map((item) => (item.id === id ? { ...item, ...patch } : item))),
     remove: (id: string) => change(items.filter((item) => item.id !== id)),
+    /** Replaces the whole list, e.g. after reordering. */
+    replaceAll: (next: T[]) => change(next),
     /** Adds the record, or replaces the one with the same id. */
     save: (record: T) =>
       change(
