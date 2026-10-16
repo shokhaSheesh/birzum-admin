@@ -22,10 +22,10 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FormSection } from '@/shared/ui/FormSection'
 import { SelectField } from '@/shared/ui/SelectField'
+import { TableCheckbox } from '@/shared/ui/TableCheckbox'
 import { TextField } from '@/shared/ui/TextField'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
-const box = 'size-5 shrink-0 cursor-pointer accent-[var(--color-primary)]'
 
 /**
  * A new payout: pick the merchant, then which of its owed sales this transfer pays for (all of
@@ -147,17 +147,12 @@ export function PayoutFormPage() {
                   <thead>
                     <tr className="border-b border-line">
                       <th className="w-12 pl-4">
-                        <input
-                          type="checkbox"
-                          aria-label={t('payout.sales.all')}
-                          checked={allPicked}
-                          ref={(el) => {
-                            if (el) el.indeterminate = chosen.length > 0 && !allPicked
-                          }}
+                        <TableCheckbox
+                          label={t('payout.sales.all')}
+                          checked={allPicked ? true : chosen.length > 0 ? 'mixed' : false}
                           onChange={() =>
                             setPicked(allPicked ? new Set() : new Set(owed.map((sale) => sale.id)))
                           }
-                          className={box}
                         />
                       </th>
                       <th className={th}>{t('payout.col.ariza')}</th>
@@ -181,12 +176,10 @@ export function PayoutFormPage() {
                           )}
                         >
                           <td className="pl-4" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              aria-label={t('payout.col.ariza') + ' ' + sale.number}
+                            <TableCheckbox
+                              label={`${t('payout.col.ariza')} ${sale.number}`}
                               checked={on}
                               onChange={() => toggle(sale.id)}
-                              className={box}
                             />
                           </td>
                           <td className="px-4 py-3 font-semibold tabular-nums">

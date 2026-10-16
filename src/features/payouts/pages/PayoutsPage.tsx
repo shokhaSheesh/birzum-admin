@@ -14,9 +14,12 @@ import {
 import { payoutStateTone } from '@/entities/payouts/payoutState'
 import { newPayoutPath, payoutPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { ALL_TIME, inRange, type DateRange } from '@/shared/lib/dates'
 import { formatDate, formatSum } from '@/shared/lib/format'
 import { Button } from '@/shared/ui/Button'
+import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -25,8 +28,6 @@ import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { MarkPaidDialog } from '../components/MarkPaidDialog'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
-const select =
-  'h-10 min-w-0 cursor-pointer rounded-control border border-line bg-canvas px-3 text-sm text-ink outline-none focus:border-primary'
 
 type Tab = 'owed' | 'history'
 
@@ -45,6 +46,7 @@ export function PayoutsPage() {
   const [query, setQuery] = useState('')
   const [merchant, setMerchant] = useState('')
   const [state, setState] = useState<'' | PayoutState>('')
+  const [range, setRange] = useState<DateRange>(ALL_TIME)
   const [marking, setMarking] = useState<string | null>(null)
   const [today] = useState(() => new Date())
 
@@ -67,7 +69,8 @@ export function PayoutsPage() {
     (payout) =>
       (needle === '' || payout.reference.toLowerCase().includes(needle)) &&
       (!merchant || payout.merchantId === merchant) &&
-      (!state || payout.state === state),
+      (!state || payout.state === state) &&
+      inRange(payout.date, range),
   )
 
   return (
@@ -207,29 +210,26 @@ export function PayoutsPage() {
                   className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-subtle"
                 />
               </label>
-              <select
-                aria-label={t('products.col.merchant')}
+              <FilterSelect
+                label={t('products.col.merchant')}
+                options={[
+                  { value: '', label: t('products.allMerchants') },
+                  ...merchants.map((item) => ({ value: item.id, label: item.name })),
+                ]}
                 value={merchant}
-                onChange={(e) => setMerchant(e.target.value)}
-                className={select}
-              >
-                <option value="">{t('products.allMerchants')}</option>
-                {merchants.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label={t('merchants.status')}
+                onChange={setMerchant}
+              />
+              <FilterSelect
+                label={t('merchants.status')}
+                options={[
+                  { value: '', label: t('payouts.allStates') },
+                  { value: 'processing', label: t('payout.state.processing') },
+                  { value: 'paid', label: t('payout.state.paid') },
+                ]}
                 value={state}
-                onChange={(e) => setState(e.target.value as '' | PayoutState)}
-                className={select}
-              >
-                <option value="">{t('payouts.allStates')}</option>
-                <option value="processing">{t('payout.state.processing')}</option>
-                <option value="paid">{t('payout.state.paid')}</option>
-              </select>
+                onChange={setState}
+              />
+              <DateRangePicker label={t('payouts.col.date')} value={range} onChange={setRange} />
             </div>
             {history.length === 0 ? (
               <EmptyState title={t('payouts.empty')} />

@@ -1,0 +1,36 @@
+# Working on Birzum Admin
+
+Read `DESIGN.md` before designing a page. The rules below are the ones that are easy to forget.
+
+## No browser-default controls
+
+Every control the admin sees is our own component, drawn with our tokens. Never ship the browser's own look for anything, because it differs between Chrome, Safari and Windows, ignores dark mode and our fonts, and looks unfinished next to our cards.
+
+| Need | Use | Never |
+|---|---|---|
+| Pick one of a few to many options in a form | `SelectField` | `<select>` |
+| Filter a table by one value | `FilterSelect` | `<select>` |
+| Filter by a period | `DateRangePicker` | `<input type="date">`, two date inputs |
+| Pick one date in a form | `DateField` (calendar popover, same calendar as the range picker) | `<input type="date">` |
+| Tick a row in a table, select all | `TableCheckbox` (with the mixed state for "some") | a bare `<input type="checkbox">` |
+| Agree to something, a labelled option | `Checkbox` | a bare checkbox |
+| On/off in a row or a settings card | `Switch` | a checkbox |
+| One of 2–6 short options, all visible | `ChoiceGrid` or radio cards | radio buttons |
+| Number, money, phone | `NumberField`, `PhoneField` | `type="number"` spinners |
+| Upload a picture | `ImageField` | a bare file input |
+| Confirm, explain why not | `ConfirmDialog` | `window.confirm`, `alert` |
+| Small create or edit | `Modal` | a side drawer, a new tab |
+| Hint on hover | `title` only on icon buttons; anything longer is visible text | custom browser tooltips |
+
+- A native element may sit underneath for accessibility (a visually hidden `input` inside `Checkbox`), but what the user sees and clicks is ours.
+- Popovers (`FilterSelect`, `SelectField`, `DateRangePicker`) open under their button, close on Esc and on a click outside, and work with the keyboard: arrows to move, Enter to pick.
+- A filter that is set looks set: its button turns navy-outlined and shows the chosen value, so a glance tells what the table is filtered by.
+- When a new kind of control is needed, build it in `src/shared/ui` first, add it to this table, then use it.
+
+## Other rules
+
+- Small records are created and edited in a centred `Modal`; big ones (a merchant, a payout) get their own page with the fixed `ActionBar`.
+- Every table row ends with `RowActions`.
+- Read-only pages (Arizalar, Mahsulotlar) say so in their description and never show edit or delete.
+- Every visible string goes through `t()` with both Uzbek and Russian.
+- Check every page in the headless browser before saying it works; say what was not checked.

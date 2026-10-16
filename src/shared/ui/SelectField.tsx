@@ -1,11 +1,12 @@
-import { ChevronDown } from 'lucide-react'
 import { useId } from 'react'
+import { cn } from '@/shared/lib/cn'
 import { controlClass } from './control'
 import { Field } from './Field'
+import { Listbox, SelectChevron, type ListOption } from './Listbox'
 
 type Props<T extends string> = {
   label: string
-  options: { value: T; label: string; disabled?: boolean }[]
+  options: ListOption<T>[]
   value: T
   onChange: (value: T) => void
   hint?: string
@@ -13,7 +14,7 @@ type Props<T extends string> = {
   disabled?: boolean
 }
 
-/** Pick one of many options from a native dropdown, in the same box as a text field. */
+/** Pick one of many options in a form: the same box as a text field, opening our list. */
 export function SelectField<T extends string>({
   label,
   options,
@@ -27,26 +28,23 @@ export function SelectField<T extends string>({
 
   return (
     <Field label={label} htmlFor={id} hint={hint} error={error}>
-      <div className={controlClass(!!error, 'relative')}>
-        <select
-          id={id}
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value as T)}
-          className="h-full w-full cursor-pointer appearance-none bg-transparent pr-8 text-base outline-none disabled:cursor-default disabled:text-ink-muted"
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={20}
-          className="pointer-events-none absolute right-4 text-ink-muted"
-          aria-hidden
-        />
-      </div>
+      <Listbox
+        id={id}
+        options={options}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        triggerClassName={cn(
+          controlClass(!!error),
+          'justify-between disabled:cursor-default disabled:bg-surface disabled:text-ink-muted',
+        )}
+        trigger={({ open, selected }) => (
+          <>
+            <span className="min-w-0 truncate">{selected?.label}</span>
+            <SelectChevron open={open} />
+          </>
+        )}
+      />
     </Field>
   )
 }

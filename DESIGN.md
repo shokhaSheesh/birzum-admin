@@ -4,19 +4,27 @@ The admin shares the visual system of the Birzum mobile apps (merchant and clien
 
 What differs is the frame: the admin is a desktop web app used all day at a large screen.
 
+## Controls
+
+- Never the browser's own controls: every dropdown, calendar, checkbox and dialog is ours (see the table in `CLAUDE.md`).
+- **Popovers** open under their button as a white card with a soft shadow and a short slide-in, close on Esc or a click outside, and work with the arrows and Enter. Lists over eight options get a search on top. The chosen option is bold with a tick.
+- **Filters** (`FilterSelect`, `DateRangePicker`) are 40px buttons with a thin border; while one is set it is outlined in navy and shows the value, so it is plain what the table is filtered by.
+- **The calendar** starts weeks on Monday, names months in the interface language, outlines today, draws chosen days as navy circles and the days between as a green band. The range picker has ready periods on the left (Bugun, Kecha, Oxirgi 7 kun, Oxirgi 30 kun, Shu oy, Oʻtgan oy, Butun davr); on the calendar the first click is the start, the second the end, and it applies then. Future days cannot be picked for a filter.
+- **Table checkboxes** have a mixed state in the header when only some rows are ticked.
+
 ## Layout
 - **Sidebar** on the left, 256px, fixed: the logo with an "Admin" tag, then the pages in titled groups (Savdo, Hamkorlar, Katalog, Qoidalar, Aloqa, Tizim). The current page is a solid navy row; a count shows as a green pill. "Yigʻish" at the bottom collapses it to 68px of icons (the logo mark, dividers instead of group titles, a green dot instead of a count, the label on hover); the choice is remembered per browser.
-- **Top bar**, 64px: global search on the left; UZ / RU, theme, notifications and the signed-in admin on the right.
+- **Top bar**, 64px: global search on the left; UZ / RU, theme and the signed-in admin on the right.
 - **Page**: a light grey ground, content up to 1152px wide, 32px from the sides. It starts with `PageHeader`: the title, one line about the page, and its actions on the right (the primary action is "+ Qoʻshish").
 - Below 1024px the sidebar becomes a drawer opened from a menu button in the top bar. The admin must still work on a laptop at 1280px; phones are not a target.
 
 ## Sign-in
-- Username and password only. The form sits on the left half (logo and UZ / RU on top, "Admin panelga kirish", the two fields, "Kirish", a line saying a forgotten password goes through the main admin); the right half is a navy brand panel with a few floating cards hinting at the panel.
-- A wrong login or password shows a red `Alert` above the fields. Below 1024px the brand panel is hidden.
+- Username and password only, in one centred card on a light grey page: the logo with an "Admin" tag above it, "Admin panelga kirish", the two fields, "Kirish", a line saying a forgotten password goes through the main admin. UZ / RU sits top right.
+- A wrong login or password shows a red `Alert` above the fields.
 - Every page of the panel needs a signed-in admin; the account menu in the top bar has "Chiqish".
 
 ## List pages
-- `PageHeader` with the primary action, then a row of `StatCard`s with the page's key figures, then one white card holding the table: `UnderlineTabs` (status with counts) and a search field on top, the table below. A whole row is clickable and ends in a chevron; numbers are right-aligned.
+- `PageHeader` with the primary action, then a row of `StatCard`s with the page's key figures, then one white card holding the table: `UnderlineTabs` (status with counts) and a search field on top, then a filter row (search, `FilterSelect`s, `DateRangePicker`), the table below. A whole row is clickable and ends in `RowActions`; numbers are right-aligned.
 
 ## Form pages
 - A bar fixed to the top of the page: a back arrow, "Tahrirlash" or the list's name above the title, then "Bekor qilish" and the primary action on the right. Below it the fields in `FormSection` cards on the left and a sticky column on the right with status (radio cards) and a live preview of how the record looks in the apps.

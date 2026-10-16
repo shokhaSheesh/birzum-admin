@@ -19,6 +19,7 @@ import { productPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -26,8 +27,6 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
-const select =
-  'h-10 min-w-0 cursor-pointer rounded-control border border-line bg-canvas px-3 text-sm text-ink outline-none focus:border-primary'
 
 /**
  * Every merchant's products, read-only: figures on top, then a table filtered by status,
@@ -106,53 +105,42 @@ export function ProductsPage() {
               className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-subtle"
             />
           </label>
-          <select
-            aria-label={t('products.col.merchant')}
+          <FilterSelect
+            label={t('products.col.merchant')}
+            options={[
+              { value: '', label: t('products.allMerchants') },
+              ...merchants.map((item) => ({ value: item.id, label: item.name })),
+            ]}
             value={merchant}
-            onChange={(e) => setMerchant(e.target.value)}
-            className={select}
-          >
-            <option value="">{t('products.allMerchants')}</option>
-            {merchants.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={t('categories.col.name')}
+            onChange={setMerchant}
+          />
+          <FilterSelect
+            label={t('categories.col.name')}
+            options={[
+              { value: '', label: t('products.allCategories') },
+              ...rootsOf(categories).flatMap((root) => [
+                { value: root.id, label: tl(root.name) },
+                ...childrenOf(categories, root.id).map((child) => ({
+                  value: child.id,
+                  label: tl(child.name),
+                  indent: true,
+                })),
+              ]),
+            ]}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className={select}
-          >
-            <option value="">{t('products.allCategories')}</option>
-            {rootsOf(categories).map((root) => [
-              <option key={root.id} value={root.id}>
-                {tl(root.name)}
-              </option>,
-              ...childrenOf(categories, root.id).map((child) => (
-                <option key={child.id} value={child.id}>
-                  {'   '}
-                  {tl(child.name)}
-                </option>
-              )),
-            ])}
-          </select>
-          <select
-            aria-label={t('brands.col.brand')}
+            onChange={setCategory}
+          />
+          <FilterSelect
+            label={t('brands.col.brand')}
+            options={[
+              { value: '', label: t('products.allBrands') },
+              ...[...brands]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((item) => ({ value: item.id, label: item.name })),
+            ]}
             value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            className={select}
-          >
-            <option value="">{t('products.allBrands')}</option>
-            {[...brands]
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-          </select>
+            onChange={setBrand}
+          />
         </div>
 
         {rows.length === 0 ? (

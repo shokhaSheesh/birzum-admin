@@ -19,6 +19,7 @@ import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
+import { DateField } from '@/shared/ui/DateField'
 import { FormSection } from '@/shared/ui/FormSection'
 import { ImageField } from '@/shared/ui/ImageField'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
@@ -230,12 +231,11 @@ export function MerchantFormPage() {
                   onChange={(e) => setContract({ ...contract, number: e.target.value })}
                   error={show('contract')}
                 />
-                <TextField
+                <DateField
                   label={t('merchant.contractDate')}
                   placeholder="KK.OO.YYYY"
-                  inputMode="numeric"
                   value={contract.date}
-                  onChange={(e) => setContract({ ...contract, date: e.target.value })}
+                  onChange={(date) => setContract({ ...contract, date })}
                   error={show('date', t('merchant.error.date'))}
                 />
                 <ChoiceGrid

@@ -12,9 +12,12 @@ import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { applicationPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { ALL_TIME, inRange, startOfDay, type DateRange } from '@/shared/lib/dates'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
+import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -22,11 +25,6 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
-const select =
-  'h-10 min-w-0 cursor-pointer rounded-control border border-line bg-canvas px-3 text-sm text-ink outline-none focus:border-primary'
-const DAY = 24 * 60 * 60 * 1000
-const PERIODS = ['all', 'today', 'week', 'month'] as const
-type Period = (typeof PERIODS)[number]
 
 /**
  * Every ariza on the platform, read-only: figures on top, then a table filtered by status,
@@ -43,19 +41,9 @@ export function ApplicationsPage() {
   const [query, setQuery] = useState('')
   const [merchant, setMerchant] = useState('')
   const [filial, setFilial] = useState('')
-  const [period, setPeriod] = useState<Period>('all')
+  const [period, setPeriod] = useState<DateRange>(ALL_TIME)
   const [today] = useState(() => new Date())
 
-  const startOf = (value: Period) => {
-    const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
-    return value === 'today'
-      ? midnight
-      : value === 'week'
-        ? midnight - 6 * DAY
-        : value === 'month'
-          ? midnight - 29 * DAY
-          : 0
-  }
   const needle = query.trim().toLowerCase()
   const digits = needle.replace(/\D/g, '')
   const filtered = all.filter(
@@ -67,7 +55,7 @@ export function ApplicationsPage() {
             application.client.phone.includes(digits)))) &&
       (!merchant || application.merchantId === merchant) &&
       (!filial || application.filialId === filial) &&
-      application.createdAt.getTime() >= startOf(period),
+      inRange(application.createdAt, period),
   )
   const rows = filtered.filter((application) => status === 'all' || application.status === status)
 
@@ -99,7 +87,7 @@ export function ApplicationsPage() {
           label={t('applications.stat.month')}
           value={groupDigits(thisMonth.length)}
           hint={t('applications.stat.today', {
-            count: String(all.filter((a) => a.createdAt.getTime() >= startOf('today')).length),
+            count: String(all.filter((a) => a.createdAt >= startOfDay(today)).length),
           })}
         />
         <StatCard
@@ -148,50 +136,31 @@ export function ApplicationsPage() {
               className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-subtle"
             />
           </label>
-          <select
-            aria-label={t('products.col.merchant')}
+          <FilterSelect
+            label={t('products.col.merchant')}
+            options={[
+              { value: '', label: t('products.allMerchants') },
+              ...merchants.map((item) => ({ value: item.id, label: item.name })),
+            ]}
             value={merchant}
-            onChange={(e) => {
-              setMerchant(e.target.value)
+            onChange={(value) => {
+              setMerchant(value)
               setFilial('')
             }}
-            className={select}
-          >
-            <option value="">{t('products.allMerchants')}</option>
-            {merchants.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={t('payout.col.filial')}
+          />
+          <FilterSelect
+            label={t('payout.col.filial')}
+            options={[
+              { value: '', label: t('applications.allFilials') },
+              ...filials
+                .filter((item) => item.merchantId === merchant)
+                .map((item) => ({ value: item.id, label: tl(item.name) })),
+            ]}
             value={filial}
-            onChange={(e) => setFilial(e.target.value)}
+            onChange={setFilial}
             disabled={!merchant}
-            className={`${select} disabled:cursor-default disabled:opacity-50`}
-          >
-            <option value="">{t('applications.allFilials')}</option>
-            {filials
-              .filter((item) => item.merchantId === merchant)
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {tl(item.name)}
-                </option>
-              ))}
-          </select>
-          <select
-            aria-label={t('applications.period')}
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as Period)}
-            className={select}
-          >
-            {PERIODS.map((value) => (
-              <option key={value} value={value}>
-                {t(`applications.period.${value}`)}
-              </option>
-            ))}
-          </select>
+          />
+          <DateRangePicker label={t('applications.period')} value={period} onChange={setPeriod} />
         </div>
 
         {rows.length === 0 ? (
