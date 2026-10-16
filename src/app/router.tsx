@@ -7,6 +7,9 @@ import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductsPage } from '@/features/products/pages/ProductsPage'
+import { PayoutDetailPage } from '@/features/payouts/pages/PayoutDetailPage'
+import { PayoutFormPage } from '@/features/payouts/pages/PayoutFormPage'
+import { PayoutsPage } from '@/features/payouts/pages/PayoutsPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
@@ -17,6 +20,7 @@ import { RequireAdmin } from './RequireAdmin'
 /** Sidebar pages that have their own design; the rest show a placeholder. */
 const DESIGNED: string[] = [
   ROUTES.merchants,
+  ROUTES.payouts,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -36,6 +40,9 @@ export const router = createBrowserRouter([
           { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
           { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
+          { path: ROUTES.payouts, element: <PayoutsPage /> },
+          { path: ROUTES.payoutNew, element: <PayoutFormPage /> },
+          { path: ROUTES.payout, element: <PayoutDetailPage /> },
           { path: ROUTES.products, element: <ProductsPage /> },
           { path: ROUTES.product, element: <ProductDetailPage /> },
           { path: ROUTES.categories, element: <CategoriesPage /> },

@@ -47,6 +47,13 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - Status: "Yashirilgan" when the merchant switched it off, else "Tugagan" when no filial has any, else "Sotuvda".
 - The detail page: name and status, brand and category path; photos (thumbnails beside the main one); "Variantlar va qoldiq", a table of every variant with its price and stock in each of the merchant's filials and the total (zero greyed, a sold-out total in amber); the description in both languages; characteristics. On the right: the merchant (opens its page) and the key figures.
 
+## Payouts (Merchantlarga oʻtkazmalar)
+
+- Birzum pays merchants the full financed sum of each handed-over sale (no commission). A sale is owed until a payout covers it.
+- The list page: figures (owed, Jarayonda, paid this month, last payout), then two tabs. **Toʻlanishi kerak**: one row per merchant still owed, with its schedule (weekly on Tuesday, monthly on the 5th), how many arizalar, the oldest one, the next payout day ("Kechikkan" in red when an ariza should already have been paid) and the sum; a row opens a new payout for that merchant. **Oʻtkazmalar**: every payout with reference, merchant, date, arizalar, sum and state, filtered by search, merchant and state; "Oʻtkazildi" sits in the row actions of one still in progress.
+- Creating a payout is a full page (it picks from a list): merchant (only those owed, with the sum), an optional note, then the owed arizalar with checkboxes, all ticked to start with. A sticky summary shows the merchant, the total for the ticked arizalar, today's date and the bank details the money goes to.
+- A payout is created "Jarayonda" and marked "Oʻtkazildi" once the bank has sent it (with a confirm). While in progress it can be cancelled, which puts its arizalar back among what is owed. A paid payout cannot change.
+
 ## Settings pages (Ustama)
 
 - The same `ActionBar` fixed on top as a form, with the group as its eyebrow. "Bekor qilish" and "Saqlash" stay disabled until something changes; then "N ta oʻzgarish saqlanmagan" shows beside them.
