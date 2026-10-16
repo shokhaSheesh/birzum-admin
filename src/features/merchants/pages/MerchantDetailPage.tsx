@@ -1,7 +1,7 @@
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { filialsStore, useFilialsOf } from '@/entities/merchants/filials'
+import { useFilialsOf } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
@@ -9,12 +9,11 @@ import { merchantEditPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
-import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
-import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -65,19 +64,6 @@ export function MerchantDetailPage() {
         <EmptyState title={t('merchant.notFound')} />
       </div>
     )
-  }
-
-  const remove = () => {
-    filials.forEach((filial) => filialsStore.remove(filial.id))
-    merchantsStore.remove(merchant.id)
-    toast(t('merchant.deleted'))
-    navigate(ROUTES.merchants, { replace: true })
-  }
-
-  const pause = () => {
-    merchantsStore.update(merchant.id, { status: 'paused' })
-    setDeleting(false)
-    toast(t('merchant.paused'))
   }
 
   return (
@@ -220,40 +206,12 @@ export function MerchantDetailPage() {
         </div>
       </div>
 
-      {merchant.activeNasiya > 0 ? (
-        <ConfirmDialog
-          open={deleting}
+      {deleting && (
+        <MerchantDeleteDialog
+          merchant={merchant}
           onClose={() => setDeleting(false)}
-          title={t('common.cantDelete')}
-          tone="primary"
-          cancelLabel={merchant.status === 'paused' ? t('common.understood') : undefined}
-          confirmLabel={merchant.status === 'paused' ? undefined : t('merchant.pause')}
-          onConfirm={pause}
-        >
-          <p>
-            {t('merchant.delete.blockedHint', {
-              name: merchant.name,
-              count: groupDigits(merchant.activeNasiya),
-            })}
-          </p>
-          <p>
-            {t(
-              merchant.status === 'paused'
-                ? 'merchant.delete.alreadyPaused'
-                : 'merchant.delete.pauseHint',
-            )}
-          </p>
-        </ConfirmDialog>
-      ) : (
-        <ConfirmDialog
-          open={deleting}
-          onClose={() => setDeleting(false)}
-          title={t('merchant.delete.title')}
-          confirmLabel={t('common.delete')}
-          onConfirm={remove}
-        >
-          <p>{t('merchant.delete.message', { name: merchant.name })}</p>
-        </ConfirmDialog>
+          onDeleted={() => navigate(ROUTES.merchants, { replace: true })}
+        />
       )}
     </div>
   )

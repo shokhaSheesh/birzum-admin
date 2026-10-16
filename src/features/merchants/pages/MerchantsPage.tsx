@@ -1,15 +1,16 @@
-import { ChevronRight, Plus, Search } from 'lucide-react'
+import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { filialsStore } from '@/entities/merchants/filials'
 import {
   MERCHANT_STATUSES,
   merchantsStore,
+  type Merchant,
   type MerchantStatus,
 } from '@/entities/merchants/merchants'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { merchantPath, ROUTES } from '@/shared/config/routes'
+import { merchantEditPath, merchantPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { Button } from '@/shared/ui/Button'
@@ -17,7 +18,9 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { RowActions } from '@/shared/ui/RowActions'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -29,6 +32,7 @@ export function MerchantsPage() {
   const filials = filialsStore.useAll()
   const [status, setStatus] = useState<'all' | MerchantStatus>('all')
   const [query, setQuery] = useState('')
+  const [deleting, setDeleting] = useState<Merchant | null>(null)
 
   const needle = query.trim().toLowerCase()
   const rows = all.filter(
@@ -102,7 +106,7 @@ export function MerchantsPage() {
                   <th className={th}>{t('merchants.col.products')}</th>
                   <th className={`${th} text-right`}>{t('merchants.col.sales')}</th>
                   <th className={th}>{t('merchants.status')}</th>
-                  <th className="w-10" />
+                  <th className="w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -136,7 +140,26 @@ export function MerchantsPage() {
                       </StatusBadge>
                     </td>
                     <td className="pr-3">
-                      <ChevronRight size={18} className="text-ink-subtle" />
+                      <RowActions
+                        actions={[
+                          {
+                            icon: Eye,
+                            label: t('common.view'),
+                            onClick: () => navigate(merchantPath(merchant.id)),
+                          },
+                          {
+                            icon: Pencil,
+                            label: t('common.edit'),
+                            onClick: () => navigate(merchantEditPath(merchant.id)),
+                          },
+                          {
+                            icon: Trash2,
+                            label: t('common.delete'),
+                            onClick: () => setDeleting(merchant),
+                            danger: true,
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -145,6 +168,8 @@ export function MerchantsPage() {
           </div>
         )}
       </div>
+
+      {deleting && <MerchantDeleteDialog merchant={deleting} onClose={() => setDeleting(null)} />}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { ChevronRight, Search } from 'lucide-react'
+import { Eye, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { brandsStore } from '@/entities/catalog/brands'
@@ -20,6 +20,7 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
@@ -167,7 +168,7 @@ export function ProductsPage() {
                   <th className={`${th} text-right`}>{t('products.col.price')}</th>
                   <th className={`${th} text-right`}>{t('products.col.stock')}</th>
                   <th className={th}>{t('merchants.status')}</th>
-                  <th className="w-10" />
+                  <th className="w-14" />
                 </tr>
               </thead>
               <tbody>
@@ -216,7 +217,15 @@ export function ProductsPage() {
                         </StatusBadge>
                       </td>
                       <td className="pr-3">
-                        <ChevronRight size={18} className="text-ink-subtle" />
+                        <RowActions
+                          actions={[
+                            {
+                              icon: Eye,
+                              label: t('common.view'),
+                              onClick: () => navigate(productPath(product.id)),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   )

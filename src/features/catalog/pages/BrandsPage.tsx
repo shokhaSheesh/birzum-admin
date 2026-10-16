@@ -1,4 +1,4 @@
-import { Plus, Search } from 'lucide-react'
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { brandsStore, type Brand } from '@/entities/catalog/brands'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { RowActions } from '@/shared/ui/RowActions'
 import { BrandModal } from '../components/BrandModal'
 import { BrandLogo } from '../components/BrandLogo'
 
@@ -78,6 +79,7 @@ export function BrandsPage() {
               <tr className="border-b border-line">
                 <th className={th}>{t('brands.col.brand')}</th>
                 <th className={`${th} text-right`}>{t('merchants.col.products')}</th>
+                <th className="w-24" />
               </tr>
             </thead>
             <tbody>
@@ -95,6 +97,19 @@ export function BrandsPage() {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {groupDigits(brand.products)}
+                  </td>
+                  <td className="pr-3">
+                    <RowActions
+                      actions={[
+                        { icon: Pencil, label: t('common.edit'), onClick: () => setEditing(brand) },
+                        {
+                          icon: Trash2,
+                          label: t('common.delete'),
+                          onClick: () => askDelete(brand),
+                          danger: true,
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

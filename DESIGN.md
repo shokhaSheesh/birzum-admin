@@ -21,6 +21,11 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 ## Form pages
 - A bar fixed to the top of the page: a back arrow, "Tahrirlash" or the list's name above the title, then "Bekor qilish" and the primary action on the right. Below it the fields in `FormSection` cards on the left and a sticky column on the right with status (radio cards) and a live preview of how the record looks in the apps.
 
+## Row actions
+
+- Every table row ends with icon buttons (`RowActions`), so common actions don't need the detail page or modal: view (eye), edit (pencil), delete (bin, red on hover). A read-only table (Mahsulotlar) has only view. Clicking the rest of the row still opens the record.
+- Delete from a row goes through the same dialog as from the detail page or modal, with the same blocking rules.
+
 ## Detail pages
 
 - A row opens the record's detail page, not its form. Top: a back link, the logo or picture, the name with its status badge, one line of identifiers, and "Oʻchirish" (red, quiet) and "Tahrirlash" on the right.
@@ -31,7 +36,7 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 
 - **How big a record is decides where it is created.** A big record (a merchant: many sections) gets its own page with the fixed `ActionBar`. A small one (a category, a brand: a few fields) opens in a centred `Modal` over the list, never a side panel. Rows open the same modal to edit.
 - The modal has the fields, and at the bottom "Oʻchirish" on the left (edit only), then "Bekor qilish" and "Qoʻshish" / "Saqlash". Esc or the backdrop closes it.
-- Categories: one level of subcategories. A subcategory row sits under its category, indented with a corner arrow; each category row has "+ Subkategoriya". The modal starts with "Asosiy kategoriya" (none, or a top-level category; locked for a category that has subcategories), then the picture, the name in Uzbek and Russian (both required, no duplicates among siblings), and "Klient ilovasida koʻrsatish". A hidden category hides its subcategories. Order is the client app's order; the arrows move a row among its siblings. A category's product count includes its subcategories'.
+- Categories: one level of subcategories. Two views, switched by a `ViewToggle` over the table: **Daraxt** (tree: a subcategory row sits under its category, indented with a corner arrow) and **Roʻyxat** (flat, A to Z, with a search and an "Asosiy kategoriya" column). Subcategories are created from the same "Kategoriya qoʻshish" modal by picking the parent. The modal starts with "Asosiy kategoriya" (none, or a top-level category; locked for a category that has subcategories), then the picture, the name in Uzbek and Russian (both required, no duplicates among siblings), and "Klient ilovasida koʻrsatish". A hidden category hides its subcategories. Order is the client app's order and is changed only in the tree view: drag a row by its six-dot handle (`GripVertical`) among its siblings; a navy line shows where it lands. Arrow keys on the handle move it too. A category's product count includes its subcategories'.
 - Brands: one name for both languages, a logo (initials until uploaded), listed A to Z with a search.
 - A category with subcategories, or a category or brand with products, cannot be deleted: the dialog says how many products are in it and that merchants must move them first. A category can be hidden instead.
 
