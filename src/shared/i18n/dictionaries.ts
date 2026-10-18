@@ -1072,6 +1072,11 @@ const uz = {
   'audit.a.roleDeleted': 'Rolni oʻchirdi',
   'audit.a.signedIn': 'Panelga kirdi',
   'audit.a.signedOut': 'Paneldan chiqdi',
+  'export.button': 'Yuklab olish',
+  'export.pdf.hint': 'Hisobot: yuborish yoki chop etish uchun',
+  'export.excel.hint': 'Jadval: raqamlar bilan ishlash uchun',
+  'export.sample': 'Namuna: {format} fayl haqiqiy versiyada yuklanadi',
+  'audit.a.exported': '{format} yuklab oldi',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -2127,6 +2132,11 @@ const ru: Record<TranslationKey, string> = {
   'audit.a.roleDeleted': 'Удаление роли',
   'audit.a.signedIn': 'Вход в панель',
   'audit.a.signedOut': 'Выход из панели',
+  'export.button': 'Скачать',
+  'export.pdf.hint': 'Отчёт: отправить или распечатать',
+  'export.excel.hint': 'Таблица: для работы с цифрами',
+  'export.sample': 'Образец: файл {format} будет в рабочей версии',
+  'audit.a.exported': 'Выгрузка {format}',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }

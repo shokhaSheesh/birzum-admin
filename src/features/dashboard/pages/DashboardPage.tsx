@@ -17,6 +17,7 @@ import { BarList } from '@/shared/ui/charts/BarList'
 import { ColumnChart } from '@/shared/ui/charts/ColumnChart'
 import { KpiTile } from '@/shared/ui/charts/KpiTile'
 import { LineChart } from '@/shared/ui/charts/LineChart'
+import { ExportMenu } from '@/shared/ui/ExportMenu'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 
@@ -149,7 +150,11 @@ export function DashboardPage() {
   const par = outstanding ? (lateRemaining / outstanding) * 100 : 0
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.dashboard')} description={t('dashboard.description')} />
+      <PageHeader
+        title={t('nav.dashboard')}
+        description={t('dashboard.description')}
+        actions={<ExportMenu section="dashboard" period={period} />}
+      />
       <PeriodFilter value={period} onChange={setPeriod} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

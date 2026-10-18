@@ -27,6 +27,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
+import { ExportMenu } from '@/shared/ui/ExportMenu'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { Pagination } from '@/shared/ui/Pagination'
 import { PeriodFilter } from '@/shared/ui/PeriodFilter'
@@ -225,10 +226,13 @@ export function CollectionsPage() {
         title={t('nav.collections')}
         description={t('collections.description')}
         actions={
-          <Button size="sm" onClick={() => setEntering(true)}>
-            <Plus size={18} />
-            {t('manual.title')}
-          </Button>
+          <>
+            <ExportMenu section="collections" period={period} />
+            <Button size="sm" onClick={() => setEntering(true)}>
+              <Plus size={18} />
+              {t('manual.title')}
+            </Button>
+          </>
         }
       />
 

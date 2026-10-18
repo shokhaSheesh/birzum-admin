@@ -2,9 +2,9 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { MONTHS, sameDay, startOfDay, type DateRange } from '@/shared/lib/dates'
-import { formatDate } from '@/shared/lib/format'
+import { startOfDay, type DateRange } from '@/shared/lib/dates'
 import { boundsOf, PERIOD_UNITS, shiftPeriod, type Period } from '@/shared/lib/period'
+import { usePeriodLabel } from '@/shared/lib/usePeriodLabel'
 import { usePopover } from '@/shared/lib/usePopover'
 import { Calendar } from './Calendar'
 
@@ -20,33 +20,13 @@ export function PeriodFilter({
   value: Period
   onChange: (period: Period) => void
 }) {
-  const { t, lang } = useI18n()
+  const { t } = useI18n()
   const { open, setOpen, ref } = usePopover()
   const [today] = useState(() => startOfDay(new Date()))
   const [draft, setDraft] = useState<DateRange>(value.range)
   const bounds = boundsOf(value)
 
-  const label = (() => {
-    const a = value.anchor
-    switch (value.unit) {
-      case 'day':
-        return formatDate(a)
-      case 'week':
-        return `${formatDate(bounds.from!).slice(0, 5)} – ${formatDate(bounds.to!)}`
-      case 'month':
-        return `${MONTHS[lang][a.getMonth()]} ${a.getFullYear()}`
-      case 'year':
-        return String(a.getFullYear())
-      case 'range':
-        return bounds.from && bounds.to
-          ? sameDay(bounds.from, bounds.to)
-            ? formatDate(bounds.from)
-            : `${formatDate(bounds.from)} – ${formatDate(bounds.to)}`
-          : t('period.pick')
-      case 'all':
-        return t('range.all')
-    }
-  })()
+  const label = usePeriodLabel(value)
   const holdsToday = (!bounds.from || bounds.from <= today) && (!bounds.to || bounds.to >= today)
   const steps = value.unit !== 'range' && value.unit !== 'all'
 
