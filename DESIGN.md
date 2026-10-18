@@ -116,6 +116,13 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - **Form** (a full page with the `ActionBar`: Bekor qilish, Qoralama, Yuborish / Rejalashtirish): **Kimga**: Klientlar or Merchantlar, then a `MultiSelectField` of the people themselves (photo or logo, name, phone), with "Barcha klientlar / merchantlar" on top; each app keeps its own pick. **Matn**: title and text in both languages, required; an optional 2:1 picture. **Qachon**: now, or a date and a half-hour slot between 08:00 and 21:30. On the right, sticky: a phone in either language with the push on the lock screen and the Yangiliklar item, then the recipient count and the time. Sending asks first ("36 kishiga hozir yuborilsinmi?").
 - **Detail**: status and when; Copy, and Edit / Cancel / Delete as the status allows; Natija as a funnel (sent → delivered → opened → tapped); the text side by side in UZ and RU with who and who made it; the phone preview on the right.
 
+## Savol-javoblar
+
+- What the client app shows in Profil → Savol-javoblar: the questions in order, then "Biz bilan bogʻlanish" (call-centre number with hours, Telegram).
+- **List** (left): a search and "Ilovada 6 ta, jami 7 ta", then one row per question: the 6-dot handle (drag, or arrow keys; off while searching, since order means the whole list), its number, the question and two lines of the answer, a `Switch` for showing it in the app (a hidden one is greyed with "Ilovada koʻrinmaydi"), edit and delete. A row opens the edit modal; new questions go to the end.
+- **Modal**: question and answer, each in both languages, required. Deleting asks first and says hiding is enough for a while.
+- **Right, sticky**: the app's screen in a phone frame, in UZ or RU by its own switch (its titles too): only the shown questions, in order, as the app's accordion (the last row clicked opens), then the contacts. Under it, the **Kontaktlar** card with "Tahrirlash": a modal for the call-centre number (`PhoneField`), the hours in both languages and the Telegram name (without @).
+
 ## Toʻlovlar va qarzlar
 
 - Money in from shoppers and working with debtors. Payments are not created here: Birzum takes the monthly payment from the card on the payment day, or the shopper pays in the app (Oylik toʻlov, Muddatidan oldin, Toʻliq yopish, as in the client app's PaySheet).
