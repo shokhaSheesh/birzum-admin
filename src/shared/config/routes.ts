@@ -4,6 +4,7 @@ export const ROUTES = {
   applications: '/applications',
   application: '/applications/:id',
   checks: '/checks',
+  checkRules: '/checks/rules',
   check: '/checks/:id',
   customers: '/customers',
   customer: '/customers/:id',

@@ -5,6 +5,7 @@ import { ratesStore } from '../pricing/pricing'
 
 /** The same statuses as the merchant and client apps. */
 export const APPLICATION_STATUSES = [
+  'checking',
   'pending',
   'processing',
   'handed',
@@ -13,7 +14,8 @@ export const APPLICATION_STATUSES = [
   'cancelled',
 ] as const
 /**
- * `pending`: a shopper sent it from the client app, the merchant has not taken it yet.
+ * `checking`: Birzum's check is running or waits for an admin; nobody can act on it yet.
+ * `pending`: Birzum approved a shopper's order from the client app; the merchant confirms it.
  * `processing`: the merchant is drawing up the contract. `handed`: goods given, nasiya running.
  * `closed`: fully paid. `rejected` and `cancelled` are final.
  */
@@ -23,7 +25,7 @@ export const REJECT_REASONS = ['noStock', 'unverified', 'limit', 'clientDeclined
 /** `risk`: Birzum's check said no, so the shop could not hand the goods over. */
 export type RejectReason = (typeof REJECT_REASONS)[number] | 'risk'
 
-/** Who made a change: merchant staff, the shopper, or the system. */
+/** Who made a change: merchant staff, the shopper, or the system (Birzum). */
 export type Actor = { kind: 'staff' | 'customer' | 'system'; name: string }
 export type HistoryEntry = { status: ApplicationStatus; at: Date; by: Actor; comment?: string }
 

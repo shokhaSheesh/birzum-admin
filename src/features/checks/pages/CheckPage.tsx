@@ -11,7 +11,8 @@ import {
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { applicationsStore, financedOf } from '@/entities/applications/applications'
-import { BIG_AMOUNT, checksStore, PASS_SCORE, type CheckFlag } from '@/entities/applications/checks'
+import { useRules } from '@/entities/applications/checkRules'
+import { checksStore, type CheckFlag } from '@/entities/applications/checks'
 import { clientsStore, fullName, initialsOf } from '@/entities/clients/clients'
 import { debtOf } from '@/entities/clients/debt'
 import { paymentsStore } from '@/entities/collections/payments'
@@ -69,6 +70,7 @@ export function CheckPage() {
   const applications = applicationsStore.useAll()
   const payments = paymentsStore.useAll()
   const [now] = useState(() => new Date())
+  const rules = useRules()
   const [deciding, setDeciding] = useState<'approve' | 'reject' | null>(null)
   const back = () => navigate(ROUTES.checks)
 
@@ -123,7 +125,7 @@ export function CheckPage() {
           sum: formatSum(debt.remaining),
         })
       case 'bigAmount':
-        return t('check.flag.bigAmount.detail', { sum: formatSum(BIG_AMOUNT) })
+        return t('check.flag.bigAmount.detail', { sum: formatSum(rules.flags.bigAmount.threshold) })
     }
   }
 
@@ -158,8 +160,8 @@ export function CheckPage() {
               <h2 className="text-lg font-bold">{t('check.why')}</h2>
               <p className="text-sm text-ink-muted">
                 {check.mode === 'auto'
-                  ? t('check.why.auto', { score: String(PASS_SCORE) })
-                  : t('check.why.manual', { score: String(PASS_SCORE) })}
+                  ? t('check.why.auto', { score: String(rules.approveFrom) })
+                  : t('check.why.manual', { score: String(rules.approveFrom) })}
               </p>
             </div>
             {check.flags.length === 0 ? (
@@ -248,10 +250,28 @@ export function CheckPage() {
               </p>
             </div>
             <ScoreMeter score={check.score} size="lg" />
+            <dl className="flex flex-col gap-1.5 rounded-control bg-surface p-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-muted">{t('check.score.base')}</dt>
+                <dd className="font-semibold tabular-nums">{check.baseScore}</dd>
+              </div>
+              {check.flags.map((flag) => (
+                <div key={flag} className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">{t(`check.flag.${flag}`)}</dt>
+                  <dd className="font-semibold text-warning tabular-nums">
+                    −{check.penalties[flag] ?? 0}
+                  </dd>
+                </div>
+              ))}
+              <div className="flex justify-between gap-3 border-t border-line pt-1.5">
+                <dt className="font-semibold">{t('check.score.final')}</dt>
+                <dd className="font-bold tabular-nums">{check.score}</dd>
+              </div>
+            </dl>
             <p className="text-sm text-ink-muted">
-              {check.score >= PASS_SCORE
-                ? t('check.score.pass', { score: String(PASS_SCORE) })
-                : t('check.score.low', { score: String(PASS_SCORE) })}
+              {check.score >= rules.approveFrom
+                ? t('check.score.pass', { score: String(rules.approveFrom) })
+                : t('check.score.low', { score: String(rules.approveFrom) })}
             </p>
             {check.state === 'waiting' && (
               <p className="flex items-center gap-2 text-sm font-semibold text-warning">

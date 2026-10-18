@@ -1,14 +1,16 @@
-import { Search } from 'lucide-react'
+import { Search, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore, financedOf } from '@/entities/applications/applications'
+import { useRules } from '@/entities/applications/checkRules'
 import { checksStore, type CheckState } from '@/entities/applications/checks'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { checkPath } from '@/shared/config/routes'
+import { checkPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { usePagination } from '@/shared/lib/usePagination'
+import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -39,6 +41,7 @@ export function ChecksPage() {
   const [merchantId, setMerchantId] = useState('')
   const [mode, setMode] = useState('')
   const [now] = useState(() => new Date())
+  const rules = useRules()
 
   const rowsOf = checks
     .map((check) => ({ check, application: applications.find((a) => a.id === check.id)! }))
@@ -80,7 +83,21 @@ export function ChecksPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.checks')} description={t('checks.description')} />
+      <PageHeader
+        title={t('nav.checks')}
+        description={t('checks.description')}
+        actions={
+          <Button
+            size="sm"
+            variant="secondary"
+            className="border border-line bg-canvas!"
+            onClick={() => navigate(ROUTES.checkRules)}
+          >
+            <SlidersHorizontal size={18} />
+            {t('rules.title')}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
@@ -93,7 +110,7 @@ export function ChecksPage() {
         <StatCard
           label={t('checks.stat.auto')}
           value={`${autoShare}%`}
-          hint={t('checks.stat.autoHint', { score: '70' })}
+          hint={t('checks.stat.autoHint', { score: String(rules.approveFrom) })}
         />
         <StatCard
           label={t('checks.stat.manual')}

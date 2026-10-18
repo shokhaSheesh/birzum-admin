@@ -27,10 +27,25 @@ export function ApproveCheckModal({ application, onClose }: Props) {
   const number = groupDigits(application.number)
 
   const approve = () => {
+    const at = now()
+    // A shopper's order goes to the merchant to confirm; one made in the shop goes on to its contract
+    const next = application.source === 'client' ? 'pending' : 'processing'
+    applicationsStore.update(application.id, {
+      status: next,
+      history: [
+        ...application.history,
+        {
+          status: next,
+          at,
+          by: { kind: 'system', name: 'Birzum' },
+          comment: comment.trim() || undefined,
+        },
+      ],
+    })
     checksStore.update(application.id, {
       state: 'approved',
       mode: 'manual',
-      decidedAt: now(),
+      decidedAt: at,
       decidedBy: admin?.name ?? '—',
       comment: comment.trim() || undefined,
     })
@@ -109,7 +124,7 @@ export function RejectCheckModal({ application, onClose }: Props) {
       changes: [
         {
           field: 'audit.f.status',
-          from: t('application.status.processing'),
+          from: t('application.status.checking'),
           to: t('application.status.rejected'),
         },
       ],

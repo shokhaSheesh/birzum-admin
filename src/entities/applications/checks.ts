@@ -1,24 +1,23 @@
 import { createStore } from '@/shared/lib/createStore'
 import { clientsStore, type Client } from '../clients/clients'
-import { applicationsStore, type Application } from './applications'
+import { applicationsStore, type Application, type HistoryEntry } from './applications'
+import {
+  DEFAULT_RULES,
+  finalScore,
+  penaltyOf,
+  verdictOf,
+  type CheckFlag,
+  type CheckRules,
+} from './checkRules'
+
+export { CHECK_FLAGS, type CheckFlag } from './checkRules'
 
 /**
- * Birzum's check of an ariza before the goods can be handed over. FlexSoft's scoring gives it a
- * score out of 100: from 70 it is approved on its own; below that, or with a late payment now
- * or a very large sum, it waits for an admin, who approves or rejects it.
+ * Birzum's check of an ariza, the first thing that happens to it: before the merchant confirms
+ * a shopper's order, and before the seller draws up the contract for one made in the shop.
+ * The rules (`checkRules`) turn FlexSoft's score and Birzum's warning signs into a decision;
+ * whatever they do not decide waits in Tekshiruv for an admin.
  */
-export const PASS_SCORE = 70
-
-/** Warning signs that send an ariza to an admin. */
-export const CHECK_FLAGS = [
-  'overdue',
-  'nearLimit',
-  'newClient',
-  'manyRunning',
-  'bigAmount',
-] as const
-export type CheckFlag = (typeof CHECK_FLAGS)[number]
-
 export const CHECK_REJECT_REASONS = ['income', 'history', 'data', 'fraud', 'other'] as const
 export type CheckRejectReason = (typeof CHECK_REJECT_REASONS)[number]
 
@@ -27,11 +26,16 @@ export type CheckState = 'waiting' | 'approved' | 'rejected'
 export type Check = {
   /** The ariza's id. */
   id: string
-  /** `auto`: the scoring decided. `manual`: an admin did. */
+  /** `auto`: the rules decided. `manual`: an admin did. */
   mode: 'auto' | 'manual'
   state: CheckState
+  /** FlexSoft's score, before Birzum's penalties. */
+  baseScore: number
+  /** The final score under the rules of the day it came in. */
   score: number
   flags: CheckFlag[]
+  /** Points each sign took off, as the rules were then. */
+  penalties: Partial<Record<CheckFlag, number>>
   checkedAt: Date
   decidedAt?: Date
   decidedBy?: string
@@ -40,98 +44,140 @@ export type Check = {
 }
 
 const DAY = 86_400_000
-/** Arizalar from this sum up are large enough to always get a second look. */
-export const BIG_AMOUNT = 18_000_000
 
-/** The warning signs for one ariza, from the shopper's state when it came in. */
-export function flagsOf(application: Application, client: Client, all: Application[]): CheckFlag[] {
+/** The warning signs for one ariza under the given rules, from the shopper's state. */
+export function flagsOf(
+  application: Application,
+  client: Client,
+  all: Application[],
+  rules: CheckRules,
+): CheckFlag[] {
   const financed = application.goodsTotal - application.downPayment
   const running = all.filter(
     (other) =>
       other.clientId === client.id && other.id !== application.id && other.status === 'handed',
   ).length
+  const f = rules.flags
   const flags: CheckFlag[] = []
-  if (client.late) flags.push('overdue')
-  if (client.limit && financed > client.limit.amount * 0.8) flags.push('nearLimit')
-  if (application.createdAt.getTime() - client.registeredAt.getTime() < 14 * DAY)
+  if (f.overdue.on && client.late) flags.push('overdue')
+  if (
+    f.nearLimit.on &&
+    client.limit &&
+    financed > (client.limit.amount * f.nearLimit.threshold) / 100
+  )
+    flags.push('nearLimit')
+  if (
+    f.newClient.on &&
+    application.createdAt.getTime() - client.registeredAt.getTime() < f.newClient.threshold * DAY
+  )
     flags.push('newClient')
-  if (running >= 3) flags.push('manyRunning')
-  if (financed >= BIG_AMOUNT) flags.push('bigAmount')
+  if (f.manyRunning.on && running >= f.manyRunning.threshold) flags.push('manyRunning')
+  if (f.bigAmount.on && financed >= f.bigAmount.threshold) flags.push('bigAmount')
   return flags
 }
 
-/** From 70 the scoring decides alone, except a late payment now or a very large sum. */
-export const passesOnItsOwn = (score: number, flags: CheckFlag[]) =>
-  score >= PASS_SCORE && !flags.includes('overdue') && !flags.includes('bigAmount')
-
-// Sample checks worked out from the arizalar: everything the merchant took on was checked; the
-// newest ones with warning signs are still waiting. Replace with the API.
+// Sample checks worked out from the arizalar under the default rules. The newest ones the rules
+// could not decide are still waiting, so those arizalar move back to "Birzum tekshirmoqda".
+// Replace with the API.
 function seed(): Check[] {
+  const rules = DEFAULT_RULES
   const all = applicationsStore.getAll()
   const clients = clientsStore.getAll()
   const newest = Math.max(...all.map((a) => a.createdAt.getTime()))
   const admins = ['Malika Rasulova', 'Sardor Saidov', 'Nodira Aliyeva']
+  const birzum = { kind: 'system' as const, name: 'Birzum' }
   const out: Check[] = []
-  const rejected: { id: string; comment: string }[] = []
+  const patches = new Map<string, Partial<Application>>()
+
   for (const application of all) {
-    if (application.status === 'pending') continue
-    // A few older ones the merchant could not hand over because Birzum said no
-    if (application.status === 'rejected') {
-      const n = Number(application.number)
-      if (application.rejection?.reason !== 'limit' || n % 2) continue
-      const decidedAt = application.history.at(-1)!.at
+    const client = clients.find((c) => c.id === application.clientId)
+    if (!client) continue
+    const n = Number(application.number)
+    const recent = newest - application.createdAt.getTime() < 4 * DAY
+    const checkedAt = new Date(application.createdAt.getTime() + 2 * 60_000)
+    const [first, ...rest] = application.history
+    const start: HistoryEntry = { status: 'checking', at: application.createdAt, by: first.by }
+
+    // A few older ones the shop never saw: Birzum said no
+    if (
+      application.status === 'rejected' &&
+      application.rejection?.reason === 'limit' &&
+      n % 2 === 0
+    ) {
       const comment = 'Oylik toʻlov daromadning yarmidan oshadi, boshqa nasiyalari ham bor.'
+      const decidedAt = new Date(application.createdAt.getTime() + 40 * 60_000)
       out.push({
         id: application.id,
         mode: 'manual',
         state: 'rejected',
-        score: 41 + (n % 20),
+        baseScore: 66,
+        score: 48,
         flags: ['nearLimit', 'manyRunning'],
-        checkedAt: new Date(decidedAt.getTime() - 40 * 60_000),
+        penalties: { nearLimit: 10, manyRunning: 8 },
+        checkedAt,
         decidedAt,
         decidedBy: admins[n % admins.length],
         reason: 'income',
         comment,
       })
-      rejected.push({ id: application.id, comment })
+      patches.set(application.id, {
+        rejection: { reason: 'risk', comment },
+        history: [start, { status: 'rejected', at: decidedAt, by: birzum, comment }],
+      })
       continue
     }
-    const client = clients.find((c) => c.id === application.clientId)
-    if (!client) continue
-    const recent = newest - application.createdAt.getTime() < 4 * DAY
+
     // "Late now" says nothing about an ariza from weeks ago
-    const flags = flagsOf(application, client, all).filter((f) => recent || f !== 'overdue')
-    const n = Number(application.number)
-    const score = Math.max(28, Math.min(97, 97 - flags.length * 8 - ((n * 37) % 31)))
-    const checkedAt = new Date(application.createdAt.getTime() + 20 * 60_000)
-    const auto = passesOnItsOwn(score, flags)
-    if (application.status === 'processing' && recent && !auto) {
-      out.push({ id: application.id, mode: 'manual', state: 'waiting', score, flags, checkedAt })
+    const flags = flagsOf(application, client, all, rules).filter((f) => recent || f !== 'overdue')
+    let base = 97 - ((n * 37) % 31)
+    let score = finalScore(base, flags, rules)
+    // Everything that went ahead passed: lift the old samples above the reject line
+    if (score < rules.rejectBelow) {
+      base += rules.rejectBelow - score + 4
+      score = finalScore(base, flags, rules)
+    }
+    const verdict = verdictOf(score, flags, rules)
+    const penalties = Object.fromEntries(flags.map((f) => [f, penaltyOf(f, rules)]))
+    const open = application.status === 'pending' || application.status === 'processing'
+
+    if (open && recent && verdict === 'manual') {
+      out.push({
+        id: application.id,
+        mode: 'manual',
+        state: 'waiting',
+        baseScore: base,
+        score,
+        flags,
+        penalties,
+        checkedAt,
+      })
+      patches.set(application.id, { status: 'checking', history: [start] })
       continue
     }
-    if (application.status === 'cancelled' && !auto) continue
+    const auto = verdict === 'approve'
+    const decidedAt = auto ? checkedAt : new Date(checkedAt.getTime() + ((n % 5) + 1) * 900_000)
     out.push({
       id: application.id,
       mode: auto ? 'auto' : 'manual',
       state: 'approved',
+      baseScore: base,
       score,
       flags,
+      penalties,
       checkedAt,
-      decidedAt: auto ? checkedAt : new Date(checkedAt.getTime() + (n % 5) * 900_000 + 600_000),
+      decidedAt,
       decidedBy: auto ? undefined : admins[n % admins.length],
     })
-  }
-  // Those arizalar say so too: rejected by Birzum, not by the shop
-  for (const { id, comment } of rejected) {
-    const application = applicationsStore.get(id)!
-    applicationsStore.update(id, {
-      rejection: { reason: 'risk', comment },
+    // The approval is the step between "Birzum tekshirmoqda" and what came next
+    patches.set(application.id, {
       history: [
-        ...application.history.slice(0, -1),
-        { ...application.history.at(-1)!, by: { kind: 'system', name: 'Birzum' }, comment },
+        start,
+        { ...first, at: new Date(Math.max(first.at.getTime(), decidedAt.getTime())) },
+        ...rest,
       ],
     })
   }
+  patches.forEach((patch, id) => applicationsStore.update(id, patch))
   return out
 }
 
