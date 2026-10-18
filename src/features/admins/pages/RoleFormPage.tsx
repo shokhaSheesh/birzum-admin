@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { adminsStore, initialsOfName } from '@/entities/admins/admins'
 import {
+  actionsFor,
+  keysFor,
   reachOf,
   rolesStore,
   SECTION_KEYS,
@@ -11,6 +13,7 @@ import {
   type Role,
   type SpecialAction,
 } from '@/entities/admins/roles'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -23,6 +26,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { FormSection } from '@/shared/ui/FormSection'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
+import { BrandChecks } from '../components/BrandChecks'
 import { PermissionTable } from '../components/PermissionTable'
 import { logAction } from '@/entities/audit/audit'
 
@@ -30,7 +34,8 @@ const blank = () =>
   Object.fromEntries(SECTION_KEYS.map((key) => [key, [] as Op[]])) as Record<string, Op[]>
 
 /**
- * Create or edit a role: its name and what it is for, then every page with Koʻrish ·
+ * Create or edit a role: its name, what it is for and which businesses it can be given for; then
+ * the pages those businesses need (Birzum's, the microloan brands', or both) with Koʻrish ·
  * Yaratish · Tahrirlash · Oʻchirish, then the sensitive actions, each only possible with the
  * permission it needs on its page. "Nusxa olish" opens it filled from another role.
  */
@@ -48,6 +53,7 @@ export function RoleFormPage() {
     existing?.name ?? (source ? `${source.name} (${t('role.copyName')})` : ''),
   )
   const [description, setDescription] = useState(source?.description ?? '')
+  const [brands, setBrands] = useState<Workspace[]>(source?.brands ?? ['birzum'])
   const [access, setAccess] = useState<Record<string, Op[]>>(
     source ? { ...source.access } : blank(),
   )
@@ -67,23 +73,48 @@ export function RoleFormPage() {
     (role) => role.id !== existing?.id && role.name.toLowerCase() === name.trim().toLowerCase(),
   )
   const nameError = !name.trim() ? t('error.required') : taken ? t('role.error.taken') : undefined
-  const { open, manage } = reachOf(access)
+  const { open, manage } = reachOf(access, brands)
+  const offered = actionsFor(brands)
   // An action needs its permission on its page; taking that away drops the action
   const allowed = (key: SpecialAction) => {
     const action = SPECIAL_ACTIONS.find((a) => a.key === key)!
-    return !!access[action.section]?.includes(action.op)
+    return offered.some((item) => item.key === key) && !!access[action.section]?.includes(action.op)
   }
   const liveActions = actions.filter(allowed)
-  const people = existing ? admins.filter((admin) => admin.roleId === existing.id) : []
+  const people = existing
+    ? admins.filter((admin) => admin.grants.some((grant) => grant.roleId === existing.id))
+    : []
+  // A business cannot be taken off while someone holds the role there
+  const stillUsed = existing
+    ? admins.flatMap((admin) =>
+        admin.grants
+          .filter((grant) => grant.roleId === existing.id && !brands.includes(grant.workspace))
+          .map((grant) => ({ admin, workspace: grant.workspace })),
+      )
+    : []
+  const brandsError =
+    brands.length === 0
+      ? t('role.error.brands')
+      : stillUsed.length
+        ? t('role.error.brandInUse', {
+            brand: WORKSPACE_INFO[stillUsed[0].workspace].name,
+            names: [...new Set(stillUsed.map((item) => item.admin.name))].join(', '),
+          })
+        : undefined
 
   const save = () => {
     setSubmitted(true)
-    if (nameError) return
+    if (nameError || brandsError) return
+    // Pages of a page set the role no longer has are cleared
+    const keys = keysFor(brands)
     const record: Role = {
       id: existing?.id ?? newId(),
       name: name.trim(),
       description: description.trim(),
-      access,
+      brands,
+      access: Object.fromEntries(
+        SECTION_KEYS.map((key) => [key, keys.includes(key) ? access[key] : []]),
+      ),
       actions: liveActions,
     }
     if (existing) rolesStore.update(existing.id, record)
@@ -129,6 +160,13 @@ export function RoleFormPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            <BrandChecks
+              label={t('role.brands')}
+              value={brands}
+              onChange={setBrands}
+              hint={t('role.brands.hint')}
+              error={brandsError && (submitted || stillUsed.length) ? brandsError : undefined}
+            />
           </FormSection>
 
           <section className="flex flex-col rounded-card border border-line bg-canvas">
@@ -136,12 +174,18 @@ export function RoleFormPage() {
               <h2 className="text-lg font-bold">{t('role.pages')}</h2>
               <p className="text-sm text-ink-muted">{t('role.pages.hint')}</p>
             </div>
-            <PermissionTable access={access} onChange={setAccess} />
+            {brands.length === 0 ? (
+              <p className="border-t border-line px-6 py-8 text-center text-sm text-ink-muted">
+                {t('role.pages.pickBrands')}
+              </p>
+            ) : (
+              <PermissionTable access={access} onChange={setAccess} brands={brands} />
+            )}
           </section>
 
           <FormSection title={t('role.actions')} hint={t('role.actions.hint')}>
             <ul className="-my-2 flex flex-col">
-              {SPECIAL_ACTIONS.map((action) => {
+              {offered.map((action) => {
                 const can = allowed(action.key)
                 const page = SECTIONS.find((s) => s.key === action.section)!
                 return (
@@ -155,7 +199,7 @@ export function RoleFormPage() {
                         {can
                           ? t(`role.action.${action.key}.hint`)
                           : t('role.action.needs', {
-                              page: t(page.label),
+                              page: t(page.short ?? page.label),
                               op: t(`op.${action.op}`),
                             })}
                       </span>

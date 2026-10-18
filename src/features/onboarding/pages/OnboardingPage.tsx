@@ -62,7 +62,7 @@ export function OnboardingPage({ app }: { app: AppId }) {
   const toggle = (slide: Slide) => {
     slidesStore.update(slide.id, { visible: !slide.visible })
     logAction({
-      section: 'onboarding',
+      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
       kind: 'update',
       action: slide.visible ? 'audit.a.slideHidden' : 'audit.a.slideShown',
       target: tl(slide.title),
@@ -184,7 +184,7 @@ export function OnboardingPage({ app }: { app: AppId }) {
           if (deleting) {
             slidesStore.remove(deleting.id)
             logAction({
-              section: 'onboarding',
+              section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
               kind: 'delete',
               action: 'audit.a.slideDeleted',
               target: tl(deleting.title),

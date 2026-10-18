@@ -3,12 +3,15 @@ import { Fragment, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { adminsStore, initialsOfName } from '@/entities/admins/admins'
 import {
+  actionsFor,
   PERMISSION_GROUPS,
   reachOf,
   rolesStore,
-  SPECIAL_ACTIONS,
+  scopeOf,
   type Role,
+  type Scope,
 } from '@/entities/admins/roles'
+import { WORKSPACE_INFO } from '@/shared/config/workspaces'
 import { ROUTES, roleEditPath, roleNewPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -18,6 +21,7 @@ import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
+import { SegmentedTabs } from '@/shared/ui/SegmentedTabs'
 import { ViewToggle } from '@/shared/ui/ViewToggle'
 import { AccessMark } from '../components/AccessMark'
 import { logAction } from '@/entities/audit/audit'
@@ -25,8 +29,9 @@ import { logAction } from '@/entities/audit/audit'
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
 /**
- * What each role may do. Two views: the roles as cards (what each can reach, who has it), and
- * a comparison with every page as a row and every role as a column. A role is created and
+ * What each role may do. Two views: the roles as cards (its businesses, what it can reach, who has
+ * it), and a comparison of one page set (Birzum's or the microloan brands') with every page as a
+ * row and every role made for it as a column. A role is created and
  * edited on its own page; the Bosh admin role is fixed.
  */
 export function RolesPage() {
@@ -37,8 +42,11 @@ export function RolesPage() {
   const [params] = useSearchParams()
   const [view, setView] = useState<'cards' | 'compare'>('cards')
   const [deleting, setDeleting] = useState<Role | null>(null)
+  const [scope, setScope] = useState<Scope>('birzum')
+  const shown = roles.filter((role) => role.brands.some((brand) => scopeOf(brand) === scope))
   const highlight = params.get('role')
-  const holders = (role: Role) => admins.filter((admin) => admin.roleId === role.id)
+  const holders = (role: Role) =>
+    admins.filter((admin) => admin.grants.some((grant) => grant.roleId === role.id))
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -51,7 +59,7 @@ export function RolesPage() {
           </Button>
         }
       />
-      <div className="self-start">
+      <div className="flex flex-wrap items-center gap-3">
         <ViewToggle
           label={t('nav.roles')}
           options={[
@@ -61,12 +69,23 @@ export function RolesPage() {
           value={view}
           onChange={setView}
         />
+        {view === 'compare' && (
+          <SegmentedTabs
+            label={t('role.brands')}
+            options={(['birzum', 'microloans'] as const).map((value) => ({
+              value,
+              label: t(`role.scopeTab.${value}`),
+            }))}
+            value={scope}
+            onChange={setScope}
+          />
+        )}
       </div>
 
       {view === 'cards' ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {roles.map((role) => {
-            const reach = reachOf(role.access)
+            const reach = reachOf(role.access, role.brands)
             const people = holders(role)
             return (
               <section
@@ -115,6 +134,23 @@ export function RolesPage() {
                     ]}
                   />
                 </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {role.brands.map((brand) => (
+                    <span
+                      key={brand}
+                      className="flex items-center gap-1.5 rounded-full border border-line py-0.5 pr-2.5 pl-0.5 text-xs font-semibold"
+                    >
+                      <span className="grid size-5 place-items-center overflow-hidden rounded-full bg-white p-0.5">
+                        <img
+                          src={WORKSPACE_INFO[brand].mark}
+                          alt=""
+                          className="max-h-full max-w-full"
+                        />
+                      </span>
+                      {WORKSPACE_INFO[brand].name}
+                    </span>
+                  ))}
+                </div>
                 <dl className="grid grid-cols-3 gap-2 rounded-control bg-surface p-3 text-center">
                   {(
                     [
@@ -153,7 +189,7 @@ export function RolesPage() {
             <thead>
               <tr className="border-b border-line">
                 <th className={`${th} sticky left-0 bg-canvas`}>{t('roles.page')}</th>
-                {roles.map((role) => (
+                {shown.map((role) => (
                   <th key={role.id} className={`${th} normal-case`}>
                     <button
                       type="button"
@@ -169,11 +205,11 @@ export function RolesPage() {
               </tr>
             </thead>
             <tbody>
-              {PERMISSION_GROUPS.map((group) => (
+              {PERMISSION_GROUPS.filter((group) => group.scope === scope).map((group) => (
                 <Fragment key={group.title}>
                   <tr className="bg-surface/60">
                     <td
-                      colSpan={roles.length + 1}
+                      colSpan={shown.length + 1}
                       className="px-4 py-2 text-xs font-bold tracking-wide text-ink-muted uppercase"
                     >
                       {t(group.title)}
@@ -182,9 +218,9 @@ export function RolesPage() {
                   {group.sections.map((section) => (
                     <tr key={section.key} className="border-b border-line">
                       <td className="sticky left-0 bg-canvas px-4 py-2.5 text-sm font-medium">
-                        {t(section.label)}
+                        {t(section.short ?? section.label)}
                       </td>
-                      {roles.map((role) => (
+                      {shown.map((role) => (
                         <td key={role.id} className="px-4 py-2.5">
                           <AccessMark section={section.key} ops={role.access[section.key] ?? []} />
                         </td>
@@ -195,18 +231,18 @@ export function RolesPage() {
               ))}
               <tr className="bg-surface/60">
                 <td
-                  colSpan={roles.length + 1}
+                  colSpan={shown.length + 1}
                   className="px-4 py-2 text-xs font-bold tracking-wide text-ink-muted uppercase"
                 >
                   {t('role.actions')}
                 </td>
               </tr>
-              {SPECIAL_ACTIONS.map((action) => (
+              {actionsFor([scope === 'birzum' ? 'birzum' : 'fortuna']).map((action) => (
                 <tr key={action.key} className="border-b border-line last:border-b-0">
                   <td className="sticky left-0 bg-canvas px-4 py-2.5 text-sm font-medium">
                     {t(`role.action.${action.key}`)}
                   </td>
-                  {roles.map((role) => (
+                  {shown.map((role) => (
                     <td key={role.id} className="px-4 py-2.5">
                       {role.actions.includes(action.key) ? (
                         <span className="text-sm font-semibold text-success">{t('op.yes')}</span>

@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom'
 import {
   adminsStore,
   initialsOfName,
+  sortGrants,
   type AdminStatus,
   type AdminUser,
 } from '@/entities/admins/admins'
 import { rolesStore } from '@/entities/admins/roles'
 import { useAdmin } from '@/entities/session/session'
 import { ROUTES } from '@/shared/config/routes'
+import { WORKSPACE_INFO, WORKSPACES, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate, formatDateTime } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
@@ -33,7 +35,7 @@ const tones: Record<AdminStatus, StatusTone> = {
 }
 
 /**
- * The people who sign in to this panel, each with one role. Small records, so adding and
+ * The people who sign in to this panel, each with a role in every business they work in. Small records, so adding and
  * editing (password and Faol / Bloklangan too) is a modal; rows only edit and delete. Nobody
  * can block or delete themselves, and the last active Bosh admin stays.
  */
@@ -45,15 +47,17 @@ export function AdminsPage() {
   const [tab, setTab] = useState<'all' | AdminStatus>('all')
   const [query, setQuery] = useState('')
   const [roleId, setRoleId] = useState('')
+  const [brand, setBrand] = useState<'' | Workspace>('')
   const [editing, setEditing] = useState<AdminUser | null | undefined>(undefined)
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
 
-  const roleOf = (admin: AdminUser) => roles.find((role) => role.id === admin.roleId)
+  const roleName = (id: string) => roles.find((role) => role.id === id)?.name
   const isMe = (admin: AdminUser) => admin.login === me?.username || admin.name === me?.name
-  const owners = admins.filter((a) => a.roleId === 'owner' && a.status === 'active')
+  const isOwner = (admin: AdminUser) => admin.grants.some((grant) => grant.roleId === 'owner')
+  const owners = admins.filter((a) => isOwner(a) && a.status === 'active')
   // The panel must always keep one active Bosh admin
   const lastOwner = (admin: AdminUser) =>
-    admin.roleId === 'owner' && admin.status === 'active' && owners.length === 1
+    isOwner(admin) && admin.status === 'active' && owners.length === 1
 
   const needle = query.trim().toLowerCase()
   const filtered = admins.filter(
@@ -62,7 +66,8 @@ export function AdminsPage() {
         admin.name.toLowerCase().includes(needle) ||
         admin.login.includes(needle) ||
         admin.phone.includes(needle.replace(/\D/g, '') || '—')) &&
-      (!roleId || admin.roleId === roleId),
+      (!roleId || admin.grants.some((grant) => grant.roleId === roleId)) &&
+      (!brand || admin.grants.some((grant) => grant.workspace === brand)),
   )
   const rows = filtered.filter((admin) => tab === 'all' || admin.status === tab)
 
@@ -115,6 +120,15 @@ export function AdminsPage() {
             value={roleId}
             onChange={setRoleId}
           />
+          <FilterSelect
+            label={t('admin.brands')}
+            options={[
+              { value: '', label: t('admins.allBrands') },
+              ...WORKSPACES.map((value) => ({ value, label: WORKSPACE_INFO[value].name })),
+            ]}
+            value={brand}
+            onChange={setBrand}
+          />
         </div>
         {rows.length === 0 ? (
           <EmptyState title={t('admins.empty')} />
@@ -125,7 +139,7 @@ export function AdminsPage() {
                 <tr className="border-b border-line">
                   <th className={th}>{t('admin.name')}</th>
                   <th className={th}>{t('merchant.phone')}</th>
-                  <th className={th}>{t('admin.role')}</th>
+                  <th className={th}>{t('admin.access')}</th>
                   <th className={th}>{t('admin.lastSeen')}</th>
                   <th className={th}>{t('merchants.status')}</th>
                   <th className="w-44" />
@@ -133,7 +147,6 @@ export function AdminsPage() {
               </thead>
               <tbody>
                 {rows.map((admin) => {
-                  const role = roleOf(admin)
                   const self = isMe(admin)
                   const locked = !!lockReason(admin)
                   return (
@@ -162,14 +175,25 @@ export function AdminsPage() {
                         {formatPhone(admin.phone)}
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {role && (
-                          <Link
-                            to={`${ROUTES.roles}?role=${role.id}`}
-                            className="rounded-full bg-navy-100 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-navy-200"
-                          >
-                            {role.name}
-                          </Link>
-                        )}
+                        <div className="flex flex-col items-start gap-1.5">
+                          {sortGrants(admin.grants).map((grant) => (
+                            <Link
+                              key={grant.workspace}
+                              to={`${ROUTES.roles}?role=${grant.roleId}`}
+                              title={WORKSPACE_INFO[grant.workspace].name}
+                              className="flex items-center gap-1.5 rounded-full bg-navy-100 py-0.5 pr-2.5 pl-0.5 text-xs font-semibold text-brand hover:bg-navy-200"
+                            >
+                              <span className="grid size-5 place-items-center overflow-hidden rounded-full bg-white p-0.5">
+                                <img
+                                  src={WORKSPACE_INFO[grant.workspace].mark}
+                                  alt={WORKSPACE_INFO[grant.workspace].name}
+                                  className="max-h-full max-w-full"
+                                />
+                              </span>
+                              {roleName(grant.roleId) ?? '—'}
+                            </Link>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap text-ink-muted tabular-nums">
                         {admin.lastSeenAt

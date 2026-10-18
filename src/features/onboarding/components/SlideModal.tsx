@@ -52,7 +52,7 @@ export function SlideModal({ app, slide, onClose, onDelete }: Props) {
     if (slide) slidesStore.update(slide.id, record)
     else slidesStore.replaceAll([...slidesStore.getAll(), { id: newId(), app, ...record }])
     logAction({
-      section: 'onboarding',
+      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
       kind: slide ? 'update' : 'create',
       action: slide ? 'audit.a.slideSaved' : 'audit.a.slideCreated',
       target: tl(record.title),
