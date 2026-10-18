@@ -11,15 +11,16 @@ import {
 import { loanProductsStore } from '@/entities/microloans/products'
 import { loanAppPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
-import { ALL_TIME, inRange, startOfDay, type DateRange } from '@/shared/lib/dates'
+import { inRange } from '@/shared/lib/dates'
+import { boundsOf, thisMonth, type Period } from '@/shared/lib/period'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { usePagination } from '@/shared/lib/usePagination'
 import { cn } from '@/shared/lib/cn'
-import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -41,8 +42,8 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
   const [status, setStatus] = useState<'all' | LoanAppStatus>('all')
   const [query, setQuery] = useState('')
   const [product, setProduct] = useState('')
-  const [period, setPeriod] = useState<DateRange>(ALL_TIME)
-  const [today] = useState(() => new Date())
+  const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
+  const bounds = boundsOf(period)
 
   const needle = query.trim().toLowerCase()
   const digits = needle.replace(/\D/g, '')
@@ -54,18 +55,15 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
         (digits !== '' &&
           (String(app.number).includes(digits) || app.borrower.phone.includes(digits)))) &&
       (!product || app.productId === product) &&
-      inRange(app.createdAt, period),
+      inRange(app.createdAt, bounds),
   )
   const rows = filtered.filter((app) => status === 'all' || app.status === status)
   const pager = usePagination(rows, JSON.stringify([query, product, period, status]))
 
-  const thisMonth = all.filter(
-    (app) =>
-      app.createdAt.getMonth() === today.getMonth() &&
-      app.createdAt.getFullYear() === today.getFullYear(),
-  )
-  const paid = thisMonth.filter((app) => app.status === 'paidOut')
-  const decided = thisMonth.filter((app) => app.status !== 'review' && app.status !== 'manual')
+  // Figures for the period; the ones waiting for a decision are counted as of now
+  const inPeriod = all.filter((app) => inRange(app.createdAt, bounds))
+  const paid = inPeriod.filter((app) => app.status === 'paidOut')
+  const decided = inPeriod.filter((app) => app.status !== 'review' && app.status !== 'manual')
   const approvedShare = decided.length
     ? Math.round((decided.filter((app) => app.status !== 'declined').length / decided.length) * 100)
     : 0
@@ -76,12 +74,14 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.applications')} description={t('loanApps.description')} />
 
+      <PeriodFilter value={period} onChange={setPeriod} />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
-          label={t('applications.stat.month')}
-          value={groupDigits(thisMonth.length)}
-          hint={t('applications.stat.today', {
-            count: String(all.filter((app) => app.createdAt >= startOfDay(today)).length),
+          label={t('loanApps.stat.count')}
+          value={groupDigits(inPeriod.length)}
+          hint={t('loanApps.stat.countHint', {
+            count: String(inPeriod.filter((app) => app.status === 'declined').length),
           })}
         />
         <StatCard
@@ -137,7 +137,6 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
             value={product}
             onChange={setProduct}
           />
-          <DateRangePicker label={t('applications.period')} value={period} onChange={setPeriod} />
         </div>
 
         {rows.length === 0 ? (

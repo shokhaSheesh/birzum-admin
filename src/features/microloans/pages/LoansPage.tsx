@@ -14,14 +14,15 @@ import { loanProductsStore } from '@/entities/microloans/products'
 import { brandLoanPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { ALL_TIME, inRange, type DateRange } from '@/shared/lib/dates'
+import { ALL_TIME, inRange } from '@/shared/lib/dates'
+import { boundsOf, type Period } from '@/shared/lib/period'
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { usePagination } from '@/shared/lib/usePagination'
-import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -43,7 +44,13 @@ export function LoansPage({ brand }: { brand: Brand }) {
   const [state, setState] = useState<'all' | LoanState>('all')
   const [query, setQuery] = useState('')
   const [product, setProduct] = useState('')
-  const [period, setPeriod] = useState<DateRange>(ALL_TIME)
+  // A list of loans: all of them unless a period is picked
+  const [period, setPeriod] = useState<Period>(() => ({
+    unit: 'all',
+    anchor: new Date(),
+    range: ALL_TIME,
+  }))
+  const bounds = boundsOf(period)
   const [today] = useState(() => new Date())
 
   const needle = query.trim().toLowerCase()
@@ -56,7 +63,7 @@ export function LoansPage({ brand }: { brand: Brand }) {
         loan.borrower.passport.toLowerCase().includes(needle) ||
         (digits.length >= 3 && loan.borrower.phone.includes(digits))) &&
       (!product || loan.productId === product) &&
-      inRange(loan.issuedAt, period),
+      inRange(loan.issuedAt, bounds),
   )
   const rows = filtered.filter((loan) => state === 'all' || stateOf(loan) === state)
   const pager = usePagination(rows, JSON.stringify([query, product, period, state]))
@@ -65,28 +72,33 @@ export function LoansPage({ brand }: { brand: Brand }) {
   const late = open.filter((loan) => loan.overdueSince)
   const portfolio = open.reduce((sum, loan) => sum + progressOf(loan).principalLeft, 0)
   const lateSum = late.reduce((sum, loan) => sum + (progressOf(loan).next?.amount ?? 0), 0)
-  const closedThisMonth = all.filter(
-    (loan) =>
-      loan.closedAt &&
-      loan.closedAt.getMonth() === today.getMonth() &&
-      loan.closedAt.getFullYear() === today.getFullYear(),
-  ).length
+  // Issued and closed in the period; portfolio and late are how things stand today
+  const issued = all.filter((loan) => inRange(loan.issuedAt, bounds))
+  const closed = all.filter((loan) => loan.closedAt && inRange(loan.closedAt, bounds))
+  const closedEarly = closed.filter((loan) => loan.prepayments.some((p) => p.kind === 'full'))
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? '—'
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.loans')} description={t('loans.description')} />
 
+      <PeriodFilter value={period} onChange={setPeriod} />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label={t('loans.stat.issued')}
+          value={formatSum(issued.reduce((sum, loan) => sum + loan.amount, 0))}
+          hint={t('loans.stat.issuedHint', { count: groupDigits(issued.length) })}
+        />
+        <StatCard
+          label={t('loans.stat.closed')}
+          value={groupDigits(closed.length)}
+          hint={t('loans.stat.closedHint', { count: String(closedEarly.length) })}
+        />
         <StatCard
           label={t('loans.stat.portfolio')}
           value={formatSum(portfolio)}
-          hint={t('loans.stat.portfolioHint')}
-        />
-        <StatCard
-          label={t('loans.stat.active')}
-          value={groupDigits(open.length)}
-          hint={t('loans.stat.activeHint', { count: String(all.length) })}
+          hint={t('loans.stat.portfolioHint', { count: groupDigits(open.length) })}
         />
         <StatCard
           label={t('loans.stat.late')}
@@ -95,11 +107,6 @@ export function LoansPage({ brand }: { brand: Brand }) {
             sum: formatSum(lateSum),
             share: String(open.length ? Math.round((late.length / open.length) * 100) : 0),
           })}
-        />
-        <StatCard
-          label={t('loans.stat.closed')}
-          value={String(closedThisMonth)}
-          hint={t('loans.stat.closedHint')}
         />
       </div>
 
@@ -139,7 +146,6 @@ export function LoansPage({ brand }: { brand: Brand }) {
             value={product}
             onChange={setProduct}
           />
-          <DateRangePicker label={t('loans.period')} value={period} onChange={setPeriod} />
         </div>
 
         {rows.length === 0 ? (

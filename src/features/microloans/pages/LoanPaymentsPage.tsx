@@ -7,15 +7,16 @@ import { cardText, loansStore, progressOf, scheduleOf } from '@/entities/microlo
 import { brandLoanPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { ALL_TIME, inRange, startOfDay, type DateRange } from '@/shared/lib/dates'
+import { inRange } from '@/shared/lib/dates'
+import { boundsOf, thisMonth, type Period } from '@/shared/lib/period'
 import { formatDateTime, formatSum } from '@/shared/lib/format'
 import { usePagination } from '@/shared/lib/usePagination'
 import { toast } from '@/shared/lib/toast'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
-import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -39,13 +40,13 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
   const { t } = useI18n()
   const navigate = useNavigate()
   const loans = loansStore.useAll().filter((loan) => loan.brand === brand)
-  const [today] = useState(() => new Date())
   const all = paymentsOf(loans)
   const [tab, setTab] = useState<Tab>('all')
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind>('')
   const [method, setMethod] = useState<Method>('')
-  const [period, setPeriod] = useState<DateRange>(ALL_TIME)
+  const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
+  const bounds = boundsOf(period)
   const [receipt, setReceipt] = useState<LoanPayment | null>(null)
   const [entering, setEntering] = useState(false)
   const [charging, setCharging] = useState<LoanPayment | null>(null)
@@ -60,21 +61,18 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
         (digits.length >= 3 && payment.loan.borrower.phone.includes(digits))) &&
       (!kind || (kind === 'monthly' ? payment.kind === 'monthly' : payment.kind !== 'monthly')) &&
       (!method || payment.method === method) &&
-      inRange(payment.at, period),
+      inRange(payment.at, bounds),
   )
   const rows = filtered.filter(
     (payment) => tab === 'all' || (tab === 'paid' ? payment.ok : !payment.ok),
   )
   const pager = usePagination(rows, JSON.stringify([query, kind, method, period, tab]))
 
-  const paid = all.filter((payment) => payment.ok)
-  const thisMonth = paid.filter(
-    (payment) =>
-      payment.at.getMonth() === today.getMonth() &&
-      payment.at.getFullYear() === today.getFullYear(),
-  )
-  const todays = paid.filter((payment) => payment.at >= startOfDay(today))
-  const early = thisMonth.filter((payment) => payment.kind !== 'monthly')
+  // Figures for the period; "late now" is how things stand today, whatever the period
+  const inPeriod = all.filter((payment) => inRange(payment.at, bounds))
+  const paid = inPeriod.filter((payment) => payment.ok)
+  const refused = inPeriod.filter((payment) => !payment.ok)
+  const early = paid.filter((payment) => payment.kind !== 'monthly')
   const failing = loans.filter((loan) => loan.overdueSince && !loan.closedAt)
   const sum = (list: LoanPayment[]) => list.reduce((total, payment) => total + payment.amount, 0)
 
@@ -126,28 +124,32 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
         }
       />
 
+      <PeriodFilter value={period} onChange={setPeriod} />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
-          label={t('loanPay.stat.month')}
-          value={formatSum(sum(thisMonth))}
-          hint={t('loanPay.stat.count', { count: String(thisMonth.length) })}
-        />
-        <StatCard
-          label={t('loanPay.stat.today')}
-          value={formatSum(sum(todays))}
-          hint={t('loanPay.stat.count', { count: String(todays.length) })}
+          label={t('loanPay.stat.paid')}
+          value={formatSum(sum(paid))}
+          hint={t('loanPay.stat.count', { count: String(paid.length) })}
         />
         <StatCard
           label={t('loanPay.stat.early')}
           value={formatSum(sum(early))}
-          hint={t('loanPay.stat.earlyHint')}
+          hint={t('loanPay.stat.count', { count: String(early.length) })}
+        />
+        <StatCard
+          label={t('loanPay.stat.refused')}
+          value={String(refused.length)}
+          hint={t('loanPay.stat.refusedHint', { sum: formatSum(sum(refused)) })}
         />
         <StatCard
           label={t('loanPay.stat.failed')}
           value={String(failing.length)}
-          hint={formatSum(
-            failing.reduce((total, loan) => total + (progressOf(loan).next?.amount ?? 0), 0),
-          )}
+          hint={t('loanPay.stat.failedHint', {
+            sum: formatSum(
+              failing.reduce((total, loan) => total + (progressOf(loan).next?.amount ?? 0), 0),
+            ),
+          })}
         />
       </div>
 
@@ -200,7 +202,6 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
             value={method}
             onChange={setMethod}
           />
-          <DateRangePicker label={t('applications.period')} value={period} onChange={setPeriod} />
         </div>
 
         {rows.length === 0 ? (
