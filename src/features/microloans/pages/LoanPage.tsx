@@ -24,7 +24,7 @@ import {
 import { contactsOfLoan, loanContactsStore } from '@/entities/microloans/loanContacts'
 import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
 import { loanProductsStore } from '@/entities/microloans/products'
-import { brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
+import { brandClientPath, brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatDate, formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
@@ -359,7 +359,16 @@ export function LoanPage({ brand }: { brand: Brand }) {
             <h2 className="font-bold">{t('loanApps.col.borrower')}</h2>
             <Rows
               rows={[
-                [t('merchant.owner'), loan.borrower.name],
+                [
+                  t('merchant.owner'),
+                  <Link
+                    key="client"
+                    to={brandClientPath(brand, `${brand}-${loan.borrower.passport}`)}
+                    className="font-semibold text-brand hover:underline"
+                  >
+                    {loan.borrower.name}
+                  </Link>,
+                ],
                 [t('merchant.phone'), formatPhone(loan.borrower.phone)],
                 [
                   t('loanApp.passport'),

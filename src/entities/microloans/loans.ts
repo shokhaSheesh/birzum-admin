@@ -206,6 +206,18 @@ function build(
   return loan
 }
 
+const PAST_BORROWERS = [
+  'Gʻaniyev Ravshan Odil oʻgʻli',
+  'Yoʻldosheva Munisa Baxrom qizi',
+  'Sultonov Davron Hamid oʻgʻli',
+  'Ahmedova Zulfiya Karim qizi',
+  'Boboyev Ilhom Nurali oʻgʻli',
+  'Choriyeva Nodira Abdulla qizi',
+  'Haydarov Jamshid Rasul oʻgʻli',
+  'Komilova Shoira Tolib qizi',
+  'Oripov Farrux Sherali oʻgʻli',
+]
+
 function seed(brand: Brand, base: number, prefix: string): Loan[] {
   const next = random(base)
   const fromApps = loanApplicationsStore
@@ -250,7 +262,15 @@ function seed(brand: Brand, base: number, prefix: string): Loan[] {
       brand,
       number,
       {
-        borrower: recent.borrower,
+        // Half are the same people again; the rest borrowed once, long ago, and came back for nothing
+        borrower:
+          i % 2
+            ? recent.borrower
+            : {
+                name: PAST_BORROWERS[(i / 2 + base) % PAST_BORROWERS.length],
+                phone: `9${3 + (i % 6)}${String(1000000 + Math.floor(next() * 8999999)).slice(0, 7)}`,
+                passport: `A${'GHKL'[i % 4]}${String(3000000 + Math.floor(next() * 6999999)).slice(0, 7)}`,
+              },
         productId: recent.productId,
         amount: recent.amount + 1_000_000 * (i % 4),
         rate: recent.rate,

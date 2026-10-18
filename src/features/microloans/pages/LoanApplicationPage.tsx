@@ -17,7 +17,7 @@ import {
   type LoanAppEvent,
 } from '@/entities/microloans/applications'
 import { loanProductsStore } from '@/entities/microloans/products'
-import { brandLoanPath, brandPath, type Brand } from '@/shared/config/workspaces'
+import { brandClientPath, brandLoanPath, brandPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
@@ -294,7 +294,16 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
             <h2 className="font-bold">{t('loanApps.col.borrower')}</h2>
             <Rows
               rows={[
-                [t('merchant.owner'), app.borrower.name],
+                [
+                  t('merchant.owner'),
+                  <Link
+                    key="client"
+                    to={brandClientPath(brand, `${brand}-${app.borrower.passport}`)}
+                    className="font-semibold text-brand hover:underline"
+                  >
+                    {app.borrower.name}
+                  </Link>,
+                ],
                 [t('merchant.phone'), formatPhone(app.borrower.phone)],
                 [
                   t('loanApp.passport'),
