@@ -13,6 +13,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { DateField } from '@/shared/ui/DateField'
 import { Modal } from '@/shared/ui/Modal'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
+import { logAction } from '@/entities/audit/audit'
+import { clientPath } from '@/shared/config/routes'
 
 const now = () => new Date()
 
@@ -49,6 +51,13 @@ export function CallResultModal({ client, onClose }: { client: Client; onClose: 
       comment: comment.trim() || undefined,
     })
     toast(t('contact.saved'))
+    logAction({
+      section: 'collections',
+      kind: 'update',
+      action: 'audit.a.contactSaved',
+      target: fullName(client),
+      href: clientPath(client.id),
+    })
     onClose()
   }
 
@@ -129,6 +138,13 @@ export function ReminderDialog({
           channel: 'reminder',
         })
         toast(t('contact.reminded'))
+        logAction({
+          section: 'collections',
+          kind: 'update',
+          action: 'audit.a.reminded',
+          target: fullName(client),
+          href: clientPath(client.id),
+        })
         onClose()
       }}
     >

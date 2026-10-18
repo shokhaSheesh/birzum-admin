@@ -25,6 +25,7 @@ import { ImageField } from '@/shared/ui/ImageField'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { PhoneField } from '@/shared/ui/PhoneField'
 import { TextField } from '@/shared/ui/TextField'
+import { logAction } from '@/entities/audit/audit'
 
 const digits = (value: string, max: number) => value.replace(/\D/g, '').slice(0, max)
 const grid = 'grid gap-4 sm:grid-cols-2'
@@ -105,6 +106,13 @@ export function MerchantFormPage() {
     }
     merchantsStore.save(merchant)
     toast(t(existing ? 'toast.saved' : 'merchant.created'))
+    logAction({
+      section: 'merchants',
+      kind: existing ? 'update' : 'create',
+      action: existing ? 'audit.a.merchantUpdated' : 'audit.a.merchantCreated',
+      target: merchant.name,
+      href: merchantPath(merchant.id),
+    })
     navigate(merchantPath(merchant.id))
   }
   const back = existing ? merchantPath(existing.id) : ROUTES.merchants

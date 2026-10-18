@@ -4,6 +4,8 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { groupDigits } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { logAction } from '@/entities/audit/audit'
+import { merchantPath } from '@/shared/config/routes'
 
 type Props = {
   merchant: Merchant
@@ -26,12 +28,32 @@ export function MerchantDeleteDialog({ merchant, onClose, onDeleted }: Props) {
       .forEach((filial) => filialsStore.remove(filial.id))
     merchantsStore.remove(merchant.id)
     toast(t('merchant.deleted'))
+    logAction({
+      section: 'merchants',
+      kind: 'delete',
+      action: 'audit.a.merchantDeleted',
+      target: merchant.name,
+    })
     onClose()
     onDeleted?.()
   }
   const pause = () => {
     merchantsStore.update(merchant.id, { status: 'paused' })
     toast(t('merchant.paused'))
+    logAction({
+      section: 'merchants',
+      kind: 'update',
+      action: 'audit.a.merchantPaused',
+      target: merchant.name,
+      href: merchantPath(merchant.id),
+      changes: [
+        {
+          field: 'audit.f.status',
+          from: t('merchant.status.active'),
+          to: t('merchant.status.paused'),
+        },
+      ],
+    })
     onClose()
   }
 

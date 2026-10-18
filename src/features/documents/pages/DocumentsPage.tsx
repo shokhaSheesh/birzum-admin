@@ -9,6 +9,7 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { logAction } from '@/entities/audit/audit'
 
 const MAX_MB = 10
 const sizeOf = (bytes: number) =>
@@ -80,6 +81,12 @@ function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFil
       },
     })
     toast(t(file ? 'document.replaced' : 'document.uploaded'))
+    logAction({
+      section: 'documents',
+      kind: 'update',
+      action: 'audit.a.documentUploaded',
+      target: `${picked.name} (${lang.toUpperCase()})`,
+    })
   }
 
   return (

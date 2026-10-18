@@ -8,6 +8,7 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** The question to edit, or null to add one. */
@@ -30,6 +31,12 @@ export function FaqModal({ item, onClose, onDelete }: Props) {
     if (item) {
       faqStore.update(item.id, { question: clean(question), answer: clean(answer) })
       toast(t('toast.saved'))
+      logAction({
+        section: 'faq',
+        kind: 'update',
+        action: 'audit.a.faqSaved',
+        target: tl(clean(question)),
+      })
     } else {
       // New questions go to the end of the list; drag them up if they matter more
       faqStore.replaceAll([
@@ -37,6 +44,12 @@ export function FaqModal({ item, onClose, onDelete }: Props) {
         { id: newId(), question: clean(question), answer: clean(answer), visible: true },
       ])
       toast(t('faq.created'))
+      logAction({
+        section: 'faq',
+        kind: 'create',
+        action: 'audit.a.faqCreated',
+        target: tl(clean(question)),
+      })
     }
     onClose()
   }

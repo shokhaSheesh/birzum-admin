@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { MarkPaidDialog } from '../components/MarkPaidDialog'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -58,6 +59,13 @@ export function PayoutDetailPage() {
     covered.forEach((sale) => salesStore.update(sale.id, { payoutId: undefined }))
     payoutsStore.remove(payout.id)
     toast(t('payout.cancelled'))
+    logAction({
+      section: 'payouts',
+      kind: 'delete',
+      action: 'audit.a.payoutCancelled',
+      target: merchant?.name,
+      href: merchant && merchantPath(merchant.id),
+    })
     navigate(ROUTES.payouts, { replace: true })
   }
 

@@ -42,6 +42,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { Listbox, SelectChevron } from '@/shared/ui/Listbox'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { logAction } from '@/entities/audit/audit'
 
 type Box = 'queue' | 'mine' | 'open' | 'closed'
 const BOXES: Box[] = ['queue', 'mine', 'open', 'closed']
@@ -286,6 +287,13 @@ function Conversation({
   const close = () => {
     save({ status: 'closed' }, line('system', t('support.sys.closed', { name: me })))
     toast(t('support.closed'))
+    logAction({
+      section: 'support',
+      kind: 'update',
+      action: 'audit.a.chatClosed',
+      target: client && fullName(client),
+      href: client && clientPath(client.id),
+    })
   }
   const reopen = () =>
     save({ status: 'open' }, line('system', t('support.sys.reopened', { name: me })))

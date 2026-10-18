@@ -40,4 +40,7 @@ const subscribe = (listener: () => void) => {
   }
 }
 
+/** The signed-in admin, outside React. */
+export const getAdmin = () => current
+
 export const useAdmin = () => useSyncExternalStore(subscribe, () => current)

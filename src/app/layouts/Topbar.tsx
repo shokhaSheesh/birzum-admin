@@ -1,6 +1,7 @@
 import { ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
 import { useState } from 'react'
-import { session, useAdmin } from '@/entities/session/session'
+import { useAdmin } from '@/entities/session/session'
+import { signOut } from '@/features/auth/api/mockAuth'
 import { LANG_NAMES, LANGS } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -93,7 +94,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={session.signOut}
+                  onClick={signOut}
                   className="flex h-10 w-full items-center gap-2.5 rounded-control px-3 text-sm font-semibold text-danger hover:bg-danger-soft"
                 >
                   <LogOut size={18} />

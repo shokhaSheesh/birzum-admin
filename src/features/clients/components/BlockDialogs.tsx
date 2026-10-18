@@ -14,6 +14,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Modal } from '@/shared/ui/Modal'
 import { SelectField } from '@/shared/ui/SelectField'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
+import { logAction } from '@/entities/audit/audit'
+import { clientPath } from '@/shared/config/routes'
 
 const now = () => new Date()
 
@@ -35,6 +37,13 @@ export function BlockModal({ client, onClose }: { client: Client; onClose: () =>
       block: { reason, comment: comment.trim(), at: now(), by: admin?.name ?? '—' },
     })
     toast(t('client.blocked'))
+    logAction({
+      section: 'customers',
+      kind: 'update',
+      action: 'audit.a.clientBlocked',
+      target: fullName(client),
+      href: clientPath(client.id),
+    })
     onClose()
   }
 
@@ -89,6 +98,13 @@ export function UnblockDialog({ client, onClose }: { client: Client; onClose: ()
       onConfirm={() => {
         clientsStore.update(client.id, { block: undefined })
         toast(t('client.unblocked'))
+        logAction({
+          section: 'customers',
+          kind: 'update',
+          action: 'audit.a.clientUnblocked',
+          target: fullName(client),
+          href: clientPath(client.id),
+        })
         onClose()
       }}
     >

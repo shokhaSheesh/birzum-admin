@@ -3,6 +3,8 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { logAction, sumParam } from '@/entities/audit/audit'
+import { payoutPath } from '@/shared/config/routes'
 
 const now = () => new Date()
 
@@ -25,6 +27,14 @@ export function MarkPaidDialog({ payoutId, onClose }: { payoutId: string; onClos
       onConfirm={() => {
         payoutsStore.update(payout.id, { state: 'paid', paidAt: now() })
         toast(t('payout.marked'))
+        logAction({
+          section: 'payouts',
+          kind: 'money',
+          action: 'audit.a.payoutSent',
+          params: { sum: sumParam(payout.amount) },
+          target: payout.reference,
+          href: payoutPath(payout.id),
+        })
         onClose()
       }}
     >

@@ -11,6 +11,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { BrandModal } from '../components/BrandModal'
 import { BrandLogo } from '../components/BrandLogo'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -39,6 +40,12 @@ export function BrandsPage() {
     brandsStore.remove(brand.id)
     setDeleting(null)
     toast(t('brand.deleted'))
+    logAction({
+      section: 'brands',
+      kind: 'delete',
+      action: 'audit.a.brandDeleted',
+      target: brand.name,
+    })
   }
 
   return (

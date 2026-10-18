@@ -29,6 +29,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { ViewToggle } from '@/shared/ui/ViewToggle'
 import { CategoryModal } from '../components/CategoryModal'
 import { CategoryThumb } from '../components/CategoryThumb'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -68,11 +69,23 @@ export function CategoriesPage() {
     categoriesStore.remove(category.id)
     setDeleting(null)
     toast(t('category.deleted'))
+    logAction({
+      section: 'categories',
+      kind: 'delete',
+      action: 'audit.a.categoryDeleted',
+      target: tl(category.name),
+    })
   }
   const hide = (category: Category) => {
     categoriesStore.update(category.id, { visible: false })
     setDeleting(null)
     toast(t('category.hidden'))
+    logAction({
+      section: 'categories',
+      kind: 'update',
+      action: 'audit.a.categoryHidden',
+      target: tl(category.name),
+    })
   }
 
   const dragOver = (e: DragEvent, target: Category) => {

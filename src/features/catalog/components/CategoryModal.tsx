@@ -12,6 +12,7 @@ import { SelectField } from '@/shared/ui/SelectField'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 import { CategoryThumb } from './CategoryThumb'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** The category to edit, or null to create one. */
@@ -62,10 +63,22 @@ export function CategoryModal({ category, parentId: presetParent, onClose, onDel
     if (category) {
       categoriesStore.update(category.id, record)
       toast(t('toast.saved'))
+      logAction({
+        section: 'categories',
+        kind: 'update',
+        action: 'audit.a.categorySaved',
+        target: tl(record.name),
+      })
     } else {
       // A new category goes to the end of the list
       categoriesStore.replaceAll([...all, { id: newId(), products: 0, ...record }])
       toast(t(parentId ? 'subcategory.created' : 'category.created'))
+      logAction({
+        section: 'categories',
+        kind: 'create',
+        action: 'audit.a.categoryCreated',
+        target: tl(record.name),
+      })
     }
     onClose()
   }

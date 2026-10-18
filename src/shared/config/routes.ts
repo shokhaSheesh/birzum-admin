@@ -31,6 +31,7 @@ export const ROUTES = {
   roles: '/roles',
   roleNew: '/roles/new',
   roleEdit: '/roles/:id/edit',
+  audit: '/audit',
 } as const
 
 /** A merchant's detail page. */

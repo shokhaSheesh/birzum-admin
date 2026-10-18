@@ -18,6 +18,7 @@ import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
 import { NumberField } from '@/shared/ui/NumberField'
 import { Switch } from '@/shared/ui/Switch'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -117,6 +118,7 @@ export function PricingPage() {
       changes,
     })
     toast(t('pricing.saved'))
+    logAction({ section: 'pricing', kind: 'update', action: 'audit.a.pricingSaved' })
   }
 
   const describe = (change: RateChange) => {

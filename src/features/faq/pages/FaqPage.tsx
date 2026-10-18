@@ -13,6 +13,7 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { Switch } from '@/shared/ui/Switch'
 import { ContactsModal } from '../components/ContactsModal'
 import { FaqModal } from '../components/FaqModal'
+import { logAction } from '@/entities/audit/audit'
 
 type Drop = { id: string; after: boolean }
 
@@ -74,6 +75,12 @@ export function FaqPage() {
   const toggle = (item: Faq) => {
     faqStore.update(item.id, { visible: !item.visible })
     toast(t(item.visible ? 'faq.hidden' : 'faq.shown'))
+    logAction({
+      section: 'faq',
+      kind: 'update',
+      action: 'audit.a.faqSaved',
+      target: tl(item.question),
+    })
   }
 
   return (
@@ -235,6 +242,12 @@ export function FaqPage() {
           if (deleting) faqStore.remove(deleting.id)
           setDeleting(null)
           toast(t('faq.deleted'))
+          logAction({
+            section: 'faq',
+            kind: 'delete',
+            action: 'audit.a.faqDeleted',
+            target: deleting ? tl(deleting.question) : undefined,
+          })
         }}
       >
         <p>{t('faq.delete.message')}</p>

@@ -33,6 +33,7 @@ import { MultiSelectField, type MultiValue } from '@/shared/ui/MultiSelectField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { PhonePreview } from '../components/PhonePreview'
 import { useAudience } from '../model/audience'
+import { logAction } from '@/entities/audit/audit'
 
 const now = () => new Date()
 /** Sending hours: 08:00 to 21:30, every half hour, so nobody gets a push at night. */
@@ -126,6 +127,13 @@ export function BroadcastFormPage() {
   const send = () => {
     const record = store(when === 'now' ? 'sent' : 'scheduled')
     toast(t(when === 'now' ? 'broadcast.sent' : 'broadcast.scheduled'))
+    logAction({
+      section: 'broadcasts',
+      kind: 'create',
+      action: when === 'now' ? 'audit.a.broadcastSent' : 'audit.a.broadcastScheduled',
+      target: tl(record.title),
+      href: broadcastPath(record.id),
+    })
     navigate(broadcastPath(record.id))
   }
 

@@ -9,6 +9,7 @@ import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
 import { PhoneField } from '@/shared/ui/PhoneField'
 import { TextField } from '@/shared/ui/TextField'
+import { logAction } from '@/entities/audit/audit'
 
 /** Edit how shoppers reach support: the call-centre number, its hours and the Telegram account. */
 export function ContactsModal({
@@ -38,6 +39,7 @@ export function ContactsModal({
       telegram: handle,
     })
     toast(t('toast.saved'))
+    logAction({ section: 'faq', kind: 'update', action: 'audit.a.contactsSaved' })
     onClose()
   }
 

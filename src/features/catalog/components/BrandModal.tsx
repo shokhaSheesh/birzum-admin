@@ -9,6 +9,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { ImageField } from '@/shared/ui/ImageField'
 import { TextField } from '@/shared/ui/TextField'
 import { BrandLogo } from './BrandLogo'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** The brand to edit, or null to create one. */
@@ -43,9 +44,21 @@ export function BrandModal({ brand, onClose, onDelete }: Props) {
     if (brand) {
       brandsStore.update(brand.id, { name: name.trim(), logo })
       toast(t('toast.saved'))
+      logAction({
+        section: 'brands',
+        kind: 'update',
+        action: 'audit.a.brandSaved',
+        target: name.trim(),
+      })
     } else {
       brandsStore.save({ id: newId(), name: name.trim(), logo, products: 0 })
       toast(t('brand.created'))
+      logAction({
+        section: 'brands',
+        kind: 'create',
+        action: 'audit.a.brandCreated',
+        target: name.trim(),
+      })
     }
     onClose()
   }

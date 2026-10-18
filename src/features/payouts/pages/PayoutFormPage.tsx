@@ -24,6 +24,7 @@ import { FormSection } from '@/shared/ui/FormSection'
 import { SelectField } from '@/shared/ui/SelectField'
 import { TableCheckbox } from '@/shared/ui/TableCheckbox'
 import { TextField } from '@/shared/ui/TextField'
+import { logAction, sumParam } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -87,6 +88,14 @@ export function PayoutFormPage() {
     })
     chosen.forEach((sale) => salesStore.update(sale.id, { payoutId: id }))
     toast(t('payout.created'))
+    logAction({
+      section: 'payouts',
+      kind: 'money',
+      action: 'audit.a.payoutCreated',
+      params: { sum: sumParam(sumOf(chosen)) },
+      target: merchant.name,
+      href: payoutPath(id),
+    })
     navigate(payoutPath(id), { replace: true })
   }
 

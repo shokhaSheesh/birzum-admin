@@ -19,6 +19,7 @@ import { PasswordField } from '@/shared/ui/PasswordField'
 import { PhoneField } from '@/shared/ui/PhoneField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { TextField } from '@/shared/ui/TextField'
+import { logAction } from '@/entities/audit/audit'
 
 /**
  * Add or edit an admin: name, login, phone, role and password. A new admin needs a password;
@@ -37,6 +38,7 @@ export function AdminModal({
 }) {
   const { t } = useI18n()
   const roles = rolesStore.useAll()
+  const roleName = (id: string) => roles.find((role) => role.id === id)?.name ?? '—'
   const [name, setName] = useState(admin?.name ?? '')
   const [login, setLogin] = useState(admin?.login ?? '')
   const [phone, setPhone] = useState(admin?.phone ?? '')
@@ -73,9 +75,43 @@ export function AdminModal({
     if (admin) {
       adminsStore.update(admin.id, data)
       toast(t(password ? 'admin.savedWithPassword' : 'toast.saved'))
+      logAction({
+        section: 'admins',
+        kind: 'update',
+        action: 'audit.a.adminSaved',
+        target: data.name,
+        // Role, status and password are what an audit asks about; the rest is in the record
+        changes: [
+          ...(admin.roleId !== data.roleId
+            ? [
+                {
+                  field: 'audit.f.role' as const,
+                  from: roleName(admin.roleId),
+                  to: roleName(data.roleId),
+                },
+              ]
+            : []),
+          ...(admin.status !== data.status
+            ? [
+                {
+                  field: 'audit.f.status' as const,
+                  from: t(`admin.status.${admin.status}`),
+                  to: t(`admin.status.${data.status}`),
+                },
+              ]
+            : []),
+          ...(password ? [{ field: 'admin.password' as const, from: '••••••', to: '••••••' }] : []),
+        ],
+      })
     } else {
       adminsStore.save({ id: newId(), ...data, createdAt: new Date() })
       toast(t('admin.created'))
+      logAction({
+        section: 'admins',
+        kind: 'create',
+        action: 'audit.a.adminCreated',
+        target: data.name,
+      })
     }
     onClose()
   }

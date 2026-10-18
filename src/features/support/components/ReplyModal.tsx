@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/Button'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
 import { SelectField } from '@/shared/ui/SelectField'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** The answer to edit, or null to create one. */
@@ -33,9 +34,21 @@ export function ReplyModal({ reply, onClose, onDelete }: Props) {
     if (reply) {
       repliesStore.update(reply.id, { topic, title: clean(title), text: clean(text) })
       toast(t('toast.saved'))
+      logAction({
+        section: 'quickReplies',
+        kind: 'update',
+        action: 'audit.a.replySaved',
+        target: tl(clean(title)),
+      })
     } else {
       repliesStore.save({ id: newId(), topic, title: clean(title), text: clean(text) })
       toast(t('replies.created'))
+      logAction({
+        section: 'quickReplies',
+        kind: 'create',
+        action: 'audit.a.replyCreated',
+        target: tl(clean(title)),
+      })
     }
     onClose()
   }

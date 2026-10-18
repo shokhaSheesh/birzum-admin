@@ -57,6 +57,7 @@ export const PERMISSION_GROUPS: {
     sections: [
       { key: 'admins', label: 'nav.admins', ops: ALL },
       { key: 'roles', label: 'nav.roles', ops: ALL },
+      { key: 'audit', label: 'nav.audit', ops: ['read'] },
     ],
   },
 ]

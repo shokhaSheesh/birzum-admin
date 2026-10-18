@@ -24,6 +24,7 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { AdminModal } from '../components/AdminDialogs'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const tones: Record<AdminStatus, StatusTone> = {
@@ -227,6 +228,12 @@ export function AdminsPage() {
           if (deleting) adminsStore.remove(deleting.id)
           setDeleting(null)
           toast(t('admin.deleted'))
+          logAction({
+            section: 'admins',
+            kind: 'delete',
+            action: 'audit.a.adminDeleted',
+            target: deleting?.name,
+          })
         }}
       >
         <p>{t('admin.delete.message')}</p>

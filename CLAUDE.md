@@ -44,3 +44,4 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 - Read-only pages (Arizalar, Mahsulotlar) say so in their description and never show edit or delete.
 - Every visible string goes through `t()` with both Uzbek and Russian.
 - Check every page in the headless browser before saying it works; say what was not checked.
+- Every action that changes data calls `logAction()` from `entities/audit/audit` right where it succeeds, next to its toast: the section key, a kind (create, update, delete, money, access), an `audit.a.*` text, the target with a link, and before → after `changes` for status, role or amounts. The Faoliyat jurnali page (`/audit`) reads it; entries are never edited or deleted.

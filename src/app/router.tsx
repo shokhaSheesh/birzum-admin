@@ -27,6 +27,7 @@ import { SupportPage } from '@/features/support/pages/SupportPage'
 import { PayoutDetailPage } from '@/features/payouts/pages/PayoutDetailPage'
 import { PayoutFormPage } from '@/features/payouts/pages/PayoutFormPage'
 import { PayoutsPage } from '@/features/payouts/pages/PayoutsPage'
+import { AuditLogPage } from '@/features/audit/pages/AuditLogPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
@@ -50,6 +51,7 @@ const DESIGNED: string[] = [
   ROUTES.documents,
   ROUTES.admins,
   ROUTES.roles,
+  ROUTES.audit,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -86,6 +88,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.documents, element: <DocumentsPage /> },
           { path: ROUTES.admins, element: <AdminsPage /> },
           { path: ROUTES.roles, element: <RolesPage /> },
+          { path: ROUTES.audit, element: <AuditLogPage /> },
           { path: ROUTES.roleNew, element: <RoleFormPage key="new" /> },
           { path: ROUTES.roleEdit, element: <RoleFormPage key="edit" /> },
           { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },

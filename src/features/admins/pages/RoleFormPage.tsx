@@ -24,6 +24,7 @@ import { FormSection } from '@/shared/ui/FormSection'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 import { PermissionTable } from '../components/PermissionTable'
+import { logAction } from '@/entities/audit/audit'
 
 const blank = () =>
   Object.fromEntries(SECTION_KEYS.map((key) => [key, [] as Op[]])) as Record<string, Op[]>
@@ -88,6 +89,12 @@ export function RoleFormPage() {
     if (existing) rolesStore.update(existing.id, record)
     else rolesStore.replaceAll([...rolesStore.getAll(), record])
     toast(t(existing ? 'toast.saved' : 'role.created'))
+    logAction({
+      section: 'roles',
+      kind: existing ? 'update' : 'create',
+      action: existing ? 'audit.a.roleSaved' : 'audit.a.roleCreated',
+      target: record.name,
+    })
     navigate(ROUTES.roles)
   }
 

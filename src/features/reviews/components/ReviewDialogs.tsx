@@ -13,6 +13,7 @@ import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Modal } from '@/shared/ui/Modal'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
+import { logAction } from '@/entities/audit/audit'
 
 const now = () => new Date()
 
@@ -34,6 +35,12 @@ export function HideReviewModal({ review, onClose }: { review: Review; onClose: 
       },
     })
     toast(t('review.hidden'))
+    logAction({
+      section: 'reviews',
+      kind: 'update',
+      action: 'audit.a.reviewHidden',
+      target: review.author,
+    })
     onClose()
   }
 
@@ -87,6 +94,12 @@ export function RestoreReviewDialog({ review, onClose }: { review: Review; onClo
       onConfirm={() => {
         reviewsStore.update(review.id, { status: 'published', moderation: undefined })
         toast(t('review.restored'))
+        logAction({
+          section: 'reviews',
+          kind: 'update',
+          action: 'audit.a.reviewRestored',
+          target: review.author,
+        })
         onClose()
       }}
     >
@@ -107,6 +120,12 @@ export function DeleteReviewDialog({ review, onClose }: { review: Review; onClos
       onConfirm={() => {
         reviewsStore.remove(review.id)
         toast(t('review.deleted'))
+        logAction({
+          section: 'reviews',
+          kind: 'delete',
+          action: 'audit.a.reviewDeleted',
+          target: review.author,
+        })
         onClose()
       }}
     >

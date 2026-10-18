@@ -11,6 +11,7 @@ import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { ReplyModal } from '../components/ReplyModal'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -148,6 +149,12 @@ export function QuickRepliesPage() {
           if (deleting) repliesStore.remove(deleting.id)
           setDeleting(null)
           toast(t('replies.deleted'))
+          logAction({
+            section: 'quickReplies',
+            kind: 'delete',
+            action: 'audit.a.replyDeleted',
+            target: deleting ? tl(deleting.title) : undefined,
+          })
         }}
       >
         <p>{t('replies.delete.message', { title: deleting ? tl(deleting.title) : '' })}</p>

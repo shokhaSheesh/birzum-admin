@@ -28,6 +28,8 @@ import { NumberField } from '@/shared/ui/NumberField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
 import { TextField } from '@/shared/ui/TextField'
+import { logAction, sumParam } from '@/entities/audit/audit'
+import { clientPath } from '@/shared/config/routes'
 
 const now = () => new Date()
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -97,6 +99,14 @@ export function ChargeModal({ client, onClose }: { client: Client; onClose: () =
     parts.forEach((sum, application) => recordPayment(application, { ...entry, amount: sum }, at))
     setResult({ ok: true, sum: amount })
     toast(t('charge.done'))
+    logAction({
+      section: 'collections',
+      kind: 'money',
+      action: 'audit.a.charged',
+      params: { sum: sumParam(amount) },
+      target: fullName(client),
+      href: clientPath(client.id),
+    })
   }
 
   return (
@@ -253,6 +263,15 @@ export function ManualPaymentModal({
       today,
     )
     toast(amount >= progress!.remaining ? t('manual.closed') : t('manual.saved'))
+    const payer = clients.find((item) => item.id === clientId)
+    logAction({
+      section: 'collections',
+      kind: 'money',
+      action: 'audit.a.paymentEntered',
+      params: { sum: sumParam(amount) },
+      target: payer && fullName(payer),
+      href: payer && clientPath(payer.id),
+    })
     onClose()
   }
 
