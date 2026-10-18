@@ -65,7 +65,7 @@ function PercentInput({
   label: string
 }) {
   return (
-    <div className={controlClass(invalid, 'h-10! w-20! px-2! text-sm!')}>
+    <div className={controlClass(invalid, 'mx-auto h-10! w-20! px-2! text-sm!')}>
       <input
         inputMode="decimal"
         aria-label={label}
@@ -330,12 +330,12 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
 
       {terms.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="overflow-x-auto rounded-control border border-line">
-            <table className="w-full text-sm">
+          <div className="w-fit max-w-full overflow-x-auto rounded-control border border-line">
+            <table className="w-max text-sm">
               <thead className="bg-surface/60">
                 <tr>
                   {byAmount && (
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-ink-muted">
+                    <th className="min-w-56 px-3 py-2 text-left text-xs font-semibold text-ink-muted">
                       {t('mlProducts.col.sum')}
                     </th>
                   )}
@@ -343,13 +343,13 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
                     terms.map((n) => (
                       <th
                         key={n}
-                        className="px-2 py-2 text-right text-xs font-semibold text-ink-muted"
+                        className="w-24 px-2 py-2 text-center text-xs font-semibold text-ink-muted"
                       >
                         {t('mlProducts.months', { n: String(n) })}
                       </th>
                     ))
                   ) : (
-                    <th className="px-2 py-2 text-right text-xs font-semibold text-ink-muted">
+                    <th className="w-24 px-2 py-2 text-center text-xs font-semibold text-ink-muted">
                       {t('mlProducts.rate')}
                     </th>
                   )}
@@ -400,7 +400,7 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
                       )}
                       {byTerm ? (
                         terms.map((n) => (
-                          <td key={n} className="px-2 py-2">
+                          <td key={n} className="w-24 px-2 py-2">
                             <PercentInput
                               label={`${bandLabel(i)} · ${t('mlProducts.months', { n: String(n) })}`}
                               value={band.byTerm[n] ?? ''}
@@ -410,7 +410,7 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
                           </td>
                         ))
                       ) : (
-                        <td className="px-2 py-2">
+                        <td className="w-24 px-2 py-2">
                           <PercentInput
                             label={t('mlProducts.rate')}
                             value={rateOfBand(band, terms[0]) ?? ''}
