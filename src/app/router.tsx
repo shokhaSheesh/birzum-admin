@@ -32,11 +32,13 @@ import { PayoutFormPage } from '@/features/payouts/pages/PayoutFormPage'
 import { PayoutsPage } from '@/features/payouts/pages/PayoutsPage'
 import { AuditLogPage } from '@/features/audit/pages/AuditLogPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
+import { LoanProductsPage } from '@/features/microloans/pages/LoanProductsPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
 import { AdminLayout } from './layouts/AdminLayout'
-import { NAV_ITEMS } from './nav'
+import { BRANDS, brandPath, type Brand } from '@/shared/config/workspaces'
+import { brandNav, NAV_ITEMS } from './nav'
 import { RequireAdmin } from './RequireAdmin'
 
 /** Sidebar pages that have their own design; the rest show a placeholder. */
@@ -63,6 +65,19 @@ const DESIGNED: string[] = [
   ROUTES.brands,
   ROUTES.pricing,
 ]
+
+/** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
+function brandRoutes(brand: Brand) {
+  const designed = [
+    { path: brandPath(brand, 'products'), element: <LoanProductsPage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'onboarding'), element: <OnboardingPage key={brand} app={brand} /> },
+  ]
+  const stubs = brandNav(brand)
+    .flatMap((group) => group.items)
+    .filter((item) => !designed.some((route) => route.path === item.to))
+    .map((item) => ({ path: item.to, element: <StubPage key={item.to} item={item} /> }))
+  return [...designed, ...stubs]
+}
 
 export const router = createBrowserRouter([
   { path: ROUTES.login, element: <LoginPage /> },
@@ -94,7 +109,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.quickReplies, element: <QuickRepliesPage /> },
           { path: ROUTES.broadcasts, element: <BroadcastsPage /> },
           { path: ROUTES.faq, element: <FaqPage /> },
-          { path: ROUTES.onboarding, element: <OnboardingPage /> },
+          { path: ROUTES.onboarding, element: <OnboardingPage key="birzum" app="birzum" /> },
           { path: ROUTES.documents, element: <DocumentsPage /> },
           { path: ROUTES.admins, element: <AdminsPage /> },
           { path: ROUTES.roles, element: <RolesPage /> },
@@ -109,6 +124,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.categories, element: <CategoriesPage /> },
           { path: ROUTES.brands, element: <BrandsPage /> },
           { path: ROUTES.pricing, element: <PricingPage /> },
+          ...BRANDS.flatMap(brandRoutes),
           ...NAV_ITEMS.filter((item) => !DESIGNED.includes(item.to)).map((item) => ({
             path: item.to,
             element: <StubPage item={item} />,

@@ -55,6 +55,10 @@ export const PERMISSION_GROUPS: {
     ],
   },
   {
+    title: 'navGroup.microloans',
+    sections: [{ key: 'mlProducts', label: 'nav.mlProducts', ops: ALL }],
+  },
+  {
     title: 'navGroup.system',
     sections: [
       { key: 'admins', label: 'nav.admins', ops: ALL },

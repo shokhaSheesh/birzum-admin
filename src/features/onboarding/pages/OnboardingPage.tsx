@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { logAction } from '@/entities/audit/audit'
-import { APPS, slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
+import { slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { toast } from '@/shared/lib/toast'
@@ -11,18 +11,16 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { Switch } from '@/shared/ui/Switch'
-import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { SlideModal } from '../components/SlideModal'
 import { SlideThumb } from '../components/SlideThumb'
 
 /**
- * The intro slides each app shows once after the first sign-in: picture, title and line in
- * both languages, in order. Pick the app on top.
+ * The intro slides an app shows once after the first sign-in: picture, title and line in both
+ * languages, in order. Each business's own menu opens its app's slides.
  */
-export function OnboardingPage() {
+export function OnboardingPage({ app }: { app: AppId }) {
   const { t, tl } = useI18n()
   const all = slidesStore.useAll()
-  const [app, setApp] = useState<AppId>('birzum')
   const [editing, setEditing] = useState<Slide | null | undefined>(undefined)
   const [deleting, setDeleting] = useState<Slide | null>(null)
 
@@ -61,24 +59,10 @@ export function OnboardingPage() {
       />
 
       <section className="flex flex-col rounded-card border border-line bg-canvas">
-        <div className="px-4 pt-2">
-          <UnderlineTabs
-            label={t('nav.onboarding')}
-            options={APPS.map((value) => ({
-              value,
-              label: t(`slides.app.${value}`),
-              count: all.filter((slide) => slide.app === value).length,
-            }))}
-            value={app}
-            onChange={(next) => {
-              setApp(next)
-            }}
-          />
-        </div>
         {slides.length === 0 ? (
           <EmptyState title={t('slides.empty')} hint={t('slides.empty.hint')} />
         ) : (
-          <ol className="flex flex-col border-t border-line">
+          <ol className="flex flex-col">
             {slides.map((slide, i) => (
               <li
                 key={slide.id}

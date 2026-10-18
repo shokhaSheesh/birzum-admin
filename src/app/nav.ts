@@ -1,5 +1,11 @@
 import {
   BadgePercent,
+  Banknote,
+  CircleAlert,
+  FileSignature,
+  MapPin,
+  Scale,
+  Settings,
   FileText,
   FolderTree,
   GalleryHorizontal,
@@ -23,6 +29,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { ROUTES } from '@/shared/config/routes'
+import { brandPath, type Brand, type Workspace } from '@/shared/config/workspaces'
 import type { TranslationKey } from '@/shared/i18n/dictionaries'
 
 export type NavItem = {
@@ -132,3 +139,92 @@ export const NAV: NavGroup[] = [
 ]
 
 export const NAV_ITEMS = NAV.flatMap((group) => group.items)
+
+/**
+ * A microloan brand's sidebar. Same pages for Fortuna and Vodiy, each under its own path; a page
+ * only one brand needs can be added to that brand here.
+ */
+export function brandNav(brand: Brand): NavGroup[] {
+  const to = (page: string) => brandPath(brand, page)
+  return [
+    {
+      items: [
+        { to: to(''), icon: LayoutDashboard, label: 'nav.dashboard', about: 'about.ml.dashboard' },
+      ],
+    },
+    {
+      title: 'navGroup.loans',
+      items: [
+        {
+          to: to('applications'),
+          icon: ReceiptText,
+          label: 'nav.applications',
+          about: 'about.ml.applications',
+        },
+        { to: to('loans'), icon: Banknote, label: 'nav.loans', about: 'about.ml.loans' },
+        { to: to('payments'), icon: Wallet, label: 'nav.loanPayments', about: 'about.ml.payments' },
+        { to: to('overdue'), icon: CircleAlert, label: 'nav.overdue', about: 'about.ml.overdue' },
+        { to: to('customers'), icon: Users, label: 'nav.borrowers', about: 'about.ml.customers' },
+      ],
+    },
+    {
+      title: 'navGroup.rules',
+      items: [
+        { to: to('products'), icon: Package, label: 'nav.products', about: 'about.ml.products' },
+        { to: to('decision'), icon: Scale, label: 'nav.decision', about: 'about.ml.decision' },
+        {
+          to: to('contract'),
+          icon: FileSignature,
+          label: 'nav.contractRules',
+          about: 'about.ml.contract',
+        },
+      ],
+    },
+    {
+      title: 'navGroup.communication',
+      items: [
+        { to: to('support'), icon: Headset, label: 'nav.support', about: 'about.ml.support' },
+        {
+          to: to('quick-replies'),
+          icon: MessageSquareText,
+          label: 'nav.quickReplies',
+          about: 'about.quickReplies',
+        },
+        {
+          to: to('broadcasts'),
+          icon: Megaphone,
+          label: 'nav.broadcasts',
+          about: 'about.ml.broadcasts',
+        },
+        { to: to('faq'), icon: MessageCircleQuestion, label: 'nav.faq', about: 'about.ml.faq' },
+        {
+          to: to('onboarding'),
+          icon: GalleryHorizontal,
+          label: 'nav.onboarding',
+          about: 'about.onboarding',
+        },
+        {
+          to: to('documents'),
+          icon: FileText,
+          label: 'nav.documents',
+          about: 'about.ml.documents',
+        },
+        { to: to('contacts'), icon: MapPin, label: 'nav.contacts', about: 'about.ml.contacts' },
+      ],
+    },
+    {
+      title: 'navGroup.system',
+      items: [
+        {
+          to: to('settings'),
+          icon: Settings,
+          label: 'nav.brandSettings',
+          about: 'about.ml.settings',
+        },
+      ],
+    },
+  ]
+}
+
+/** The sidebar for a workspace. */
+export const navOf = (workspace: Workspace) => (workspace === 'birzum' ? NAV : brandNav(workspace))

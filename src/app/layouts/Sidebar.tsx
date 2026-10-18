@@ -1,6 +1,6 @@
 import { checksStore } from '@/entities/applications/checks'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
 import { chatsStore } from '@/entities/support/chats'
 import logoMark from '@/shared/assets/logo-mark.svg'
@@ -9,7 +9,9 @@ import logo from '@/shared/assets/logo.svg'
 import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { NAV } from '../nav'
+import { WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
+import { navOf } from '../nav'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 type Props = {
   onNavigate?: () => void
@@ -19,9 +21,14 @@ type Props = {
   onToggle?: () => void
 }
 
-/** The left navigation: the logo, then the pages in titled groups, then the collapse button. */
+/**
+ * The left navigation: the logo, the business being run (Birzum or a microloan brand), then that
+ * business's pages in titled groups, then the collapse button.
+ */
 export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const { t } = useI18n()
+  const workspace = workspaceOf(useLocation().pathname)
+  const home = WORKSPACE_INFO[workspace].home
   // Arizalar counts the ones waiting for a merchant to take them
   const pending = applicationsStore
     .useAll()
@@ -47,7 +54,9 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
           </div>
         )}
 
-        {NAV.map((group, i) => (
+        <WorkspaceSwitcher collapsed={collapsed} />
+
+        {navOf(workspace).map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
             {group.title &&
               (collapsed ? (
@@ -70,7 +79,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
                 <NavLink
                   key={to}
                   to={to}
-                  end={to === ROUTES.dashboard}
+                  end={to === home}
                   onClick={onNavigate}
                   title={collapsed ? t(label) : undefined}
                   aria-label={collapsed ? t(label) : undefined}
