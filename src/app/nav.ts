@@ -92,7 +92,7 @@ export const NAV: NavGroup[] = [
   {
     title: 'navGroup.communication',
     items: [
-      { to: ROUTES.support, icon: Headset, label: 'nav.support', about: 'about.support', badge: 3 },
+      { to: ROUTES.support, icon: Headset, label: 'nav.support', about: 'about.support' },
       {
         to: ROUTES.broadcasts,
         icon: Megaphone,

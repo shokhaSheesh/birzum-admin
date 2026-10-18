@@ -95,6 +95,15 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - The list is cards, not a table, because the text is the point: stars, time and status, the text, the moderation line when there is one, then the client (opens the client), the shop, the product and the ariza number (opens the ariza). Tabs: Hammasi, Salbiy sharhlar, Yashirilgan, Merchant oʻchirgan; search, merchant and star filters; pagination.
 - Actions: **Yashirish** (modal: what it does, the review quoted, a reason as choice cards, a comment), **Qaytarish** for a hidden or merchant-removed review (confirm), **Oʻchirish** for good (confirm that says hiding is usually enough).
 
+## Yordam chati
+
+- The operators' side of the client app's support chat (the merchant app has none). A full-height page in three panes, not a scrolling page: chats, the conversation, the shopper.
+- **Chats** (380px): search (name, phone, text) and four tabs: Navbat (open and nobody's yet), Mening, Ochiq, Yopilgan; only Navbat and Mening show counts. A row: photo or initials, name, time (clock today, "Kecha", or the date), the last message ("Siz: …" for an answer, "Rasm" for a photo), unread count, the topic and who has it, or "Javob kutmoqda" in amber. The sidebar badge counts open chats with unread messages; opening a chat reads them.
+- **Conversation**: header with the name, topic and phone, then "Chatni olish" (from the queue) or the person in charge as a dropdown to hand it over, and "Yopish" (or "Qayta ochish"). Messages: the shopper on the left in white, answers on the right in navy with the admin's name and time, internal notes on the right in amber labelled "Ichki izoh", events in small grey text in the middle (took, handed over, closed), and day chips (Bugun, Kecha, the date). `?chat=` opens a chat directly.
+- **Reply box**: Javob / Ichki izoh switch (the whole box turns amber for a note, with "Faqat adminlar koʻradi"), the text (Enter sends, Shift+Enter breaks the line), Tayyor javoblar (a list above the box that fills the text), a photo button, and Yuborish. Answering a chat from the queue takes it.
+- **Shopper** (from 1280px): photo, name, phone, status, limit, running nasiyas, what is left, overdue in red, next payment, the last four arizalar (each opens) and "Klient sahifasi".
+- Below 1024px the list and the conversation are separate screens with a back arrow.
+
 ## Toʻlovlar va qarzlar
 
 - Money in from shoppers and working with debtors. Payments are not created here: Birzum takes the monthly payment from the card on the payment day, or the shopper pays in the app (Oylik toʻlov, Muddatidan oldin, Toʻliq yopish, as in the client app's PaySheet).
