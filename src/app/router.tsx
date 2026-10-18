@@ -5,6 +5,9 @@ import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
+import { BroadcastDetailPage } from '@/features/broadcasts/pages/BroadcastDetailPage'
+import { BroadcastFormPage } from '@/features/broadcasts/pages/BroadcastFormPage'
+import { BroadcastsPage } from '@/features/broadcasts/pages/BroadcastsPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -37,6 +40,7 @@ const DESIGNED: string[] = [
   ROUTES.reviews,
   ROUTES.support,
   ROUTES.quickReplies,
+  ROUTES.broadcasts,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -68,6 +72,10 @@ export const router = createBrowserRouter([
           { path: ROUTES.reviews, element: <ReviewsPage /> },
           { path: ROUTES.support, element: <SupportPage /> },
           { path: ROUTES.quickReplies, element: <QuickRepliesPage /> },
+          { path: ROUTES.broadcasts, element: <BroadcastsPage /> },
+          { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },
+          { path: ROUTES.broadcast, element: <BroadcastDetailPage /> },
+          { path: ROUTES.broadcastEdit, element: <BroadcastFormPage key="edit" /> },
           { path: ROUTES.products, element: <ProductsPage /> },
           { path: ROUTES.product, element: <ProductDetailPage /> },
           { path: ROUTES.categories, element: <CategoriesPage /> },

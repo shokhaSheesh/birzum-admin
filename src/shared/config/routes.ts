@@ -22,6 +22,9 @@ export const ROUTES = {
   support: '/support',
   quickReplies: '/quick-replies',
   broadcasts: '/broadcasts',
+  broadcastNew: '/broadcasts/new',
+  broadcast: '/broadcasts/:id',
+  broadcastEdit: '/broadcasts/:id/edit',
   faq: '/faq',
   documents: '/documents',
   admins: '/admins',
@@ -46,3 +49,8 @@ export const applicationPath = (id: string) => `/applications/${id}`
 
 /** A shopper's detail page. */
 export const clientPath = (id: string) => `/customers/${id}`
+
+/** A broadcast's detail page. */
+export const broadcastPath = (id: string) => `/broadcasts/${id}`
+/** A draft or scheduled broadcast's form. */
+export const broadcastEditPath = (id: string) => `/broadcasts/${id}/edit`

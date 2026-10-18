@@ -109,6 +109,13 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - A small directory of its own under Aloqa: the answers the chat's list offers. Table: title, the text (two lines), topic (Toʻlov, Limit, Buyurtma, Boshqa or Har qanday mavzu), edit and delete. Search and a topic filter.
 - Create and edit in a centred modal: topic (an answer with a topic comes first in chats of that topic), title and text, each in both languages (required in both, since the answer goes out in the shopper's language). Deleting asks first; sent messages stay as they were.
 
+## Xabarnomalar
+
+- A broadcast is a message from Birzum that lands in the app's Yangiliklar list (client app, or the merchant app's Yangiliklar tab) and arrives as a push. Shoppers can also get it by SMS.
+- **List**: figures for this month (sent, delivered, open rate, scheduled with the next one), status tabs (Yuborilgan, Rejalashtirilgan, Qoralama, Bekor qilingan), search, then rows: title and first line of the text, who (the group on top, then the app and the channels), date, opened (% of delivered with a thin bar), status. Row actions: view; edit for a draft or a scheduled one; cancel a scheduled one; delete a draft or cancelled one. Copying lives on the detail page.
+- **Form** (a full page with the `ActionBar`: Bekor qilish, Qoralama, Yuborish / Rejalashtirish): Kimga (Klientlar with a group and its count today: all, running a nasiya, debtors, without a nasiya, limit expired; or Merchantlar as cards to tick, none ticked meaning every active one), Matn (title and text in both languages, required; an optional 2:1 picture; for shoppers what a tap opens: the message, a category or a shop), Yuborish (app + push always; SMS as a paid extra with a live count against 160 characters; now, or a date and a half-hour slot between 08:00 and 21:30, never at night). On the right, sticky: a phone in either language showing the push on the lock screen, the Yangiliklar item (with picture and the tap line) and the SMS, then the recipient count, channels and time. Sending asks first ("36 kishiga hozir yuborilsinmi?").
+- **Detail**: status and when; Copy, and Edit / Cancel / Delete as the status allows; Natija as a funnel (sent → delivered → opened → tapped; SMS opens cannot be counted, and it says so); the text side by side in UZ and RU with who, channels, the tap target and who made it; the phone preview on the right.
+
 ## Toʻlovlar va qarzlar
 
 - Money in from shoppers and working with debtors. Payments are not created here: Birzum takes the monthly payment from the card on the payment day, or the shopper pays in the app (Oylik toʻlov, Muddatidan oldin, Toʻliq yopish, as in the client app's PaySheet).
