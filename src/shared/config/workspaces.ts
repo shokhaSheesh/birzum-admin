@@ -29,3 +29,6 @@ export const brandPath = (brand: Brand, page = '') => (page ? `/${brand}/${page}
 
 /** A microloan ariza's page within its brand. */
 export const loanAppPath = (brand: Brand, id: string) => brandPath(brand, `applications/${id}`)
+
+/** A microloan's page within its brand. */
+export const brandLoanPath = (brand: Brand, id: string) => brandPath(brand, `loans/${id}`)

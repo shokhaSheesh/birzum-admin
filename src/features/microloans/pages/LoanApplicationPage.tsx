@@ -1,6 +1,14 @@
-import { ArrowLeft, CircleAlert, CircleCheck, CircleX, Clock, type LucideIcon } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  CircleX,
+  Clock,
+  type LucideIcon,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   isOffer,
   loanApplicationsStore,
@@ -9,7 +17,7 @@ import {
   type LoanAppEvent,
 } from '@/entities/microloans/applications'
 import { loanProductsStore } from '@/entities/microloans/products'
-import { brandPath, type Brand } from '@/shared/config/workspaces'
+import { brandLoanPath, brandPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
@@ -188,9 +196,13 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
               />
             </div>
             {app.loanNumber && (
-              <p className="border-t border-line pt-3 text-sm text-ink-muted">
+              <Link
+                to={brandLoanPath(brand, app.loanNumber)}
+                className="flex items-center justify-between gap-2 border-t border-line pt-3 text-sm font-semibold text-brand hover:underline"
+              >
                 {t('application.contract', { number: app.loanNumber })}
-              </p>
+                <ChevronRight size={16} />
+              </Link>
             )}
           </section>
 

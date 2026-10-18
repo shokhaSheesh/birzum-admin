@@ -34,7 +34,9 @@ import { AuditLogPage } from '@/features/audit/pages/AuditLogPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { LoanApplicationPage } from '@/features/microloans/pages/LoanApplicationPage'
 import { LoanApplicationsPage } from '@/features/microloans/pages/LoanApplicationsPage'
+import { LoanPage } from '@/features/microloans/pages/LoanPage'
 import { LoanProductsPage } from '@/features/microloans/pages/LoanProductsPage'
+import { LoansPage } from '@/features/microloans/pages/LoansPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
@@ -71,6 +73,8 @@ const DESIGNED: string[] = [
 /** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
 function brandRoutes(brand: Brand) {
   const designed = [
+    { path: brandPath(brand, 'loans'), element: <LoansPage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'loans/:id'), element: <LoanPage key={brand} brand={brand} /> },
     {
       path: brandPath(brand, 'applications'),
       element: <LoanApplicationsPage key={brand} brand={brand} />,
