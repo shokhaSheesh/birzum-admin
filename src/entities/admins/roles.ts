@@ -59,6 +59,7 @@ export const PERMISSION_GROUPS: {
     sections: [
       { key: 'mlApplications', label: 'nav.mlApplications', ops: ['read', 'update'] },
       { key: 'mlLoans', label: 'nav.mlLoans', ops: ['read'] },
+      { key: 'mlPayments', label: 'nav.mlPayments', ops: ['read', 'create'] },
       { key: 'mlProducts', label: 'nav.mlProducts', ops: ALL },
     ],
   },

@@ -12,10 +12,14 @@ export type Workspace = (typeof WORKSPACES)[number]
 export type Brand = Exclude<Workspace, 'birzum'>
 export const BRANDS: Brand[] = ['fortuna', 'vodiy']
 
-export const WORKSPACE_INFO: Record<Workspace, { name: string; mark: string; home: string }> = {
-  birzum: { name: 'Birzum', mark: logoMark, home: '/' },
-  fortuna: { name: 'Fortuna Biznes', mark: fortunaMark, home: '/fortuna' },
-  vodiy: { name: 'Vodiy Taraqqiyot', mark: vodiyMark, home: '/vodiy' },
+export const WORKSPACE_INFO: Record<
+  Workspace,
+  { name: string; mark: string; home: string; /** Tax number on fiscal cheques. */ tin: string }
+> = {
+  // The STIRs are placeholders until each company gives its own, as in the apps
+  birzum: { name: 'Birzum', mark: logoMark, home: '/', tin: '300000000' },
+  fortuna: { name: 'Fortuna Biznes', mark: fortunaMark, home: '/fortuna', tin: '305000000' },
+  vodiy: { name: 'Vodiy Taraqqiyot', mark: vodiyMark, home: '/vodiy', tin: '306000000' },
 }
 
 /** Which business a path belongs to. */

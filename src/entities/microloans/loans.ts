@@ -38,8 +38,14 @@ export type Loan = {
   prepayments: Prepayment[]
   /** Set while a payment is late: the due day it was missed on. */
   overdueSince?: Date
+  /** Automatic charges the card refused, kept after the payment comes in. */
+  refused: { at: Date; n: number; amount: number; reason: 'funds' | 'blocked' | 'expired' }[]
   closedAt?: Date
 }
+
+/** "Humo •••• 1671". */
+export const cardText = (card: Loan['card']) =>
+  `${card.brand === 'humo' ? 'Humo' : 'Uzcard'} •••• ${card.last4}`
 
 export const LOAN_STATES = ['active', 'overdue', 'closed'] as const
 export type LoanState = (typeof LOAN_STATES)[number]
@@ -121,7 +127,7 @@ function random(seed: number) {
 function build(
   brand: Brand,
   number: string,
-  base: Omit<Loan, 'brand' | 'number' | 'paidCount' | 'paidOn' | 'prepayments' | 'id'>,
+  base: Omit<Loan, 'brand' | 'number' | 'paidCount' | 'paidOn' | 'prepayments' | 'refused' | 'id'>,
   next: () => number,
 ): Loan {
   const loan: Loan = {
@@ -132,6 +138,7 @@ function build(
     paidCount: 0,
     paidOn: {},
     prepayments: [],
+    refused: [],
   }
   const schedule = scheduleOf(loan)
   const due = schedule.filter((item) => item.due <= NOW).length
@@ -151,9 +158,33 @@ function build(
   } else if (roll < 0.3 && due >= 1) {
     // Missed the latest payment
     loan.paidCount = due - 1
-    loan.overdueSince = schedule[due - 1].due
+    const missed = schedule[due - 1]
+    loan.overdueSince = missed.due
+    // Refused on the day, then tried again each morning, up to three times
+    const reason = (['funds', 'funds', 'blocked', 'expired'] as const)[Math.floor(next() * 4)]
+    const late = Math.max(1, Math.floor((NOW.getTime() - missed.due.getTime()) / 86_400_000))
+    for (let d = 0; d <= Math.min(late, 2); d++)
+      loan.refused.push({
+        at: at9(new Date(missed.due.getTime() + d * 86_400_000)),
+        n: missed.n,
+        amount: missed.amount,
+        reason,
+      })
   } else loan.paidCount = Math.min(due, schedule.length)
-  for (let n = 1; n <= loan.paidCount; n++) loan.paidOn[n] = at9(schedule[n - 1].due)
+  // Most are taken from the card at 09:00 on the day; about one in four paid early in the app
+  for (let n = 1; n <= loan.paidCount; n++) {
+    const due = schedule[n - 1].due
+    loan.paidOn[n] =
+      next() < 0.25
+        ? new Date(
+            due.getFullYear(),
+            due.getMonth(),
+            due.getDate() - 1 - Math.floor(next() * 4),
+            12 + Math.floor(next() * 9),
+            Math.floor(next() * 60),
+          )
+        : at9(due)
+  }
   return loan
 }
 
