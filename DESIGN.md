@@ -121,7 +121,14 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - What the client app shows in Profil → Savol-javoblar: the questions in order, then "Biz bilan bogʻlanish" (call-centre number with hours, Telegram).
 - **List** (left): a search and "Ilovada 6 ta, jami 7 ta", then one row per question: the 6-dot handle (drag, or arrow keys; off while searching, since order means the whole list), its number, the question and two lines of the answer, a `Switch` for showing it in the app (a hidden one is greyed with "Ilovada koʻrinmaydi"), edit and delete. A row opens the edit modal; new questions go to the end.
 - **Modal**: question and answer, each in both languages, required. Deleting asks first and says hiding is enough for a while.
-- **Right, sticky**: the app's screen in a phone frame, in UZ or RU by its own switch (its titles too): only the shown questions, in order, as the app's accordion (the last row clicked opens), then the contacts. Under it, the **Kontaktlar** card with "Tahrirlash": a modal for the call-centre number (`PhoneField`), the hours in both languages and the Telegram name (without @).
+- **Right, sticky**: the **Kontaktlar** card the app shows under the questions, with "Tahrirlash": a modal for the call-centre number (`PhoneField`), the hours in both languages and the Telegram name (without @). No phone preview here.
+
+## Hujjatlar
+
+- The client app's legal documents: Foydalanish shartlari (agreed at sign-in), Maxfiylik siyosati (sign-in and checkout), Ommaviy oferta (checkout). They are fixed, since the app links to each; their text changes in versions. No create or delete.
+- **List**: one row per document with where consent is asked, the version in force and since when, and an amber "N-versiya qoralamasi" badge while a draft exists.
+- **Document page, reading**: the version in force (or an older one picked in Versiyalar), Uzbek and Russian side by side per section; "Tahrirlash" starts a draft from it. **Versiyalar** on the right: newest first, status (Qoralama, Amalda, Eski), when and who, the note, and "Qayta rozilik soʻralgan".
+- **Editing a draft** (the `ActionBar`: Qoralamani oʻchirish, Saqlash, Eʼlon qilish): one card per section with heading and text in both languages, up, down, remove (not the last), "+ Boʻlim qoʻshish". Nobody sees a draft until it is published. **Eʼlon qilish** asks for "Nima oʻzgardi" (required) and "Klientlardan qayta rozilik soʻrash" (on by default); the old version becomes Eski.
 
 ## Toʻlovlar va qarzlar
 

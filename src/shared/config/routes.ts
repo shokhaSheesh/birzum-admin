@@ -27,6 +27,7 @@ export const ROUTES = {
   broadcastEdit: '/broadcasts/:id/edit',
   faq: '/faq',
   documents: '/documents',
+  document: '/documents/:id',
   admins: '/admins',
 } as const
 
@@ -54,3 +55,6 @@ export const clientPath = (id: string) => `/customers/${id}`
 export const broadcastPath = (id: string) => `/broadcasts/${id}`
 /** A draft or scheduled broadcast's form. */
 export const broadcastEditPath = (id: string) => `/broadcasts/${id}/edit`
+
+/** A legal document's page. */
+export const documentPath = (id: string) => `/documents/${id}`

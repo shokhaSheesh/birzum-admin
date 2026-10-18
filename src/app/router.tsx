@@ -10,6 +10,8 @@ import { BroadcastFormPage } from '@/features/broadcasts/pages/BroadcastFormPage
 import { BroadcastsPage } from '@/features/broadcasts/pages/BroadcastsPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
+import { DocumentPage } from '@/features/documents/pages/DocumentPage'
+import { DocumentsPage } from '@/features/documents/pages/DocumentsPage'
 import { FaqPage } from '@/features/faq/pages/FaqPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
@@ -43,6 +45,7 @@ const DESIGNED: string[] = [
   ROUTES.quickReplies,
   ROUTES.broadcasts,
   ROUTES.faq,
+  ROUTES.documents,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -76,6 +79,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.quickReplies, element: <QuickRepliesPage /> },
           { path: ROUTES.broadcasts, element: <BroadcastsPage /> },
           { path: ROUTES.faq, element: <FaqPage /> },
+          { path: ROUTES.documents, element: <DocumentsPage /> },
+          { path: ROUTES.document, element: <DocumentPage /> },
           { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },
           { path: ROUTES.broadcast, element: <BroadcastDetailPage /> },
           { path: ROUTES.broadcastEdit, element: <BroadcastFormPage key="edit" /> },

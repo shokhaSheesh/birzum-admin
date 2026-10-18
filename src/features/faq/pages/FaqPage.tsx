@@ -1,18 +1,6 @@
-import {
-  ChevronDown,
-  Clock,
-  EyeOff,
-  GripVertical,
-  Pencil,
-  Phone,
-  Plus,
-  Search,
-  Send,
-  Trash2,
-} from 'lucide-react'
+import { EyeOff, GripVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { contactsInfoStore, faqStore, type Faq } from '@/entities/faq/faq'
-import { dictionaries, LANGS, type Lang, type TranslationKey } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatPhone } from '@/shared/lib/phone'
@@ -37,11 +25,11 @@ function reorder(all: Faq[], moved: Faq, target: Faq, after: boolean) {
 
 /**
  * The client app's Savol-javoblar: the questions in the order shoppers see them, dragged by
- * their handle to reorder, each with a switch to show or hide it. On the right, the app's
- * screen as shoppers see it, and the support contacts shown under the questions.
+ * their handle to reorder, each with a switch to show or hide it. On the right, the support
+ * contacts the app shows under the questions.
  */
 export function FaqPage() {
-  const { t, tl, lang: appLang } = useI18n()
+  const { t, tl } = useI18n()
   const all = faqStore.useAll()
   const contacts = contactsInfoStore.useAll()[0]
   const [query, setQuery] = useState('')
@@ -51,10 +39,6 @@ export function FaqPage() {
   const [editingContacts, setEditingContacts] = useState(false)
   const [dragged, setDragged] = useState<Faq | null>(null)
   const [drop, setDrop] = useState<Drop | null>(null)
-  const [previewLang, setPreviewLang] = useState<Lang>(appLang)
-  // The preview speaks its own language, whatever the panel's is
-  const pt = (key: TranslationKey) => dictionaries[previewLang][key]
-  const [openId, setOpenId] = useState<string | null>(all[0]?.id ?? null)
 
   const needle = query.trim().toLowerCase()
   const rows = all.filter(
@@ -140,10 +124,7 @@ export function FaqPage() {
                   }}
                   onDragOver={(e) => dragOver(e, item)}
                   onDrop={() => dropOn(item)}
-                  onClick={() => {
-                    setOpenId(item.id)
-                    setEditing(item)
-                  }}
+                  onClick={() => setEditing(item)}
                   className={cn(
                     'flex cursor-pointer items-start gap-2 border-b border-line py-3 pr-3 pl-2 last:border-b-0 hover:bg-surface/60',
                     !item.visible && 'bg-surface/40',
@@ -206,83 +187,6 @@ export function FaqPage() {
         </section>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          <div className="flex items-center justify-between">
-            <p className="font-bold">{t('faq.preview')}</p>
-            <div className="flex gap-0.5 rounded-full bg-surface p-0.5">
-              {LANGS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setPreviewLang(value)}
-                  aria-pressed={previewLang === value}
-                  className={cn(
-                    'h-7 rounded-full px-3 text-xs font-bold uppercase',
-                    previewLang === value ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
-                  )}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* The client app's screen, light like the app */}
-          <div className="mx-auto flex h-[560px] w-full max-w-[300px] flex-col overflow-hidden rounded-[36px] border-[6px] border-navy-950 bg-white text-navy-950 shadow-xl">
-            <p className="px-5 pt-4 pb-2 text-[11px] font-semibold tabular-nums">09:41</p>
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4">
-              <p className="text-[17px] font-bold">{pt('faq.preview.title')}</p>
-              <span className="flex h-9 items-center gap-2 rounded-xl bg-[#f2f5f6] px-3 text-[12px] text-[#8499a4]">
-                <Search size={14} />
-                {pt('faq.preview.search')}
-              </span>
-              <ul className="flex flex-col">
-                {shown.map((item) => {
-                  const open = item.id === openId
-                  return (
-                    <li key={item.id} className="border-b border-[#dfe6e9]">
-                      <button
-                        type="button"
-                        onClick={() => setOpenId(open ? null : item.id)}
-                        className="flex w-full items-center gap-2 py-2.5 text-left text-[13px] font-semibold"
-                      >
-                        <span className="flex-1">{item.question[previewLang]}</span>
-                        <ChevronDown
-                          size={16}
-                          className={cn('shrink-0 text-[#56707f]', open && 'rotate-180')}
-                        />
-                      </button>
-                      {open && (
-                        <p className="pb-2.5 text-[12px] leading-snug text-[#56707f]">
-                          {item.answer[previewLang]}
-                        </p>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-              <p className="pt-1 text-[13px] font-bold">{pt('faq.preview.contacts')}</p>
-              <div className="rounded-2xl bg-[#f2f5f6] px-3 text-[12px]">
-                <div className="flex items-center gap-2 border-b border-[#dfe6e9] py-2.5">
-                  <Phone size={16} className="shrink-0 text-navy-900" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold tabular-nums">
-                      {formatPhone(contacts.phone)}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] text-[#56707f]">
-                      <Clock size={11} />
-                      {contacts.hours[previewLang]}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 py-2.5">
-                  <Send size={16} className="shrink-0 text-navy-900" />
-                  <span className="font-semibold">@{contacts.telegram}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p className="text-center text-xs text-ink-subtle">{t('faq.preview.hint')}</p>
-
           <section className="flex flex-col gap-3 rounded-card border border-line bg-canvas p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="font-bold">{t('faq.contacts')}</p>
