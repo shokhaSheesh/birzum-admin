@@ -139,7 +139,8 @@ function seed(): Application[] {
         rand() > 0.6 ? Math.round((goodsTotal * (0.1 + rand() * 0.2)) / 100_000) * 100_000 : 0
       const rate = pick(rates)
       const installmentTotal = Math.round((goodsTotal - downPayment) * (1 + rate.markup / 100))
-      const person = pick(people)
+      // Only someone already signed up can file one
+      const person = pick(people.filter((p) => p.registeredAt < createdAt))
       // A blocked shopper cannot start a new nasiya
       if (person.block && createdAt > person.block.at) continue
       const name = fullName(person)

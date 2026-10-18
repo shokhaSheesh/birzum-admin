@@ -8,6 +8,7 @@ import { clientsStore, fullName, initialsOf, type Client } from '@/entities/clie
 import { CLIENT_STATUSES, clientStatusOf, debtOf, type ClientStatus } from '@/entities/clients/debt'
 import { clientPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { usePagination } from '@/shared/lib/usePagination'
 import { cn } from '@/shared/lib/cn'
 import { ALL_TIME, inRange, type DateRange } from '@/shared/lib/dates'
 import { formatDate, formatSum } from '@/shared/lib/format'
@@ -17,6 +18,7 @@ import { DateRangePicker } from '@/shared/ui/DateRangePicker'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
@@ -62,10 +64,11 @@ export function ClientsPage() {
       inRange(client.registeredAt, joined),
   )
   const rows = filtered.filter((row) => status === 'all' || row.status === status)
+  const pager = usePagination(rows, JSON.stringify([query, limit, joined, status]))
   const count = (value: ClientStatus) => rowsAll.filter((row) => row.status === value).length
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.customers')} description={t('clients.description')} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -127,115 +130,120 @@ export function ClientsPage() {
         {rows.length === 0 ? (
           <EmptyState title={t('clients.empty')} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-t border-line">
-              <thead>
-                <tr className="border-b border-line">
-                  <th className={th}>{t('applications.col.client')}</th>
-                  <th className={th}>{t('application.pinfl')}</th>
-                  <th className={`${th} text-right`}>{t('client.limit')}</th>
-                  <th className={`${th} text-right`}>{t('clients.col.nasiya')}</th>
-                  <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
-                  <th className={th}>{t('merchants.status')}</th>
-                  <th className="w-24" />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(({ client, debt, status: clientStatus }) => {
-                  const limitState = limitOf(client)
-                  return (
-                    <tr
-                      key={client.id}
-                      onClick={() => navigate(clientPath(client.id))}
-                      className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
-                          <div className="flex min-w-0 flex-col">
-                            <span className="truncate font-semibold">{fullName(client)}</span>
-                            <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
-                              {formatPhone(client.phone)}
-                            </span>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] border-t border-line">
+                <thead>
+                  <tr className="border-b border-line">
+                    <th className={th}>{t('applications.col.client')}</th>
+                    <th className={th}>{t('application.pinfl')}</th>
+                    <th className={`${th} text-right`}>{t('client.limit')}</th>
+                    <th className={`${th} text-right`}>{t('clients.col.nasiya')}</th>
+                    <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
+                    <th className={th}>{t('merchants.status')}</th>
+                    <th className="w-24" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pager.rows.map(({ client, debt, status: clientStatus }) => {
+                    const limitState = limitOf(client)
+                    return (
+                      <tr
+                        key={client.id}
+                        onClick={() => navigate(clientPath(client.id))}
+                        className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate font-semibold">{fullName(client)}</span>
+                              <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
+                                {formatPhone(client.phone)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm tabular-nums">{client.pinfl}</td>
-                      <td className="px-4 py-3 text-right">
-                        {limitState === 'none' ? (
-                          <span className="text-sm text-ink-subtle">{t('clients.limit.none')}</span>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span
-                              className={cn(
-                                'font-semibold whitespace-nowrap tabular-nums',
-                                limitState === 'expired' && 'text-ink-subtle line-through',
-                              )}
-                            >
-                              {formatSum(client.limit!.amount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm tabular-nums">{client.pinfl}</td>
+                        <td className="px-4 py-3 text-right">
+                          {limitState === 'none' ? (
+                            <span className="text-sm text-ink-subtle">
+                              {t('clients.limit.none')}
                             </span>
-                            <span
-                              className={cn(
-                                'text-xs',
-                                limitState === 'expired' ? 'text-warning' : 'text-ink-muted',
-                              )}
-                            >
-                              {limitState === 'expired'
-                                ? t('clients.limit.expired')
-                                : t('client.limit.until', {
-                                    date: formatDate(client.limit!.validUntil),
-                                  })}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">{debt.running}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex flex-col">
-                          <span className="font-semibold whitespace-nowrap tabular-nums">
-                            {debt.remaining ? formatSum(debt.remaining) : '—'}
-                          </span>
-                          {debt.overdue > 0 && (
-                            <span className="text-xs whitespace-nowrap text-danger">
-                              {t('client.overdueDays', { days: String(debt.overdueDays) })}
-                            </span>
+                          ) : (
+                            <div className="flex flex-col">
+                              <span
+                                className={cn(
+                                  'font-semibold whitespace-nowrap tabular-nums',
+                                  limitState === 'expired' && 'text-ink-subtle line-through',
+                                )}
+                              >
+                                {formatSum(client.limit!.amount)}
+                              </span>
+                              <span
+                                className={cn(
+                                  'text-xs',
+                                  limitState === 'expired' ? 'text-warning' : 'text-ink-muted',
+                                )}
+                              >
+                                {limitState === 'expired'
+                                  ? t('clients.limit.expired')
+                                  : t('client.limit.until', {
+                                      date: formatDate(client.limit!.validUntil),
+                                    })}
+                              </span>
+                            </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge tone={clientStatusTone[clientStatus]}>
-                          {t(`client.status.${clientStatus}`)}
-                        </StatusBadge>
-                      </td>
-                      <td className="pr-3">
-                        <RowActions
-                          actions={[
-                            {
-                              icon: Eye,
-                              label: t('common.view'),
-                              onClick: () => navigate(clientPath(client.id)),
-                            },
-                            client.block
-                              ? {
-                                  icon: ShieldCheck,
-                                  label: t('client.unblock'),
-                                  onClick: () => setUnblocking(client),
-                                }
-                              : {
-                                  icon: Ban,
-                                  label: t('client.block'),
-                                  onClick: () => setBlocking(client),
-                                  danger: true,
-                                },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">{debt.running}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="font-semibold whitespace-nowrap tabular-nums">
+                              {debt.remaining ? formatSum(debt.remaining) : '—'}
+                            </span>
+                            {debt.overdue > 0 && (
+                              <span className="text-xs whitespace-nowrap text-danger">
+                                {t('client.overdueDays', { days: String(debt.overdueDays) })}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge tone={clientStatusTone[clientStatus]}>
+                            {t(`client.status.${clientStatus}`)}
+                          </StatusBadge>
+                        </td>
+                        <td className="pr-3">
+                          <RowActions
+                            actions={[
+                              {
+                                icon: Eye,
+                                label: t('common.view'),
+                                onClick: () => navigate(clientPath(client.id)),
+                              },
+                              client.block
+                                ? {
+                                    icon: ShieldCheck,
+                                    label: t('client.unblock'),
+                                    onClick: () => setUnblocking(client),
+                                  }
+                                : {
+                                    icon: Ban,
+                                    label: t('client.block'),
+                                    onClick: () => setBlocking(client),
+                                    danger: true,
+                                  },
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination pager={pager} />
+          </>
         )}
       </div>
 

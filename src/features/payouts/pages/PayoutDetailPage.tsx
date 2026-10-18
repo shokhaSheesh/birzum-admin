@@ -46,7 +46,7 @@ export function PayoutDetailPage() {
 
   if (!payout) {
     return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
         {back}
         <EmptyState title={t('payout.notFound')} />
       </div>
@@ -62,7 +62,7 @@ export function PayoutDetailPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       {back}
 
       <div className="flex flex-wrap items-center gap-4">

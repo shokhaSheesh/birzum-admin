@@ -54,7 +54,7 @@ export function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
         {back}
         <EmptyState title={t('products.notFound')} />
       </div>
@@ -67,7 +67,7 @@ export function ProductDetailPage() {
   const hasVariants = product.variants.length > 1 || product.variants[0].label.uz !== ''
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       {back}
 
       <div className="flex flex-col gap-1">

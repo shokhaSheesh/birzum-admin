@@ -92,11 +92,17 @@ body,
 }
 
 body {
-  background: var(--color-navy-950);
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Every admin page's width: it fills the space beside the sidebar, collapsed or not, up to a
+   comfortable reading width on very wide screens */
+@utility max-w-page {
+  max-width: 1680px;
 }
 
 /* Bottom space that lets a tab screen's content scroll clear of the floating tab bar */

@@ -69,6 +69,25 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - The detail page: number, status, time and where it started (client app or merchant app); a red banner with the reject reason and comment, or a grey one for a cancellation; products; nasiya terms in two columns; the change history, newest first, with who did it. On the right: the client, the merchant and filial (opens the merchant), how the goods are collected, and for a handed-over ariza whether Birzum has paid the merchant. A handed-over or closed ariza also shows its **Toʻlov jadvali**: progress bar, "4 / 12 toʻlangan · qolgan …", then every month with date, sum and Toʻlangan (with the day) / Kutilmoqda / Muddati oʻtgan. The schedule is the one the client app shows (the payout, or "Toʻlanishi kerak").
 - The sample payouts are worked out from the sample arizalar, so numbers and sums agree across pages.
 
+## Boshqaruv paneli
+
+- One `PeriodFilter` for the whole page, default this month. Everything follows it except Portfel, which is today's state and says so.
+- **Four `KpiTile`s**: Savdo hajmi (goods total of nasiyas handed over), Tushdi, Arizalar, Yangi klientlar. Each has its change against the previous period as a pill (arrow and sign, green when it went the good way, red when not) and a small trend line in grey with today's point in green. While the period is still running, the change compares the same days of the previous one ("oʻtgan oyning shu kunlariga"), never a half month against a whole one. With nothing to compare it says so.
+- **Savdo va tushum** (`LineChart`): both money series on one axis, 2px smooth monotone lines (they never dip below zero), a faint wash under Savdo, solid hairline grid, a legend with each total. Hover or focus shows a crosshair, a ringed dot on each line and one tooltip with both values. Lines stop at now and start at the first day with data.
+- **Arizalar oqimi**: Kelib tushdi → Koʻrib chiqildi → Topshirildi as bars with counts and the share of the first, then Jarayonda, Rad etildi, Bekor qilindi.
+- **Merchantlar** and **Kategoriyalar** (`BarList`): ranked thin bars with the value at the end; **Muddatlar** (`ColumnChart`): handed-over nasiyas per term, count on each cap.
+- **Portfel** (today): the clients' remaining debt as the one hero number, a bar split into paying on time (green) and late nasiyas (red), then the overdue sum and PAR (remaining of late nasiyas over the whole portfolio).
+- **Diqqat talab qiladi**: links to what needs someone: arizalar waiting for a merchant, debtors (and broken promises), merchants owed a payout, merchants being onboarded. A row with nothing to do is left out.
+
+## Charts
+
+- Our own components, our tokens. Marks carry colour; text never does. Bars and columns are at most 24px wide with a 4px rounded end; lines are 2px; gridlines are solid hairlines. Two series always get a legend. Every chart answers hover and keyboard focus with its exact figures.
+- A chart over a period uses the period's bars: hours for a day, days for a week, a month or a range up to 62 days, months for a year, a longer range or all time.
+
+## Pagination
+
+- A table longer than 20 rows ends in `Pagination`: "1–20 / 89", rows per page (20, 50, 100), and page numbers with gaps. Changing a filter goes back to page 1. A total for the whole filtered list (e.g. what came in) sits in the same bar.
+
 ## Toʻlovlar va qarzlar
 
 - Money in from shoppers and working with debtors. Payments are not created here: Birzum takes the monthly payment from the card on the payment day, or the shopper pays in the app (Oylik toʻlov, Muddatidan oldin, Toʻliq yopish, as in the client app's PaySheet).

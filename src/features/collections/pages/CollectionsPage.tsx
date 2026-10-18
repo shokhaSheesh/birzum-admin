@@ -17,6 +17,7 @@ import {
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { clientPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { usePagination } from '@/shared/lib/usePagination'
 import { cn } from '@/shared/lib/cn'
 import { inRange, startOfDay } from '@/shared/lib/dates'
 import { boundsOf, bucketsOf, thisMonth, type Period } from '@/shared/lib/period'
@@ -27,6 +28,7 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { Pagination } from '@/shared/ui/Pagination'
 import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
@@ -191,6 +193,15 @@ export function CollectionsPage() {
     )
   })
 
+  const debtorPager = usePagination(
+    debtorRows,
+    JSON.stringify([query, age, merchant, contactState, period]),
+  )
+  const paymentPager = usePagination(
+    paymentRows,
+    JSON.stringify([payQuery, kind, result, payMerchant, method, period]),
+  )
+
   const merchantOptions = [
     { value: '', label: t('products.allMerchants') },
     ...merchants.map((item) => ({ value: item.id, label: item.name })),
@@ -209,7 +220,7 @@ export function CollectionsPage() {
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.collections')}
         description={t('collections.description')}
@@ -364,127 +375,131 @@ export function CollectionsPage() {
             {debtorRows.length === 0 ? (
               <EmptyState title={t('collections.debtors.empty')} />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] border-t border-line">
-                  <thead>
-                    <tr className="border-b border-line">
-                      <th className={th}>{t('applications.col.client')}</th>
-                      <th className={`${th} text-right`}>{t('client.overdue')}</th>
-                      <th className={th}>{t('collections.col.late')}</th>
-                      <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
-                      <th className={th}>{t('collections.col.lastContact')}</th>
-                      <th className={th}>{t('collections.col.promise')}</th>
-                      <th className="w-44" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {debtorRows.map(
-                      ({ client, overdue, count, days, remaining, last, promise, state }) => (
-                        <tr
-                          key={client.id}
-                          onClick={() => navigate(`${clientPath(client.id)}?tab=contacts`)}
-                          className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
-                              <div className="flex min-w-0 flex-col">
-                                <span className="truncate font-semibold">{fullName(client)}</span>
-                                <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
-                                  {formatPhone(client.phone)}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex flex-col">
-                              <span className="font-semibold whitespace-nowrap text-danger tabular-nums">
-                                {formatSum(overdue)}
-                              </span>
-                              <span className="text-xs text-ink-muted">
-                                {t('collections.paymentsCount', {
-                                  count: String(count),
-                                })}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <StatusBadge tone={days > 7 ? 'danger' : 'warning'}>
-                              {t('collections.days', { days: String(days) })}
-                            </StatusBadge>
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                            {formatSum(remaining)}
-                          </td>
-                          <td className="px-4 py-3">
-                            {last ? (
-                              <div className="flex flex-col">
-                                <span className="text-sm">
-                                  {last.channel === 'call'
-                                    ? t(`contact.result.${last.result ?? 'noAnswer'}`)
-                                    : t('contact.reminded')}
-                                </span>
-                                <span className="text-xs text-ink-muted tabular-nums">
-                                  {formatDate(last.at)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-ink-subtle">
-                                {t('collections.contact.none')}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {promise ? (
-                              <span
-                                className={cn(
-                                  'text-sm font-medium whitespace-nowrap tabular-nums',
-                                  state === 'broken' ? 'text-danger' : 'text-success',
-                                )}
-                              >
-                                {formatDate(promise)}
-                                {state === 'broken' && (
-                                  <span className="block text-xs font-normal">
-                                    {t('collections.contact.broken')}
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[980px] border-t border-line">
+                    <thead>
+                      <tr className="border-b border-line">
+                        <th className={th}>{t('applications.col.client')}</th>
+                        <th className={`${th} text-right`}>{t('client.overdue')}</th>
+                        <th className={th}>{t('collections.col.late')}</th>
+                        <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
+                        <th className={th}>{t('collections.col.lastContact')}</th>
+                        <th className={th}>{t('collections.col.promise')}</th>
+                        <th className="w-44" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {debtorPager.rows.map(
+                        ({ client, overdue, count, days, remaining, last, promise, state }) => (
+                          <tr
+                            key={client.id}
+                            onClick={() => navigate(`${clientPath(client.id)}?tab=contacts`)}
+                            className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
+                                <div className="flex min-w-0 flex-col">
+                                  <span className="truncate font-semibold">{fullName(client)}</span>
+                                  <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
+                                    {formatPhone(client.phone)}
                                   </span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-ink-subtle">—</span>
-                            )}
-                          </td>
-                          <td className="pr-3">
-                            <RowActions
-                              actions={[
-                                {
-                                  icon: Eye,
-                                  label: t('common.view'),
-                                  onClick: () => navigate(`${clientPath(client.id)}?tab=contacts`),
-                                },
-                                {
-                                  icon: PhoneCall,
-                                  label: t('contact.call'),
-                                  onClick: () => setCalling(client),
-                                },
-                                {
-                                  icon: BellRing,
-                                  label: t('contact.remind'),
-                                  onClick: () => setReminding(client),
-                                },
-                                {
-                                  icon: CreditCard,
-                                  label: t('charge.title'),
-                                  onClick: () => setCharging(client),
-                                },
-                              ]}
-                            />
-                          </td>
-                        </tr>
-                      ),
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex flex-col">
+                                <span className="font-semibold whitespace-nowrap text-danger tabular-nums">
+                                  {formatSum(overdue)}
+                                </span>
+                                <span className="text-xs text-ink-muted">
+                                  {t('collections.paymentsCount', {
+                                    count: String(count),
+                                  })}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge tone={days > 7 ? 'danger' : 'warning'}>
+                                {t('collections.days', { days: String(days) })}
+                              </StatusBadge>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                              {formatSum(remaining)}
+                            </td>
+                            <td className="px-4 py-3">
+                              {last ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm">
+                                    {last.channel === 'call'
+                                      ? t(`contact.result.${last.result ?? 'noAnswer'}`)
+                                      : t('contact.reminded')}
+                                  </span>
+                                  <span className="text-xs text-ink-muted tabular-nums">
+                                    {formatDate(last.at)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-ink-subtle">
+                                  {t('collections.contact.none')}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {promise ? (
+                                <span
+                                  className={cn(
+                                    'text-sm font-medium whitespace-nowrap tabular-nums',
+                                    state === 'broken' ? 'text-danger' : 'text-success',
+                                  )}
+                                >
+                                  {formatDate(promise)}
+                                  {state === 'broken' && (
+                                    <span className="block text-xs font-normal">
+                                      {t('collections.contact.broken')}
+                                    </span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-ink-subtle">—</span>
+                              )}
+                            </td>
+                            <td className="pr-3">
+                              <RowActions
+                                actions={[
+                                  {
+                                    icon: Eye,
+                                    label: t('common.view'),
+                                    onClick: () =>
+                                      navigate(`${clientPath(client.id)}?tab=contacts`),
+                                  },
+                                  {
+                                    icon: PhoneCall,
+                                    label: t('contact.call'),
+                                    onClick: () => setCalling(client),
+                                  },
+                                  {
+                                    icon: BellRing,
+                                    label: t('contact.remind'),
+                                    onClick: () => setReminding(client),
+                                  },
+                                  {
+                                    icon: CreditCard,
+                                    label: t('charge.title'),
+                                    onClick: () => setCharging(client),
+                                  },
+                                ]}
+                              />
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination pager={debtorPager} />
+              </>
             )}
           </>
         ) : (
@@ -536,17 +551,22 @@ export function CollectionsPage() {
               <EmptyState title={t('collections.payments.empty')} />
             ) : (
               <>
-                <PaymentsTable payments={paymentRows} />
-                <p className="border-t border-line px-4 py-3 text-right text-sm text-ink-muted">
-                  {t('collections.paymentsCount', { count: groupDigits(paymentRows.length) })} ·{' '}
-                  <span className="font-semibold text-ink tabular-nums">
-                    {formatSum(
-                      paymentRows
-                        .filter((payment) => !payment.failed)
-                        .reduce((sum, payment) => sum + payment.amount, 0),
-                    )}
-                  </span>
-                </p>
+                <PaymentsTable payments={paymentPager.rows} />
+                <Pagination
+                  pager={paymentPager}
+                  summary={
+                    <>
+                      {t('collections.chart.collected')}:{' '}
+                      <span className="font-semibold text-ink tabular-nums">
+                        {formatSum(
+                          paymentRows
+                            .filter((payment) => !payment.failed)
+                            .reduce((sum, payment) => sum + payment.amount, 0),
+                        )}
+                      </span>
+                    </>
+                  }
+                />
               </>
             )}
           </>

@@ -48,7 +48,7 @@ export function MerchantsPage() {
   const nasiya = all.reduce((sum, merchant) => sum + merchant.activeNasiya, 0)
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.merchants')}
         description={t('merchants.description')}

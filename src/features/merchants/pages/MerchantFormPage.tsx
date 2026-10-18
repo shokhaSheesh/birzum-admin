@@ -124,7 +124,7 @@ export function MerchantFormPage() {
         </Button>
       </ActionBar>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-6">
             <FormSection title={t('merchant.section.shop')} hint={t('merchant.section.shop.hint')}>

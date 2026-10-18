@@ -155,7 +155,7 @@ export function PricingPage() {
         </Button>
       </ActionBar>
 
-      <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
+      <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="flex flex-col gap-6">
           <section className="flex flex-col rounded-card border border-line bg-canvas">
             <div className="flex flex-col gap-1 p-5">

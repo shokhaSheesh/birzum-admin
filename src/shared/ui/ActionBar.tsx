@@ -18,7 +18,7 @@ export function ActionBar({ eyebrow, title, onBack, children }: Props) {
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3 lg:px-8">
+      <div className="mx-auto flex w-full max-w-page items-center gap-3 px-4 py-3 lg:px-8">
         {onBack && (
           <button
             type="button"

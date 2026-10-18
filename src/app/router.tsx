@@ -4,6 +4,7 @@ import { ApplicationsPage } from '@/features/applications/pages/ApplicationsPage
 import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -24,6 +25,7 @@ import { RequireAdmin } from './RequireAdmin'
 
 /** Sidebar pages that have their own design; the rest show a placeholder. */
 const DESIGNED: string[] = [
+  ROUTES.dashboard,
   ROUTES.applications,
   ROUTES.customers,
   ROUTES.collections,
@@ -44,6 +46,7 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         // Every sidebar page is empty for now; each one is filled in as it gets designed
         children: [
+          { path: ROUTES.dashboard, element: <DashboardPage /> },
           { path: ROUTES.applications, element: <ApplicationsPage /> },
           { path: ROUTES.application, element: <ApplicationDetailPage /> },
           { path: ROUTES.customers, element: <ClientsPage /> },

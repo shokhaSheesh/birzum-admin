@@ -110,7 +110,7 @@ export function PayoutFormPage() {
         </Button>
       </ActionBar>
 
-      <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+      <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <div className="flex flex-col gap-6">
           <FormSection title={t('products.col.merchant')} hint={t('payout.merchant.hint')}>
             <SelectField

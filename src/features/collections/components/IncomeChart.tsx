@@ -32,7 +32,8 @@ export function IncomeChart({
   now: Date
 }) {
   const { t, lang } = useI18n()
-  const [active, setActive] = useState<number | null>(null)
+  const [hovered, setActive] = useState<number | null>(null)
+  const active = hovered !== null && hovered < buckets.length ? hovered : null
   const today = startOfDay(now)
 
   const compact = (value: number) => {
@@ -104,8 +105,8 @@ export function IncomeChart({
         </div>
         <div className="relative h-52" onMouseLeave={() => setActive(null)}>
           <div className="absolute inset-0 flex flex-col justify-between">
-            <span className="border-t border-dashed border-line" />
-            <span className="border-t border-dashed border-line" />
+            <span className="border-t border-line" />
+            <span className="border-t border-line" />
             <span className="border-t border-line" />
           </div>
           <div className="absolute inset-0 flex items-end">
@@ -122,7 +123,7 @@ export function IncomeChart({
                 {bar.expected > 0 && (
                   <span
                     className={cn(
-                      'w-full max-w-10 border border-green-500 bg-green-200',
+                      'w-full max-w-6 border border-green-500 bg-green-200',
                       bar.collected ? 'rounded-t-[4px] border-b-0' : 'rounded-t-[4px]',
                     )}
                     style={{ height: `max(3px, ${(bar.expected / top) * 100}%)` }}
@@ -131,7 +132,7 @@ export function IncomeChart({
                 {bar.collected > 0 && (
                   <span
                     className={cn(
-                      'w-full max-w-10 transition-colors',
+                      'w-full max-w-6 transition-colors',
                       bar.expected ? '' : 'rounded-t-[4px]',
                       active === i ? 'bg-green-600' : 'bg-green-500',
                     )}

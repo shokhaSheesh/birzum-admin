@@ -8,7 +8,7 @@ export function StubPage({ item }: { item: NavItem }) {
   const { t } = useI18n()
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t(item.label)} description={t(item.about)} />
       <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-line bg-canvas px-6 py-16 text-center">
         <span className="grid size-14 place-items-center rounded-full bg-green-200 text-brand">

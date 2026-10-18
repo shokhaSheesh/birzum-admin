@@ -137,7 +137,8 @@ export const clientsStore = createStore<Client>(
     passportExpiresOn: new Date(2029 + (i % 5), i % 12, 10),
     birthDate: new Date(born[0], born[1] - 1, born[2]),
     address: ADDRESSES[i % ADDRESSES.length],
-    registeredAt: new Date(2026, 4 + (i % 4), 3 + i),
+    // Spread from June to mid-October, earliest first
+    registeredAt: new Date(2026, 5, 1 + Math.floor((i * 137) / seeds.length), 10 + (i % 9)),
     // A few limits ran out and wait for the shopper to recalculate
     limit:
       limit === null

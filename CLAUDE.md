@@ -19,6 +19,8 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 | One of 2–6 short options, all visible | `ChoiceGrid` or radio cards | radio buttons |
 | Number, money, phone | `NumberField`, `PhoneField` | `type="number"` spinners |
 | Upload a picture | `ImageField` | a bare file input |
+| A table longer than 20 rows | `Pagination` + `usePagination` (back to page 1 when filters change) | endless scroll, "show more" |
+| A chart | our own in `shared/ui/charts` (`LineChart`, `KpiTile`, `BarList`, `ColumnChart`) | a chart library's default look |
 | Confirm, explain why not | `ConfirmDialog` | `window.confirm`, `alert` |
 | Small create or edit | `Modal` | a side drawer, a new tab |
 | Hint on hover | `title` only on icon buttons; anything longer is visible text | custom browser tooltips |
@@ -29,6 +31,9 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 - When a new kind of control is needed, build it in `src/shared/ui` first, add it to this table, then use it.
 
 ## Other rules
+
+- Every page uses `max-w-page` (fills the space beside the sidebar up to 1680px), so collapsing the sidebar gives the page more room. Never a narrower fixed width.
+- The body background is the canvas colour; never a dark colour that shows when the page bounces.
 
 - Small records are created and edited in a centred `Modal`; big ones (a merchant, a payout) get their own page with the fixed `ActionBar`.
 - Every table row ends with `RowActions`.

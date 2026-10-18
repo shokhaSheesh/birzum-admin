@@ -92,7 +92,7 @@ export function ClientDetailPage() {
 
   if (!client) {
     return (
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
         {back}
         <EmptyState title={t('client.notFound')} />
       </div>
@@ -107,7 +107,7 @@ export function ClientDetailPage() {
   const expired = !!client.limit && client.limit.validUntil < today
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       {back}
 
       <div className="flex flex-wrap items-center gap-5">
