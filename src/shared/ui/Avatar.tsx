@@ -3,10 +3,10 @@ import { cn } from '@/shared/lib/cn'
 type Props = {
   initials: string
   photoUrl?: string
-  size?: 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg'
 }
 
-const sizes = { md: 'size-11 text-sm', lg: 'size-20 text-2xl' }
+const sizes = { sm: 'size-7 text-[10px]', md: 'size-11 text-sm', lg: 'size-20 text-2xl' }
 
 /** A person's photo, or their initials when there is none. */
 export function Avatar({ initials, photoUrl, size = 'md' }: Props) {

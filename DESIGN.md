@@ -87,6 +87,14 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 
 - A table longer than 20 rows ends in `Pagination`: "1–20 / 89", rows per page (20, 50, 100), and page numbers with gaps. Changing a filter goes back to page 1. The rows-per-page list opens upwards. No totals in this bar: figures belong in the cards on top.
 
+## Sharhlar
+
+- Reviews come from the client app (1–5 stars and a text, after Topshirilgan) and belong to a shop and an ariza. A merchant can delete them in the merchant app; the admin still sees those.
+- One `PeriodFilter` for the page. Figures: Sharhlar (and how many count in ratings), Oʻrtacha baho, Salbiy sharhlar (1–2 stars) with their share, Moderatsiya (hidden by an admin, removed by a merchant).
+- **Baholar**: the average large with `Stars` (partly filled, 4,5 shows four and a half), then one bar per star count (amber, red for 1–2); a bar filters the list. **Merchantlar reytingi**: each shop's average and count, its negative ones, and an amber badge when the merchant deleted reviews; a row filters the list. Only published reviews count in any rating.
+- The list is cards, not a table, because the text is the point: stars, time and status, the text, the moderation line when there is one, then the client (opens the client), the shop, the product and the ariza number (opens the ariza). Tabs: Hammasi, Salbiy sharhlar, Yashirilgan, Merchant oʻchirgan; search, merchant and star filters; pagination.
+- Actions: **Yashirish** (modal: what it does, the review quoted, a reason as choice cards, a comment), **Qaytarish** for a hidden or merchant-removed review (confirm), **Oʻchirish** for good (confirm that says hiding is usually enough).
+
 ## Toʻlovlar va qarzlar
 
 - Money in from shoppers and working with debtors. Payments are not created here: Birzum takes the monthly payment from the card on the payment day, or the shopper pays in the app (Oylik toʻlov, Muddatidan oldin, Toʻliq yopish, as in the client app's PaySheet).

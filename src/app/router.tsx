@@ -13,6 +13,7 @@ import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductsPage } from '@/features/products/pages/ProductsPage'
+import { ReviewsPage } from '@/features/reviews/pages/ReviewsPage'
 import { PayoutDetailPage } from '@/features/payouts/pages/PayoutDetailPage'
 import { PayoutFormPage } from '@/features/payouts/pages/PayoutFormPage'
 import { PayoutsPage } from '@/features/payouts/pages/PayoutsPage'
@@ -31,6 +32,7 @@ const DESIGNED: string[] = [
   ROUTES.collections,
   ROUTES.merchants,
   ROUTES.payouts,
+  ROUTES.reviews,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -59,6 +61,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.payouts, element: <PayoutsPage /> },
           { path: ROUTES.payoutNew, element: <PayoutFormPage /> },
           { path: ROUTES.payout, element: <PayoutDetailPage /> },
+          { path: ROUTES.reviews, element: <ReviewsPage /> },
           { path: ROUTES.products, element: <ProductsPage /> },
           { path: ROUTES.product, element: <ProductDetailPage /> },
           { path: ROUTES.categories, element: <CategoriesPage /> },

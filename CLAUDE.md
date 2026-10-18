@@ -21,6 +21,7 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 | Upload a picture | `ImageField` | a bare file input |
 | A table longer than 20 rows | `Pagination` + `usePagination` (back to page 1 when filters change) | endless scroll, "show more" |
 | A chart | our own in `shared/ui/charts` (`LineChart`, `KpiTile`, `BarList`, `ColumnChart`) | a chart library's default look |
+| A star rating | `Stars` (partial fill) | ★ characters, emoji |
 | Confirm, explain why not | `ConfirmDialog` | `window.confirm`, `alert` |
 | Small create or edit | `Modal` | a side drawer, a new tab |
 | Hint on hover | `title` only on icon buttons; anything longer is visible text | custom browser tooltips |
