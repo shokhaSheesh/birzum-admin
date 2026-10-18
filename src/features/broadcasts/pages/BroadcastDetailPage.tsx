@@ -2,8 +2,6 @@ import { ArrowLeft, Ban, Copy, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { broadcastsStore } from '@/entities/broadcasts/broadcasts'
-import { categoriesStore } from '@/entities/catalog/categories'
-import { merchantsStore } from '@/entities/merchants/merchants'
 import { broadcastEditPath, ROUTES } from '@/shared/config/routes'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -30,8 +28,6 @@ export function BroadcastDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams()
   const broadcast = broadcastsStore.useAll().find((item) => item.id === id)
-  const categories = categoriesStore.useAll()
-  const merchants = merchantsStore.useAll()
   const audienceText = useAudienceText()
   const { countOf } = useAudience()
   const actions = useBroadcastActions()
@@ -64,13 +60,6 @@ export function BroadcastDetailPage() {
         ['tapped', stats.tapped],
       ] as const)
     : []
-  const link = broadcast.link
-  const linkText =
-    link.kind === 'category'
-      ? `${t('broadcast.link.category')}: ${tl(categories.find((c) => c.id === link.id)?.name ?? { uz: link.id, ru: link.id })}`
-      : link.kind === 'merchant'
-        ? `${t('broadcast.link.merchant')}: ${merchants.find((m) => m.id === link.id)?.name ?? link.id}`
-        : t('broadcast.link.none')
   const editable = broadcast.status === 'draft' || broadcast.status === 'scheduled'
 
   return (
@@ -177,9 +166,6 @@ export function BroadcastDetailPage() {
                 })}
               </ol>
             )}
-            {stats && broadcast.sms && (
-              <p className="text-xs text-ink-subtle">{t('broadcast.results.sms')}</p>
-            )}
           </section>
 
           <section className={card}>
@@ -199,10 +185,6 @@ export function BroadcastDetailPage() {
               {(
                 [
                   [t('broadcast.audience'), audienceText(broadcast.audience)],
-                  [t('broadcast.channels'), broadcast.sms ? 'Push + SMS' : 'Push'],
-                  ...(broadcast.audience.kind === 'clients'
-                    ? [[t('broadcast.link'), linkText] as const]
-                    : []),
                   [
                     t('broadcast.createdAt'),
                     `${formatDateTime(broadcast.createdAt)} · ${broadcast.createdBy}`,
@@ -243,17 +225,7 @@ export function BroadcastDetailPage() {
             title={broadcast.title}
             body={broadcast.body}
             image={broadcast.image}
-            sms={broadcast.sms}
             appName={broadcast.audience.kind === 'clients' ? 'Birzum' : 'Birzum Biznes'}
-            linkLabel={
-              link.kind === 'none'
-                ? undefined
-                : t(
-                    link.kind === 'category'
-                      ? 'broadcast.link.openCategory'
-                      : 'broadcast.link.openMerchant',
-                  )
-            }
           />
         </aside>
       </div>

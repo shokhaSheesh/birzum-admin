@@ -199,7 +199,7 @@ export function BroadcastsPage() {
                               {audienceText.partsOf(b.audience)[1]}
                             </span>
                             <span className="text-xs text-ink-muted">
-                              {audienceText.partsOf(b.audience)[0]} · Push{b.sms && ' + SMS'}
+                              {audienceText.partsOf(b.audience)[0]}
                             </span>
                           </div>
                         </td>

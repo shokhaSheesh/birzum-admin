@@ -3,13 +3,11 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   broadcastsStore,
-  CLIENT_SEGMENTS,
+  statsFor,
   type Audience,
   type Broadcast,
-  type BroadcastLink,
-  type ClientSegment,
 } from '@/entities/broadcasts/broadcasts'
-import { categoriesStore, rootsOf } from '@/entities/catalog/categories'
+import { fullName, initialsOf } from '@/entities/clients/clients'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { useAdmin } from '@/entities/session/session'
 import { broadcastPath, ROUTES } from '@/shared/config/routes'
@@ -18,21 +16,21 @@ import { emptyText, isComplete } from '@/shared/i18n/localized'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { newId } from '@/shared/lib/createStore'
-import { parseDate, startOfDay } from '@/shared/lib/dates'
+import { parseDate } from '@/shared/lib/dates'
 import { formatDate, groupDigits } from '@/shared/lib/format'
+import { formatPhone } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
-import { Alert } from '@/shared/ui/Alert'
+import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/Button'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { DateField } from '@/shared/ui/DateField'
 import { FormSection } from '@/shared/ui/FormSection'
 import { ImageField } from '@/shared/ui/ImageField'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
+import { MultiSelectField, type MultiValue } from '@/shared/ui/MultiSelectField'
 import { SelectField } from '@/shared/ui/SelectField'
-import { statsFor } from '@/entities/broadcasts/broadcasts'
 import { PhonePreview } from '../components/PhonePreview'
 import { useAudience } from '../model/audience'
 
@@ -42,11 +40,13 @@ const TIMES = Array.from({ length: 28 }, (_, i) => {
   const minutes = 8 * 60 + i * 30
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 })
-const SMS_LIMIT = 160
+const clockOf = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 
 /**
- * Write a broadcast: who gets it, the text in both languages with an optional picture and
- * what it opens, the channels, and when. A phone on the right shows it as it will arrive.
+ * Write a broadcast: who gets it (every shopper or merchant, or the ones picked), the text in
+ * both languages with an optional picture, and when. A phone on the right shows it as it will
+ * arrive.
  */
 export function BroadcastFormPage() {
   const { t, tl, lang: appLang } = useI18n()
@@ -54,44 +54,35 @@ export function BroadcastFormPage() {
   const admin = useAdmin()
   const { id } = useParams()
   const existing = broadcastsStore.useAll().find((item) => item.id === id)
-  const categories = categoriesStore.useAll()
-  const { segments, merchants, countOf } = useAudience()
+  const { clients, merchants, countOf } = useAudience()
 
   const [kind, setKind] = useState<Audience['kind']>(existing?.audience.kind ?? 'clients')
-  const [segment, setSegment] = useState<ClientSegment>(
-    existing?.audience.kind === 'clients' ? existing.audience.segment : 'all',
-  )
-  const [picked, setPicked] = useState<string[]>(
-    existing?.audience.kind === 'merchants' ? existing.audience.merchantIds : [],
-  )
+  // Each app keeps its own pick, so switching between them loses nothing
+  const [picks, setPicks] = useState<Record<Audience['kind'], MultiValue>>({
+    clients: existing?.audience.kind === 'clients' ? existing.audience : { all: true, ids: [] },
+    merchants: existing?.audience.kind === 'merchants' ? existing.audience : { all: true, ids: [] },
+  })
   const [title, setTitle] = useState(existing?.title ?? emptyText())
   const [body, setBody] = useState(existing?.body ?? emptyText())
   const [image, setImage] = useState(existing?.image)
-  const [link, setLink] = useState<BroadcastLink>(existing?.link ?? { kind: 'none' })
-  const [sms, setSms] = useState(existing?.sms ?? false)
   const [when, setWhen] = useState<'now' | 'later'>(
     existing?.status === 'scheduled' ? 'later' : 'now',
   )
   const [day, setDay] = useState(existing?.sendAt ? formatDate(existing.sendAt) : '')
-  const [time, setTime] = useState(
-    existing?.sendAt
-      ? `${String(existing.sendAt.getHours()).padStart(2, '0')}:${String(existing.sendAt.getMinutes()).padStart(2, '0')}`
-      : '10:00',
-  )
+  const [time, setTime] = useState(existing?.sendAt ? clockOf(existing.sendAt) : '10:00')
   const [previewLang, setPreviewLang] = useState<Lang>(appLang)
   const [submitted, setSubmitted] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
-  const audience: Audience = kind === 'clients' ? { kind, segment } : { kind, merchantIds: picked }
+  const pick = picks[kind]
+  const audience: Audience = { kind, all: pick.all, ids: pick.all ? [] : pick.ids }
   const reach = countOf(audience)
-  const smsOn = kind === 'clients' && sms
   const sendDate = (() => {
     const date = parseDate(day)
     if (!date) return null
     const [h, m] = time.split(':').map(Number)
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m)
   })()
-  const smsLength = Math.max(...LANGS.map((l) => `${title[l]}. ${body[l]}`.length))
   const errors = {
     title: !isComplete(title),
     body: !isComplete(body),
@@ -103,23 +94,17 @@ export function BroadcastFormPage() {
             ? t('broadcast.error.past')
             : undefined
         : undefined,
-    sms:
-      smsOn && smsLength > SMS_LIMIT
-        ? t('broadcast.error.sms', { max: String(SMS_LIMIT) })
-        : undefined,
     reach: reach === 0 ? t('broadcast.error.nobody') : undefined,
   }
-  const valid = !errors.title && !errors.body && !errors.date && !errors.sms && !errors.reach
+  const valid = !errors.title && !errors.body && !errors.date && !errors.reach
 
   const store = (status: Broadcast['status']) => {
     const record: Broadcast = {
       id: existing?.id ?? newId(),
       audience,
-      sms: smsOn,
       title: { uz: title.uz.trim(), ru: title.ru.trim() },
       body: { uz: body.uz.trim(), ru: body.ru.trim() },
       image,
-      link: kind === 'clients' ? link : { kind: 'none' },
       status,
       sendAt: status === 'sent' ? now() : status === 'scheduled' ? sendDate! : undefined,
       createdAt: existing?.createdAt ?? now(),
@@ -143,25 +128,6 @@ export function BroadcastFormPage() {
     toast(t(when === 'now' ? 'broadcast.sent' : 'broadcast.scheduled'))
     navigate(broadcastPath(record.id))
   }
-
-  const linkOptions = [
-    { value: 'none', label: t('broadcast.link.none') },
-    ...rootsOf(categories)
-      .filter((c) => c.visible)
-      .map((c) => ({
-        value: `category:${c.id}`,
-        label: `${t('broadcast.link.category')}: ${tl(c.name)}`,
-      })),
-    ...merchants.map((m) => ({
-      value: `merchant:${m.id}`,
-      label: `${t('broadcast.link.merchant')}: ${m.name}`,
-    })),
-  ]
-  const linkValue = link.kind === 'none' ? 'none' : `${link.kind}:${link.id}`
-  const linkLabel =
-    kind === 'clients' && link.kind !== 'none'
-      ? t(link.kind === 'category' ? 'broadcast.link.openCategory' : 'broadcast.link.openMerchant')
-      : undefined
 
   return (
     <>
@@ -189,7 +155,7 @@ export function BroadcastFormPage() {
 
       <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="flex flex-col gap-6">
-          <FormSection title={t('broadcast.audience')} hint={t('broadcast.audience.hint')}>
+          <FormSection title={t('broadcast.audience')}>
             <ChoiceGrid
               label={t('broadcast.audience.kind')}
               columns={2}
@@ -201,49 +167,39 @@ export function BroadcastFormPage() {
               onChange={setKind}
             />
             {kind === 'clients' ? (
-              <SelectField
-                label={t('broadcast.segment')}
-                options={CLIENT_SEGMENTS.map((value) => ({
-                  value,
-                  label: `${t(`broadcast.segment.${value}`)} · ${groupDigits(segments[value])}`,
+              <MultiSelectField
+                key="clients"
+                label={t('nav.customers')}
+                allLabel={t('broadcast.allClients')}
+                placeholder={t('broadcast.pickClients')}
+                options={clients.map((client) => ({
+                  value: client.id,
+                  label: fullName(client),
+                  sub: formatPhone(client.phone),
+                  leading: (
+                    <Avatar size="sm" initials={initialsOf(client)} photoUrl={client.photoUrl} />
+                  ),
                 }))}
-                value={segment}
-                onChange={setSegment}
-                hint={t(`broadcast.segment.${segment}.hint`)}
+                value={picks.clients}
+                onChange={(value) => setPicks({ ...picks, clients: value })}
+                error={submitted ? errors.reach : undefined}
               />
             ) : (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-ink-muted">{t('broadcast.merchants')}</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {merchants.map((merchant) => {
-                    const on = picked.includes(merchant.id)
-                    return (
-                      <label
-                        key={merchant.id}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-3 rounded-control border-[1.5px] p-3',
-                          on ? 'border-primary bg-green-200' : 'border-line hover:bg-surface',
-                        )}
-                      >
-                        <MerchantLogo merchant={merchant} size="sm" />
-                        <span className="flex-1 font-semibold">{merchant.name}</span>
-                        <Checkbox
-                          label={<span className="sr-only">{merchant.name}</span>}
-                          checked={on}
-                          onChange={(value) =>
-                            setPicked(
-                              value
-                                ? [...picked, merchant.id]
-                                : picked.filter((m) => m !== merchant.id),
-                            )
-                          }
-                        />
-                      </label>
-                    )
-                  })}
-                </div>
-                <p className="text-sm text-ink-subtle">{t('broadcast.merchants.hint')}</p>
-              </div>
+              <MultiSelectField
+                key="merchants"
+                label={t('nav.merchants')}
+                allLabel={t('broadcast.allMerchants')}
+                placeholder={t('broadcast.pickMerchants')}
+                options={merchants.map((merchant) => ({
+                  value: merchant.id,
+                  label: merchant.name,
+                  leading: <MerchantLogo merchant={merchant} size="xs" />,
+                }))}
+                value={picks.merchants}
+                onChange={(value) => setPicks({ ...picks, merchants: value })}
+                hint={t('broadcast.merchants.hint')}
+                error={submitted ? errors.reach : undefined}
+              />
             )}
           </FormSection>
 
@@ -278,43 +234,11 @@ export function BroadcastFormPage() {
               value={image}
               onChange={setImage}
             />
-            {kind === 'clients' && (
-              <SelectField
-                label={t('broadcast.link')}
-                hint={t('broadcast.link.hint')}
-                options={linkOptions}
-                value={linkValue}
-                onChange={(value) => {
-                  const [k, target] = value.split(':')
-                  setLink(
-                    k === 'none'
-                      ? { kind: 'none' }
-                      : { kind: k as 'category' | 'merchant', id: target },
-                  )
-                }}
-              />
-            )}
           </FormSection>
 
-          <FormSection title={t('broadcast.delivery')} hint={t('broadcast.delivery.hint')}>
-            <div className="flex flex-col gap-3 rounded-control bg-surface p-4 text-sm">
-              <p className="font-semibold">{t('broadcast.channel.push')}</p>
-              <p className="-mt-2 text-ink-muted">{t('broadcast.channel.push.hint')}</p>
-              {kind === 'clients' && (
-                <Checkbox
-                  label={t('broadcast.channel.sms')}
-                  description={t('broadcast.channel.sms.hint', {
-                    length: String(smsLength),
-                    max: String(SMS_LIMIT),
-                  })}
-                  checked={sms}
-                  onChange={setSms}
-                  error={submitted ? errors.sms : undefined}
-                />
-              )}
-            </div>
+          <FormSection title={t('broadcast.when')}>
             <ChoiceGrid
-              label={t('broadcast.when')}
+              label={t('broadcast.when.label')}
               columns={2}
               options={[
                 { value: 'now', label: t('broadcast.when.now'), icon: Send },
@@ -369,22 +293,13 @@ export function BroadcastFormPage() {
             title={title}
             body={body}
             image={image}
-            sms={smsOn}
             appName={kind === 'clients' ? 'Birzum' : 'Birzum Biznes'}
-            linkLabel={linkLabel}
           />
           <p className="text-center text-xs text-ink-subtle">{t('broadcast.preview.langHint')}</p>
           <dl className="flex flex-col gap-2 rounded-card border border-line bg-canvas p-4 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">{t('broadcast.reach')}</dt>
               <dd className="font-bold tabular-nums">{groupDigits(reach)}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink-muted">{t('broadcast.channels')}</dt>
-              <dd className="font-semibold">
-                {t('broadcast.channel.push')}
-                {smsOn && ` + SMS`}
-              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">{t('broadcast.when')}</dt>
@@ -397,7 +312,6 @@ export function BroadcastFormPage() {
               </dd>
             </div>
           </dl>
-          {submitted && errors.reach && <Alert message={errors.reach} />}
         </aside>
       </div>
 
@@ -415,10 +329,7 @@ export function BroadcastFormPage() {
           {when === 'now'
             ? t('broadcast.confirm.nowHint')
             : t('broadcast.confirm.laterHint', {
-                date:
-                  sendDate && sendDate > startOfDay(now())
-                    ? `${formatDate(sendDate)}, ${time}`
-                    : '',
+                date: sendDate ? `${formatDate(sendDate)}, ${time}` : '',
               })}
         </p>
       </ConfirmDialog>

@@ -1,17 +1,8 @@
 import type { LocalizedText } from '@/shared/i18n/dictionaries'
 import { createStore } from '@/shared/lib/createStore'
 
-/** Groups of shoppers a broadcast can go to, worked out from their nasiyalar today. */
-export const CLIENT_SEGMENTS = ['all', 'running', 'overdue', 'idle', 'limitExpired'] as const
-export type ClientSegment = (typeof CLIENT_SEGMENTS)[number]
-
-export type Audience =
-  | { kind: 'clients'; segment: ClientSegment }
-  /** Empty list: every merchant. */
-  | { kind: 'merchants'; merchantIds: string[] }
-
-/** What opens when the shopper taps it: the message itself, a category or a shop. */
-export type BroadcastLink = { kind: 'none' } | { kind: 'category' | 'merchant'; id: string }
+/** Who gets it: everyone in that app, or the people picked. */
+export type Audience = { kind: 'clients' | 'merchants'; all: boolean; ids: string[] }
 
 /**
  * `draft`: saved, not sent. `scheduled`: goes out by itself at `sendAt`. `sent`: done.
@@ -20,18 +11,13 @@ export type BroadcastLink = { kind: 'none' } | { kind: 'category' | 'merchant'; 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sent' | 'cancelled'
 export const BROADCAST_STATUSES: BroadcastStatus[] = ['sent', 'scheduled', 'draft', 'cancelled']
 
-/**
- * A message from Birzum to shoppers or merchants. It always lands in the app's Yangiliklar list
- * and as a push; shoppers can also get it by SMS.
- */
+/** A message from Birzum to shoppers or merchants: it lands in the app's Yangiliklar list and as a push. */
 export type Broadcast = {
   id: string
   audience: Audience
-  sms: boolean
   title: LocalizedText
   body: LocalizedText
   image?: string
-  link: BroadcastLink
   status: BroadcastStatus
   /** When it went or will go out. */
   sendAt?: Date
@@ -55,14 +41,12 @@ const at = (month: number, day: number, hour: number, minute = 0) =>
 export const broadcastsStore = createStore<Broadcast>([
   {
     id: 'b1',
-    audience: { kind: 'clients', segment: 'all' },
-    sms: false,
+    audience: { kind: 'clients', all: true, ids: [] },
     title: { uz: 'Ilovada yangilik', ru: 'Новое в приложении' },
     body: {
       uz: 'Endi nasiyani muddatidan oldin ilovada yopish mumkin.',
       ru: 'Теперь рассрочку можно погасить досрочно прямо в приложении.',
     },
-    link: { kind: 'none' },
     status: 'sent',
     sendAt: at(9, 14, 11),
     createdAt: at(9, 14, 10, 20),
@@ -71,14 +55,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b2',
-    audience: { kind: 'clients', segment: 'all' },
-    sms: false,
+    audience: { kind: 'clients', all: true, ids: [] },
     title: { uz: 'Mediaparkda chegirmalar', ru: 'Скидки в Mediapark' },
     body: {
       uz: 'Televizorlarga 15% gacha chegirma, nasiyaga ham.',
       ru: 'Скидки на телевизоры до 15%, и в рассрочку тоже.',
     },
-    link: { kind: 'merchant', id: 'm1' },
     status: 'sent',
     sendAt: at(9, 10, 12),
     createdAt: at(9, 9, 17, 5),
@@ -87,14 +69,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b3',
-    audience: { kind: 'clients', segment: 'overdue' },
-    sms: true,
+    audience: { kind: 'clients', all: false, ids: ['c4', 'c9', 'c18', 'c22', 'c26', 'c31'] },
     title: { uz: 'Toʻlovni unutmang', ru: 'Не забудьте об оплате' },
     body: {
       uz: 'Oylik toʻlovingiz muddati oʻtdi. Ilovada bir bosishda toʻlang va yangi xaridlar uchun limitingizni saqlang.',
       ru: 'Срок ежемесячного платежа прошёл. Оплатите в приложении в одно нажатие и сохраните лимит для новых покупок.',
     },
-    link: { kind: 'none' },
     status: 'sent',
     sendAt: at(9, 12, 10),
     createdAt: at(9, 12, 9, 40),
@@ -103,14 +83,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b4',
-    audience: { kind: 'merchants', merchantIds: [] },
-    sms: false,
+    audience: { kind: 'merchants', all: true, ids: [] },
     title: { uz: 'Birzumdan yangilik', ru: 'Новости Birzum' },
     body: {
       uz: 'Endi klient mahsulotni olganini surat bilan tasdiqlash mumkin.',
       ru: 'Теперь выдачу товара можно подтвердить фотографией клиента.',
     },
-    link: { kind: 'none' },
     status: 'sent',
     sendAt: at(9, 6, 9),
     createdAt: at(9, 6, 8, 30),
@@ -119,14 +97,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b5',
-    audience: { kind: 'clients', segment: 'limitExpired' },
-    sms: false,
+    audience: { kind: 'clients', all: false, ids: ['c14', 'c3', 'c7'] },
     title: { uz: 'Limitingizni yangilang', ru: 'Обновите лимит' },
     body: {
       uz: 'Limitingiz muddati tugadi. Ilovada bir daqiqada qayta hisoblang.',
       ru: 'Срок лимита истёк. Пересчитайте его в приложении за минуту.',
     },
-    link: { kind: 'none' },
     status: 'sent',
     sendAt: at(8, 28, 15),
     createdAt: at(8, 28, 14),
@@ -135,14 +111,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b6',
-    audience: { kind: 'clients', segment: 'all' },
-    sms: true,
+    audience: { kind: 'clients', all: true, ids: [] },
     title: { uz: 'Black Friday: 0% ustama', ru: 'Black Friday: 0% наценки' },
     body: {
       uz: '27–30-noyabr kunlari 3 oylik nasiyada ustama yoʻq. Hamkor doʻkonlarda.',
       ru: 'С 27 по 30 ноября рассрочка на 3 месяца без наценки. В магазинах-партнёрах.',
     },
-    link: { kind: 'category', id: 'phones' },
     status: 'scheduled',
     sendAt: at(10, 27, 9),
     createdAt: at(9, 16, 16),
@@ -150,14 +124,12 @@ export const broadcastsStore = createStore<Broadcast>([
   },
   {
     id: 'b7',
-    audience: { kind: 'merchants', merchantIds: ['m1', 'm2'] },
-    sms: false,
+    audience: { kind: 'merchants', all: false, ids: ['m1', 'm2'] },
     title: { uz: 'Hisob-kitob jadvali', ru: 'График выплат' },
     body: {
       uz: 'Noyabrdan boshlab haftalik oʻtkazmalar seshanba emas, dushanba kuni boʻladi.',
       ru: 'С ноября еженедельные выплаты будут по понедельникам, а не по вторникам.',
     },
-    link: { kind: 'none' },
     status: 'draft',
     createdAt: at(9, 17, 12),
     createdBy: 'Malika Rasulova',

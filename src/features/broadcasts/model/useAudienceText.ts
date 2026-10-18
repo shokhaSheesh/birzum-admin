@@ -1,22 +1,39 @@
 import type { Audience } from '@/entities/broadcasts/broadcasts'
+import { clientsStore, fullName } from '@/entities/clients/clients'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { useI18n } from '@/shared/i18n/useI18n'
 
-/** Who a broadcast goes to, in words: "Klientlar · Qarzdorlar" or "Merchantlar · Mediapark, iSpace". */
+/**
+ * Who a broadcast goes to, in words, as [the app, who]: ["Klientlar", "Hammasi"],
+ * ["Merchantlar", "Mediapark, iSpace"] or ["Klientlar", "6 ta klient"].
+ */
 export function useAudienceText() {
   const { t } = useI18n()
+  const clients = clientsStore.useAll()
   const merchants = merchantsStore.useAll()
-  /** [the app, the group]: ["Klientlar", "Qarzdorlar"]. */
-  const partsOf = (audience: Audience): [string, string] =>
-    audience.kind === 'clients'
-      ? [t('nav.customers'), t(`broadcast.segment.${audience.segment}`)]
-      : [
-          t('nav.merchants'),
-          audience.merchantIds.length
-            ? audience.merchantIds
-                .map((id) => merchants.find((m) => m.id === id)?.name ?? id)
-                .join(', ')
-            : t('broadcast.segment.all'),
-        ]
+  const partsOf = (audience: Audience): [string, string] => {
+    const app = t(audience.kind === 'clients' ? 'nav.customers' : 'nav.merchants')
+    if (audience.all) return [app, t('broadcast.audience.all')]
+    const names = audience.ids.map((id) =>
+      audience.kind === 'clients'
+        ? clients.find((c) => c.id === id)
+          ? fullName(clients.find((c) => c.id === id)!)
+          : id
+        : (merchants.find((m) => m.id === id)?.name ?? id),
+    )
+    return [
+      app,
+      names.length <= 2
+        ? names.join(', ')
+        : t(
+            audience.kind === 'clients'
+              ? 'broadcast.audience.clientsN'
+              : 'broadcast.audience.merchantsN',
+            {
+              count: String(names.length),
+            },
+          ),
+    ]
+  }
   return Object.assign((audience: Audience) => partsOf(audience).join(' · '), { partsOf })
 }

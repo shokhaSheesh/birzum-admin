@@ -1,4 +1,4 @@
-import { Bell, ChevronRight } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import type { Lang, LocalizedText } from '@/shared/i18n/dictionaries'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -9,18 +9,15 @@ type Props = {
   title: LocalizedText
   body: LocalizedText
   image?: string
-  sms: boolean
   /** "Birzum Biznes" for merchants, "Birzum" for shoppers. */
   appName: string
-  /** Text of the tap target under the in-app item, if it opens something. */
-  linkLabel?: string
 }
 
 /**
- * How the broadcast will look on a phone, in one language: the push on the lock screen, the
- * item in the app's Yangiliklar list, and the SMS when it goes by SMS too.
+ * How the broadcast will look on a phone, in one language: the push on the lock screen and
+ * the item in the app's Yangiliklar list.
  */
-export function PhonePreview({ lang, title, body, image, sms, appName, linkLabel }: Props) {
+export function PhonePreview({ lang, title, body, image, appName }: Props) {
   const { t } = useI18n()
   const heading = title[lang].trim() || t('broadcast.preview.title')
   const text = body[lang].trim() || t('broadcast.preview.body')
@@ -58,23 +55,8 @@ export function PhonePreview({ lang, title, body, image, sms, appName, linkLabel
         <div className={cn('flex flex-col gap-1 p-3', empty && 'opacity-60')}>
           <p className="text-[13px] font-bold">{heading}</p>
           <p className="text-[12px] leading-snug text-navy-700">{text}</p>
-          {linkLabel && (
-            <span className="mt-1 flex items-center gap-0.5 text-[12px] font-semibold text-navy-900">
-              {linkLabel}
-              <ChevronRight size={14} />
-            </span>
-          )}
         </div>
       </div>
-
-      {sms && (
-        <div className="flex flex-col gap-1">
-          <p className="text-center text-[10px] text-white/60">SMS · Birzum</p>
-          <p className="max-w-[85%] rounded-2xl rounded-bl-md bg-white/90 px-3 py-2 text-[12px] leading-snug text-navy-950">
-            {heading}. {text}
-          </p>
-        </div>
-      )}
     </div>
   )
 }
