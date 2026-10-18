@@ -1,34 +1,49 @@
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import { CircleAlert, CircleCheck, X } from 'lucide-react'
+import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { useToast } from '@/shared/lib/toast'
+import { dismissToast, useToasts } from '@/shared/lib/toast'
 
-/** Draws the current toast. Mounted once, in the device layout, above every screen and sheet. */
+/**
+ * The toasts, in the top right corner, oldest on top and each new one below it. Mounted once,
+ * in the admin layout, above pages and modals.
+ */
 export function Toaster() {
-  const current = useToast()
-  if (!current) return null
-  const Icon = current.tone === 'error' ? CircleAlert : CircleCheck
+  const { t } = useI18n()
+  const toasts = useToasts()
+  if (toasts.length === 0) return null
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-[60] flex justify-center px-5 pt-[max(0.75rem,env(safe-area-inset-top))]"
+      className="pointer-events-none fixed top-4 right-4 left-4 z-[70] flex flex-col items-end gap-2 sm:left-auto"
       aria-live="polite"
     >
-      <p
-        key={current.id}
-        role="status"
-        className={cn(
-          'toast flex max-w-full items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-[0_8px_24px_-8px_rgb(7_42_60/0.45)]',
-          current.tone === 'error'
-            ? 'bg-danger text-white'
-            : 'bg-navy-950 text-white dark:bg-raised',
-        )}
-      >
-        <Icon
-          size={18}
-          className={cn('shrink-0', current.tone === 'success' && 'text-green-500')}
-        />
-        <span className="min-w-0 truncate">{current.message}</span>
-      </p>
+      {toasts.map((item) => {
+        const Icon = item.tone === 'error' ? CircleAlert : CircleCheck
+        return (
+          <div
+            key={item.id}
+            role="status"
+            className="toast pointer-events-auto flex w-full items-start gap-3 rounded-control border border-line bg-canvas py-3 pr-2 pl-4 text-sm font-semibold shadow-xl sm:w-96"
+          >
+            <Icon
+              size={20}
+              className={cn(
+                'mt-px shrink-0',
+                item.tone === 'error' ? 'text-danger' : 'text-success',
+              )}
+            />
+            <span className="min-w-0 flex-1 py-px">{item.message}</span>
+            <button
+              type="button"
+              onClick={() => dismissToast(item.id)}
+              aria-label={t('common.close')}
+              className="-my-1 grid size-7 shrink-0 place-items-center rounded-full text-ink-subtle hover:bg-surface hover:text-ink"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }
