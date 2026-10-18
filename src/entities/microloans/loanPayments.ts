@@ -3,8 +3,11 @@ import type { Brand } from '@/shared/config/workspaces'
 
 /** What a payment was for. */
 export type LoanPaymentKind = 'monthly' | 'full' | 'partial'
-/** How it came: taken from the card on the day, or paid by the borrower in the app. */
-export type LoanPaymentMethod = 'auto' | 'app'
+/**
+ * How it came: taken from the card on the day, paid by the borrower in the app, or entered by an
+ * admin (cash at a branch, a bank transfer).
+ */
+export type LoanPaymentMethod = 'auto' | 'app' | 'cash' | 'transfer'
 /** Why the card could not be charged. */
 export const FAIL_REASONS = ['funds', 'blocked', 'expired'] as const
 export type FailReason = (typeof FAIL_REASONS)[number]
@@ -23,6 +26,8 @@ export type LoanPayment = {
   /** The monthly payment's number, for "monthly". */
   n?: number
   method: LoanPaymentMethod
+  /** Receipt or payment order number, for one an admin entered. */
+  reference?: string
   ok: boolean
   reason?: FailReason
 }
@@ -42,7 +47,10 @@ export function paymentsOf(loans: Loan[]): LoanPayment[] {
         amount: schedule[n - 1].amount,
         kind: 'monthly',
         n,
-        method: paidAt.getHours() === 9 && paidAt.getMinutes() === 0 ? 'auto' : 'app',
+        reference: loan.entered?.[`m${n}`]?.reference,
+        method:
+          loan.entered?.[`m${n}`]?.method ??
+          (paidAt.getHours() === 9 && paidAt.getMinutes() === 0 ? 'auto' : 'app'),
         ok: true,
       })
     }
@@ -54,7 +62,8 @@ export function paymentsOf(loans: Loan[]): LoanPayment[] {
         at: extra.at,
         amount: extra.amount,
         kind: extra.kind,
-        method: 'app',
+        method: loan.entered?.[`e${i}`]?.method ?? 'app',
+        reference: loan.entered?.[`e${i}`]?.reference,
         ok: true,
       }),
     )

@@ -1,6 +1,6 @@
-import { CircleCheck, CircleX, Eye, Search } from 'lucide-react'
+import { CircleCheck, CircleX, Plus, ReceiptText, RotateCcw, Search } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { logAction } from '@/entities/audit/audit'
 import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
 import { cardText, loansStore, progressOf, scheduleOf } from '@/entities/microloans/loans'
@@ -20,20 +20,24 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { LoanPaymentModal } from '../components/LoanPaymentModal'
+import { Button } from '@/shared/ui/Button'
+import { LoanManualPaymentModal } from '../components/LoanManualPaymentModal'
+import { LoanReceiptModal } from '../components/LoanReceiptModal'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 type Tab = 'all' | 'paid' | 'failed'
 type Kind = '' | 'monthly' | 'early'
-type Method = '' | 'auto' | 'app'
+type Method = '' | 'auto' | 'app' | 'cash' | 'transfer'
 
 /**
  * Toʻlovlar of one microloan brand: every payment on its loans — taken from the card on the
  * day, or paid in the app, monthly or early — with its fiscal cheque, and every automatic charge
- * the card refused. A loan still late on a refused charge can be charged again from here.
+ * the card refused. A row opens its loan. A loan still late on a refused charge can be charged
+ * again from here, and a payment made outside the app (cash, transfer) is entered here.
  */
 export function LoanPaymentsPage({ brand }: { brand: Brand }) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const loans = loansStore.useAll().filter((loan) => loan.brand === brand)
   const [today] = useState(() => new Date())
   const all = paymentsOf(loans)
@@ -42,7 +46,8 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
   const [kind, setKind] = useState<Kind>('')
   const [method, setMethod] = useState<Method>('')
   const [period, setPeriod] = useState<DateRange>(ALL_TIME)
-  const [open, setOpen] = useState<LoanPayment | null>(null)
+  const [receipt, setReceipt] = useState<LoanPayment | null>(null)
+  const [entering, setEntering] = useState(false)
   const [charging, setCharging] = useState<LoanPayment | null>(null)
 
   const needle = query.trim().toLowerCase()
@@ -110,7 +115,16 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.loanPayments')} description={t('loanPay.description')} />
+      <PageHeader
+        title={t('nav.loanPayments')}
+        description={t('loanPay.description')}
+        actions={
+          <Button size="sm" onClick={() => setEntering(true)}>
+            <Plus size={18} />
+            {t('manual.title')}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
@@ -180,6 +194,8 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
               { value: '', label: t('loanPay.method.all') },
               { value: 'auto', label: t('loanPay.method.auto') },
               { value: 'app', label: t('loanPay.method.app') },
+              { value: 'cash', label: t('loanPay.method.cash') },
+              { value: 'transfer', label: t('loanPay.method.transfer') },
             ]}
             value={method}
             onChange={setMethod}
@@ -209,7 +225,7 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
                   {pager.rows.map((payment) => (
                     <tr
                       key={payment.id}
-                      onClick={() => setOpen(payment)}
+                      onClick={() => navigate(brandLoanPath(brand, payment.loan.id))}
                       className={cn(
                         'cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60',
                         !payment.ok && 'bg-danger-soft/40',
@@ -243,7 +259,7 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
                       <td className="px-4 py-3 text-sm">
                         <span className="block">{t(`loanPay.method.${payment.method}`)}</span>
                         <span className="text-xs whitespace-nowrap text-ink-muted">
-                          {cardText(payment.loan.card)}
+                          {payment.reference ?? cardText(payment.loan.card)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold whitespace-nowrap tabular-nums">
@@ -269,9 +285,25 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
                       </td>
                       <td className="pr-3">
                         <RowActions
-                          actions={[
-                            { icon: Eye, label: t('common.view'), onClick: () => setOpen(payment) },
-                          ]}
+                          actions={
+                            payment.ok
+                              ? [
+                                  {
+                                    icon: ReceiptText,
+                                    label: t('receipt.show'),
+                                    onClick: () => setReceipt(payment),
+                                  },
+                                ]
+                              : canRetry(payment)
+                                ? [
+                                    {
+                                      icon: RotateCcw,
+                                      label: t('loanPay.retry'),
+                                      onClick: () => setCharging(payment),
+                                    },
+                                  ]
+                                : []
+                          }
                         />
                       </td>
                     </tr>
@@ -284,17 +316,8 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
         )}
       </div>
 
-      {open && (
-        <LoanPaymentModal
-          payment={open}
-          canRetry={canRetry(open)}
-          onRetry={() => {
-            setCharging(open)
-            setOpen(null)
-          }}
-          onClose={() => setOpen(null)}
-        />
-      )}
+      {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
+      {entering && <LoanManualPaymentModal brand={brand} onClose={() => setEntering(false)} />}
       <ConfirmDialog
         open={!!charging}
         onClose={() => setCharging(null)}

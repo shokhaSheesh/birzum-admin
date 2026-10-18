@@ -1599,6 +1599,20 @@ const uz = {
   'receipt.module': 'Fiskal modul',
   'receipt.sign': 'Fiskal belgi',
   'receipt.open': 'soliq.uz da tekshirish',
+  'manualLoan.pick': 'Qarzni tanlang',
+  'manualLoan.next': 'Keyingi toʻlov, {date}',
+  'manualLoan.late': 'Kechikkan toʻlov, {date}',
+  'manualLoan.payoff': 'Toʻliq yopish uchun',
+  'manualLoan.error.min': 'Kamida keyingi toʻlov: {sum}',
+  'manualLoan.error.max': 'Qarzni yopishga {sum} yetadi',
+  'manualLoan.willPartial':
+    'Keyingi toʻlovdan ortigʻi {sum} muddatidan oldin qisman toʻlov boʻladi: keyingi oylik toʻlovlar kamayadi, muddat oʻzgarmaydi.',
+  'manualLoan.willClose': 'Bu summa qolgan qarzni toʻliq yopadi: qarz yopiladi.',
+  'manualLoan.closed': 'Toʻlov kiritildi, qarz yopildi',
+  'loanPay.method.cash': 'Filialda naqd',
+  'loanPay.method.transfer': 'Bank oʻtkazmasi',
+  'audit.a.loanPaymentEntered': '{brand}: qarzga toʻlov kiritdi, {sum}',
+  'loan.enter': 'Toʻlov kiritish',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -3176,6 +3190,20 @@ const ru: Record<TranslationKey, string> = {
   'receipt.module': 'Фискальный модуль',
   'receipt.sign': 'Фискальный признак',
   'receipt.open': 'Проверить на soliq.uz',
+  'manualLoan.pick': 'Выберите займ',
+  'manualLoan.next': 'Следующий платёж, {date}',
+  'manualLoan.late': 'Просроченный платёж, {date}',
+  'manualLoan.payoff': 'Для полного погашения',
+  'manualLoan.error.min': 'Не меньше следующего платежа: {sum}',
+  'manualLoan.error.max': 'Для погашения достаточно {sum}',
+  'manualLoan.willPartial':
+    'Сверх следующего платежа {sum} пойдёт в частичное досрочное погашение: следующие платежи уменьшатся, срок не изменится.',
+  'manualLoan.willClose': 'Сумма покрывает весь остаток: займ будет закрыт.',
+  'manualLoan.closed': 'Платёж внесён, займ закрыт',
+  'loanPay.method.cash': 'Наличными в филиале',
+  'loanPay.method.transfer': 'Банковский перевод',
+  'audit.a.loanPaymentEntered': '{brand}: внесение платежа по займу, {sum}',
+  'loan.enter': 'Внести платёж',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }

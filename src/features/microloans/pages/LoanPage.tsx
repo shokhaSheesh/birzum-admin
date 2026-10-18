@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, CircleAlert, FileText } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CircleAlert, FileText, Plus, ReceiptText } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { loanApplicationsStore } from '@/entities/microloans/applications'
@@ -11,16 +11,20 @@ import {
   type Installment,
   type Loan,
 } from '@/entities/microloans/loans'
+import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
 import { loanProductsStore } from '@/entities/microloans/products'
 import { brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
+import { formatDate, formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
+import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
+import { LoanManualPaymentModal } from '../components/LoanManualPaymentModal'
+import { LoanReceiptModal } from '../components/LoanReceiptModal'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
@@ -60,8 +64,9 @@ const monthStateOf = (loan: Loan, item: Installment): MonthState =>
 
 /**
  * One microloan, read-only: what was issued and what is left, the late payment if any, the full
- * schedule month by month, every payment made (monthly and early), and the borrower, card and
- * ariza it came from.
+ * schedule month by month, every payment made (monthly and early, with its fiscal cheque) and
+ * every refused charge, and the borrower, card and ariza it came from. A payment made outside the
+ * app is entered from here.
  */
 export function LoanPage({ brand }: { brand: Brand }) {
   const { t } = useI18n()
@@ -71,6 +76,8 @@ export function LoanPage({ brand }: { brand: Brand }) {
   const product = loanProductsStore.useAll().find((p) => p.id === loan?.productId)
   const app = loanApplicationsStore.useAll().find((item) => item.id === loan?.applicationId)
   const [today] = useState(() => new Date())
+  const [receipt, setReceipt] = useState<LoanPayment | null>(null)
+  const [entering, setEntering] = useState(false)
 
   const back = (
     <button
@@ -95,23 +102,8 @@ export function LoanPage({ brand }: { brand: Brand }) {
   const { schedule, next, remaining, principalLeft, paid, total } = progressOf(loan)
   const state = stateOf(loan)
   const card4 = `${loan.card.brand === 'humo' ? 'Humo' : 'Uzcard'} •••• ${loan.card.last4}`
-  // Every payment made, newest first: the monthly ones and the early ones
-  const payments = [
-    ...schedule
-      .filter((item) => item.n <= loan.paidCount)
-      .map((item) => ({
-        key: `m${item.n}`,
-        at: loan.paidOn[item.n] ?? item.due,
-        amount: item.amount,
-        label: t('loan.payment.monthly', { n: String(item.n) }),
-      })),
-    ...loan.prepayments.map((extra, i) => ({
-      key: `e${i}`,
-      at: extra.at,
-      amount: extra.amount,
-      label: t(extra.kind === 'full' ? 'loan.payment.full' : 'loan.payment.partial'),
-    })),
-  ].sort((a, b) => b.at.getTime() - a.at.getTime())
+  // Every payment made, newest first, and the charges the card refused
+  const payments = paymentsOf([loan])
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -122,9 +114,17 @@ export function LoanPage({ brand }: { brand: Brand }) {
           <h1 className="text-2xl font-bold tabular-nums">{loan.number}</h1>
           <StatusBadge tone={loanStateTone[state]}>{t(`loan.state.${state}`)}</StatusBadge>
         </div>
-        <p className="text-ink-muted">
-          {product?.name} · {t('loan.issuedOn', { date: formatDate(loan.issuedAt) })}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-ink-muted">
+            {product?.name} · {t('loan.issuedOn', { date: formatDate(loan.issuedAt) })}
+          </p>
+          {state !== 'closed' && (
+            <Button size="sm" onClick={() => setEntering(true)}>
+              <Plus size={18} />
+              {t('manual.title')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {state === 'overdue' && next && (
@@ -244,18 +244,44 @@ export function LoanPage({ brand }: { brand: Brand }) {
               <ul className="flex flex-col">
                 {payments.map((payment) => (
                   <li
-                    key={payment.key}
+                    key={payment.id}
                     className="flex items-center justify-between gap-3 border-b border-line py-3 last:border-b-0"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{payment.label}</span>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className={cn('font-medium', !payment.ok && 'text-danger')}>
+                        {payment.kind === 'monthly'
+                          ? t('loan.payment.monthly', { n: String(payment.n) })
+                          : t(
+                              payment.kind === 'full'
+                                ? 'loan.payment.full'
+                                : 'loan.payment.partial',
+                            )}
+                        {!payment.ok && ` · ${t(`loanPay.reason.${payment.reason ?? 'funds'}`)}`}
+                      </span>
                       <span className="text-sm text-ink-muted tabular-nums">
-                        {formatDate(payment.at)} · {card4}
+                        {formatDateTime(payment.at)} · {t(`loanPay.method.${payment.method}`)} ·{' '}
+                        {payment.reference ?? card4}
                       </span>
                     </div>
-                    <span className="font-semibold whitespace-nowrap tabular-nums">
+                    <span
+                      className={cn(
+                        'font-semibold whitespace-nowrap tabular-nums',
+                        !payment.ok && 'text-danger line-through',
+                      )}
+                    >
                       {formatSum(payment.amount)}
                     </span>
+                    {payment.ok && (
+                      <button
+                        type="button"
+                        onClick={() => setReceipt(payment)}
+                        aria-label={t('receipt.show')}
+                        title={t('receipt.show')}
+                        className="grid size-9 shrink-0 place-items-center rounded-full text-ink-subtle hover:bg-surface hover:text-ink"
+                      >
+                        <ReceiptText size={18} />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -312,6 +338,10 @@ export function LoanPage({ brand }: { brand: Brand }) {
           )}
         </aside>
       </div>
+      {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
+      {entering && (
+        <LoanManualPaymentModal brand={brand} loan={loan} onClose={() => setEntering(false)} />
+      )}
     </div>
   )
 }

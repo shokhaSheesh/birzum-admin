@@ -40,7 +40,24 @@ export type Loan = {
   overdueSince?: Date
   /** Automatic charges the card refused, kept after the payment comes in. */
   refused: { at: Date; n: number; amount: number; reason: 'funds' | 'blocked' | 'expired' }[]
+  /**
+   * Payments an admin entered (cash at a branch, a bank transfer), by the payment's key: "m5" for
+   * the 5th monthly one, "e0" for the first early one.
+   */
+  entered?: Record<string, EnteredPayment>
   closedAt?: Date
+}
+
+/** How a payment made outside the app came in. */
+export const MANUAL_METHODS = ['cash', 'transfer'] as const
+export type ManualMethod = (typeof MANUAL_METHODS)[number]
+export type EnteredPayment = {
+  method: ManualMethod
+  /** Receipt or payment order number. */
+  reference: string
+  note?: string
+  /** The admin who entered it. */
+  by: string
 }
 
 /** "Humo •••• 1671". */
@@ -251,3 +268,44 @@ export const loansStore = createStore<Loan>([
   ...seed('fortuna', 7, 'FB'),
   ...seed('vodiy', 19, 'VT'),
 ])
+
+/**
+ * Puts a payment made outside the app on the loan: it pays the next monthly payment (and ends a
+ * late one), anything over goes to the loan early (the payments after it get smaller, the end
+ * stays), and a sum that covers what is left closes the loan. Returns whether it closed.
+ */
+export function enterPayment(loan: Loan, amount: number, at: Date, entry: EnteredPayment) {
+  const { next, principalLeft } = progressOf(loan)
+  const entered = { ...loan.entered }
+  if (!next) return false
+  // Covers everything: the next payment and the rest of the principal
+  if (amount >= next.interest + principalLeft) {
+    const key = `e${loan.prepayments.length}`
+    entered[key] = entry
+    loansStore.update(loan.id, {
+      prepayments: [...loan.prepayments, { at, amount, kind: 'full', afterPaid: loan.paidCount }],
+      overdueSince: undefined,
+      closedAt: at,
+      entered,
+    })
+    return true
+  }
+  const paidCount = loan.paidCount + 1
+  entered[`m${paidCount}`] = entry
+  const extra = amount - next.amount
+  const prepayments =
+    extra > 0
+      ? [...loan.prepayments, { at, amount: extra, kind: 'partial' as const, afterPaid: paidCount }]
+      : loan.prepayments
+  if (extra > 0) entered[`e${loan.prepayments.length}`] = entry
+  const done = paidCount >= scheduleOf(loan).length
+  loansStore.update(loan.id, {
+    paidCount,
+    paidOn: { ...loan.paidOn, [paidCount]: at },
+    prepayments,
+    overdueSince: undefined,
+    entered,
+    ...(done ? { closedAt: at } : {}),
+  })
+  return done
+}
