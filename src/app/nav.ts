@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageCircleQuestion,
+  MessageSquareText,
   Package,
   ReceiptText,
   ShieldCheck,
@@ -93,6 +94,12 @@ export const NAV: NavGroup[] = [
     title: 'navGroup.communication',
     items: [
       { to: ROUTES.support, icon: Headset, label: 'nav.support', about: 'about.support' },
+      {
+        to: ROUTES.quickReplies,
+        icon: MessageSquareText,
+        label: 'nav.quickReplies',
+        about: 'about.quickReplies',
+      },
       {
         to: ROUTES.broadcasts,
         icon: Megaphone,

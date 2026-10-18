@@ -100,9 +100,14 @@ What differs is the frame: the admin is a desktop web app used all day at a larg
 - The operators' side of the client app's support chat (the merchant app has none). A full-height page in three panes, not a scrolling page: chats, the conversation, the shopper.
 - **Chats** (380px): search (name, phone, text) and four tabs: Navbat (open and nobody's yet), Mening, Ochiq, Yopilgan; only Navbat and Mening show counts. A row: photo or initials, name, time (clock today, "Kecha", or the date), the last message ("Siz: …" for an answer, "Rasm" for a photo), unread count, the topic and who has it, or "Javob kutmoqda" in amber. The sidebar badge counts open chats with unread messages; opening a chat reads them.
 - **Conversation**: header with the name, topic and phone, then "Chatni olish" (from the queue) or the person in charge as a dropdown to hand it over, and "Yopish" (or "Qayta ochish"). Messages: the shopper on the left in white, answers on the right in navy with the admin's name and time, internal notes on the right in amber labelled "Ichki izoh", events in small grey text in the middle (took, handed over, closed), and day chips (Bugun, Kecha, the date). `?chat=` opens a chat directly.
-- **Reply box**: Javob / Ichki izoh switch (the whole box turns amber for a note, with "Faqat adminlar koʻradi"), the text (Enter sends, Shift+Enter breaks the line), Tayyor javoblar (a list above the box that fills the text), a photo button, and Yuborish. Answering a chat from the queue takes it.
+- **Reply box**: Javob / Ichki izoh switch (the whole box turns amber for a note, with "Faqat adminlar koʻradi"), the text (Enter sends, Shift+Enter breaks the line), Tayyor javoblar (a list above the box: this chat's topic first, a UZ / RU switch for the language it inserts, and "Tayyor javoblarni boshqarish" at the bottom), a photo button, and Yuborish. Answering a chat from the queue takes it.
 - **Shopper** (from 1280px): photo, name, phone, status, limit, running nasiyas, what is left, overdue in red, next payment, the last four arizalar (each opens) and "Klient sahifasi".
 - Below 1024px the list and the conversation are separate screens with a back arrow.
+
+## Tayyor javoblar
+
+- A small directory of its own under Aloqa: the answers the chat's list offers. Table: title, the text (two lines), topic (Toʻlov, Limit, Buyurtma, Boshqa or Har qanday mavzu), edit and delete. Search and a topic filter.
+- Create and edit in a centred modal: topic (an answer with a topic comes first in chats of that topic), title and text, each in both languages (required in both, since the answer goes out in the shopper's language). Deleting asks first; sent messages stay as they were.
 
 ## Toʻlovlar va qarzlar
 

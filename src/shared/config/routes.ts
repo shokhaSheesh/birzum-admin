@@ -20,6 +20,7 @@ export const ROUTES = {
   brands: '/brands',
   pricing: '/pricing',
   support: '/support',
+  quickReplies: '/quick-replies',
   broadcasts: '/broadcasts',
   faq: '/faq',
   documents: '/documents',

@@ -35,15 +35,6 @@ export type Chat = {
 /** Support staff who answer chats. Sample names; the real list comes from Adminlar va rollar. */
 export const OPERATORS = ['Sardor Saidov', 'Malika Rasulova', 'Sardor Nematov']
 
-/** Saved answers an operator drops into the reply. */
-export const QUICK_REPLIES = [
-  'payDay',
-  'limitRecalc',
-  'orderStatus',
-  'cardChange',
-  'thanks',
-] as const
-
 export const lastMessageOf = (chat: Chat) =>
   chat.messages.filter((message) => message.from !== 'system').at(-1) ?? chat.messages.at(-1)!
 

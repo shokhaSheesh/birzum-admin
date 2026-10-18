@@ -22,11 +22,12 @@ import {
   chatsStore,
   lastMessageOf,
   OPERATORS,
-  QUICK_REPLIES,
   type Chat,
   type ChatMessage,
 } from '@/entities/support/chats'
-import { applicationPath, clientPath } from '@/shared/config/routes'
+import { repliesStore } from '@/entities/support/replies'
+import { applicationPath, clientPath, ROUTES } from '@/shared/config/routes'
+import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { newId } from '@/shared/lib/createStore'
@@ -242,7 +243,7 @@ function Conversation({
   me: string
   onBack: () => void
 }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [draft, setDraft] = useState('')
   const end = useRef<HTMLDivElement>(null)
@@ -250,6 +251,10 @@ function Conversation({
   const { open: quickOpen, setOpen: setQuickOpen, ref: quickRef } = usePopover()
   const [today] = useState(now)
   const operators = OPERATORS.includes(me) ? OPERATORS : [me, ...OPERATORS]
+  const [replyLang, setReplyLang] = useState<Lang>(lang)
+  // Answers for this chat's topic first, then the general ones, then the rest
+  const rank = (topic: string) => (topic === chat.topic ? 0 : topic === 'any' ? 1 : 2)
+  const replies = [...repliesStore.useAll()].sort((a, b) => rank(a.topic) - rank(b.topic))
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' })
@@ -438,28 +443,61 @@ function Conversation({
                 {t('support.quick')}
               </button>
               {quickOpen && (
-                <ul className="popover absolute bottom-full left-0 z-30 mb-1.5 flex w-80 flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]">
-                  {QUICK_REPLIES.map((key) => (
-                    <li key={key}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(t(`support.quick.${key}`))
-                          setMode('reply')
-                          setQuickOpen(false)
-                        }}
-                        className="flex w-full flex-col gap-0.5 rounded-control px-3 py-2 text-left hover:bg-surface"
-                      >
-                        <span className="text-sm font-semibold">
-                          {t(`support.quick.${key}.label`)}
-                        </span>
-                        <span className="line-clamp-1 text-xs text-ink-muted">
-                          {t(`support.quick.${key}`)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="popover absolute bottom-full left-0 z-30 mb-1.5 flex w-96 flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]">
+                  <div className="flex items-center justify-between gap-2 px-3 py-1.5">
+                    <span className="text-xs text-ink-muted">{t('replies.insertIn')}</span>
+                    <div className="flex gap-0.5 rounded-full bg-surface p-0.5">
+                      {LANGS.map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setReplyLang(value)}
+                          aria-pressed={replyLang === value}
+                          className={cn(
+                            'h-7 rounded-full px-2.5 text-xs font-bold uppercase',
+                            replyLang === value ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
+                          )}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <ul className="flex max-h-72 flex-col overflow-y-auto">
+                    {replies.map((reply) => (
+                      <li key={reply.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraft(reply.text[replyLang])
+                            setMode('reply')
+                            setQuickOpen(false)
+                          }}
+                          className="flex w-full flex-col gap-0.5 rounded-control px-3 py-2 text-left hover:bg-surface"
+                        >
+                          <span className="flex items-center gap-2 text-sm font-semibold">
+                            {reply.title[replyLang]}
+                            {reply.topic === chat.topic && (
+                              <span className="rounded-full bg-green-200 px-2 py-0.5 text-[11px] font-semibold">
+                                {t(`support.topic.${chat.topic}`)}
+                              </span>
+                            )}
+                          </span>
+                          <span className="line-clamp-1 text-xs text-ink-muted">
+                            {reply.text[replyLang]}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to={ROUTES.quickReplies}
+                    className="mt-1 flex items-center justify-between rounded-control border-t border-line px-3 pt-2.5 pb-1.5 text-sm font-semibold text-brand hover:bg-surface"
+                  >
+                    {t('replies.manage')}
+                    <ChevronRight size={16} />
+                  </Link>
+                </div>
               )}
             </div>
             <button
