@@ -280,7 +280,7 @@ export function BroadcastFormPage() {
                   aria-pressed={previewLang === value}
                   className={cn(
                     'h-7 rounded-full px-3 text-xs font-bold uppercase',
-                    previewLang === value ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
+                    previewLang === value ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted',
                   )}
                 >
                   {value}

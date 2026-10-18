@@ -86,7 +86,7 @@ export function PeriodFilter({
               }}
               className={cn(
                 'h-9 shrink-0 rounded-[10px] px-3.5 text-sm font-semibold whitespace-nowrap transition-colors',
-                selected ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted hover:text-ink',
+                selected ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted hover:text-ink',
               )}
             >
               {t(`period.${unit}`)}

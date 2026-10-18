@@ -66,7 +66,7 @@ export function AdminLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setOpen(true)} />
-        <main className="min-h-0 flex-1 overflow-y-auto bg-surface/50">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-page">
           <Outlet />
         </main>
       </div>

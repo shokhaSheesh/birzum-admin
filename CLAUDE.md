@@ -6,26 +6,26 @@ Read `DESIGN.md` before designing a page. The rules below are the ones that are 
 
 Every control the admin sees is our own component, drawn with our tokens. Never ship the browser's own look for anything, because it differs between Chrome, Safari and Windows, ignores dark mode and our fonts, and looks unfinished next to our cards.
 
-| Need | Use | Never |
-|---|---|---|
-| Pick one of a few to many options in a form | `SelectField` | `<select>` |
-| Pick several, or all, of a long list (people, merchants) | `MultiSelectField` (search, "Hammasi" checkbox, chips) | `<select multiple>`, a wall of checkboxes |
-| Filter a table by one value | `FilterSelect` | `<select>` |
-| One period for a whole page (figures, chart and tables) | `PeriodFilter` (Kun · Hafta · Oy · Yil · Oraliq · Butun davr, ‹ › to step) | a date range per card |
-| Filter by a period | `DateRangePicker` | `<input type="date">`, two date inputs |
-| Pick one date in a form | `DateField` (calendar popover, same calendar as the range picker) | `<input type="date">` |
-| Tick a row in a table, select all | `TableCheckbox` (with the mixed state for "some") | a bare `<input type="checkbox">` |
-| Agree to something, a labelled option | `Checkbox` | a bare checkbox |
-| On/off in a row or a settings card | `Switch` | a checkbox |
-| One of 2–6 short options, all visible | `ChoiceGrid` or radio cards | radio buttons |
-| Number, money, phone | `NumberField`, `PhoneField` | `type="number"` spinners |
-| Upload a picture | `ImageField` | a bare file input |
-| A table longer than 20 rows | `Pagination` + `usePagination` (back to page 1 when filters change) | endless scroll, "show more" |
-| A chart | our own in `shared/ui/charts` (`LineChart`, `KpiTile`, `BarList`, `ColumnChart`) | a chart library's default look |
-| A star rating | `Stars` (partial fill) | ★ characters, emoji |
-| Confirm, explain why not | `ConfirmDialog` | `window.confirm`, `alert` |
-| Small create or edit | `Modal` | a side drawer, a new tab |
-| Hint on hover | `title` only on icon buttons; anything longer is visible text | custom browser tooltips |
+| Need                                                     | Use                                                                              | Never                                     |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------- |
+| Pick one of a few to many options in a form              | `SelectField`                                                                    | `<select>`                                |
+| Pick several, or all, of a long list (people, merchants) | `MultiSelectField` (search, "Hammasi" checkbox, chips)                           | `<select multiple>`, a wall of checkboxes |
+| Filter a table by one value                              | `FilterSelect`                                                                   | `<select>`                                |
+| One period for a whole page (figures, chart and tables)  | `PeriodFilter` (Kun · Hafta · Oy · Yil · Oraliq · Butun davr, ‹ › to step)       | a date range per card                     |
+| Filter by a period                                       | `DateRangePicker`                                                                | `<input type="date">`, two date inputs    |
+| Pick one date in a form                                  | `DateField` (calendar popover, same calendar as the range picker)                | `<input type="date">`                     |
+| Tick a row in a table, select all                        | `TableCheckbox` (with the mixed state for "some")                                | a bare `<input type="checkbox">`          |
+| Agree to something, a labelled option                    | `Checkbox`                                                                       | a bare checkbox                           |
+| On/off in a row or a settings card                       | `Switch`                                                                         | a checkbox                                |
+| One of 2–6 short options, all visible                    | `ChoiceGrid` or radio cards                                                      | radio buttons                             |
+| Number, money, phone                                     | `NumberField`, `PhoneField`                                                      | `type="number"` spinners                  |
+| Upload a picture                                         | `ImageField`                                                                     | a bare file input                         |
+| A table longer than 20 rows                              | `Pagination` + `usePagination` (back to page 1 when filters change)              | endless scroll, "show more"               |
+| A chart                                                  | our own in `shared/ui/charts` (`LineChart`, `KpiTile`, `BarList`, `ColumnChart`) | a chart library's default look            |
+| A star rating                                            | `Stars` (partial fill)                                                           | ★ characters, emoji                       |
+| Confirm, explain why not                                 | `ConfirmDialog`                                                                  | `window.confirm`, `alert`                 |
+| Small create or edit                                     | `Modal`                                                                          | a side drawer, a new tab                  |
+| Hint on hover                                            | `title` only on icon buttons; anything longer is visible text                    | custom browser tooltips                   |
 
 - A native element may sit underneath for accessibility (a visually hidden `input` inside `Checkbox`), but what the user sees and clicks is ours.
 - Popovers (`FilterSelect`, `SelectField`, `DateRangePicker`) open under their button, close on Esc and on a click outside, and work with the keyboard: arrows to move, Enter to pick.
@@ -36,6 +36,7 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 
 - Every page uses `max-w-page` (fills the space beside the sidebar up to 1680px), so collapsing the sidebar gives the page more room. Never a narrower fixed width.
 - The body background is the canvas colour; never a dark colour that shows when the page bounces.
+- Pages sit on `bg-page` (light grey; black in the dark theme) with cards on `bg-canvas`. Dark is black and neutral grey like iOS, never dark blue, and actions are lime with black text. The chosen option in a segmented control is `bg-raised`, so it stays lighter than its track in dark.
 
 - Small records are created and edited in a centred `Modal`; big ones (a merchant, a payout) get their own page with the fixed `ActionBar`.
 - Every table row ends with `RowActions`, kept short: edit and delete. A status change (active / blocked) belongs in the edit modal, not as more row icons.

@@ -18,7 +18,9 @@ export function Toaster() {
         role="status"
         className={cn(
           'toast flex max-w-full items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-[0_8px_24px_-8px_rgb(7_42_60/0.45)]',
-          current.tone === 'error' ? 'bg-danger text-white' : 'bg-navy-950 text-white',
+          current.tone === 'error'
+            ? 'bg-danger text-white'
+            : 'bg-navy-950 text-white dark:bg-raised',
         )}
       >
         <Icon

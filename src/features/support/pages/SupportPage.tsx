@@ -455,7 +455,7 @@ function Conversation({
                           aria-pressed={replyLang === value}
                           className={cn(
                             'h-7 rounded-full px-2.5 text-xs font-bold uppercase',
-                            replyLang === value ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
+                            replyLang === value ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted',
                           )}
                         >
                           {value}

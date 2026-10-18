@@ -52,7 +52,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
               onClick={() => setLang(value)}
               className={cn(
                 'h-8 rounded-md px-2.5 text-xs font-bold uppercase',
-                value === lang ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted',
+                value === lang ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted',
               )}
             >
               {value}

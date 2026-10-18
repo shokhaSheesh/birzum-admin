@@ -22,7 +22,7 @@ export function ViewToggle<T extends string>({ label, options, value, onChange }
           onClick={() => onChange(option)}
           className={cn(
             'flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors',
-            option === value ? 'bg-canvas text-ink shadow-sm' : 'text-ink-muted hover:text-ink',
+            option === value ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted hover:text-ink',
           )}
         >
           <Icon size={16} />
