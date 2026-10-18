@@ -1,4 +1,4 @@
-import type { LocalizedText } from '@/shared/i18n/dictionaries'
+import type { Lang, LocalizedText } from '@/shared/i18n/dictionaries'
 import { createStore } from '@/shared/lib/createStore'
 
 /** The apps whose intro slides this panel manages. */
@@ -7,13 +7,13 @@ export type AppId = (typeof APPS)[number]
 
 /**
  * One intro slide an app shows once, after the first sign-in. `image` is what the admin
- * uploaded; without it the app shows its own drawn picture (`builtIn`), which only the slides
+ * uploaded, one per language (a picture may carry text); without it the app shows its own drawn picture (`builtIn`), which only the slides
  * that ship with the app have. New slides need an image.
  */
 export type Slide = {
   id: string
   app: AppId
-  image?: string
+  image?: Partial<Record<Lang, string>>
   builtIn?: boolean
   title: LocalizedText
   text: LocalizedText

@@ -11,10 +11,12 @@ type Props = {
   preview: ReactNode
   value?: string
   onChange: (url: string | undefined) => void
+  /** Beside the label, e.g. a UZ / RU toggle for a picture per language. */
+  labelEnd?: ReactNode
 }
 
 /** One picture of a record (a logo, a category image): a preview, then upload and remove. */
-export function ImageField({ label, hint, preview, value, onChange }: Props) {
+export function ImageField({ label, hint, preview, value, onChange, labelEnd }: Props) {
   const { t } = useI18n()
   const input = useRef<HTMLInputElement>(null)
 
@@ -22,7 +24,10 @@ export function ImageField({ label, hint, preview, value, onChange }: Props) {
     <div className="flex items-center gap-5">
       {preview}
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-ink-muted">{label}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-medium text-ink-muted">{label}</p>
+          {labelEnd}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => input.current?.click()}>
             <ImageUp size={18} />

@@ -1287,7 +1287,7 @@ const uz = {
   'slides.image.hint': 'PNG yoki JPG, 1120×920 px, 2 MB gacha.',
   'slides.image.hintBuiltIn':
     'Yuklamasangiz, ilova oʻz chizilgan rasmini koʻrsatadi. PNG yoki JPG, 1120×920 px.',
-  'slides.image.required': 'Yangi slayd uchun rasm yuklang',
+  'slides.image.required': 'Rasmni ikkala tilda ham yuklang',
   'slides.title': 'Sarlavha',
   'slides.text': 'Matn',
   'slides.visible': 'Koʻrsatish',
@@ -2581,7 +2581,7 @@ const ru: Record<TranslationKey, string> = {
   'slides.image.hint': 'PNG или JPG, 1120×920 px, до 2 МБ.',
   'slides.image.hintBuiltIn':
     'Без загрузки приложение покажет свою рисованную картинку. PNG или JPG, 1120×920 px.',
-  'slides.image.required': 'Для нового слайда загрузите картинку',
+  'slides.image.required': 'Загрузите картинку на обоих языках',
   'slides.title': 'Заголовок',
   'slides.text': 'Текст',
   'slides.visible': 'Показывать',
