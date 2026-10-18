@@ -1,20 +1,16 @@
-import { ChevronRight, HandCoins, ReceiptText, Store, Wallet, type LucideIcon } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { applicationsStore, handedAtOf } from '@/entities/applications/applications'
 import { categoriesStore } from '@/entities/catalog/categories'
 import { productsStore } from '@/entities/catalog/products'
 import { clientsStore } from '@/entities/clients/clients'
-import { contactsOf, contactsStore } from '@/entities/collections/contacts'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { owedSales, salesStore, sumOf } from '@/entities/payouts/payouts'
+import { sumOf } from '@/entities/payouts/payouts'
 import { ratesStore } from '@/entities/pricing/pricing'
-import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { changeOf, compactSum, previousOf } from '@/shared/lib/chartAxis'
-import { inRange, startOfDay, type DateRange } from '@/shared/lib/dates'
+import { inRange, type DateRange } from '@/shared/lib/dates'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { boundsOf, bucketsOf, thisMonth, type Period } from '@/shared/lib/period'
 import { BarList } from '@/shared/ui/charts/BarList'
@@ -42,8 +38,7 @@ function Card({ title, note, children }: { title: string; note?: string; childre
 
 /**
  * The platform at a glance for one period: four figures with their change, sales against money
- * collected, how arizalar went, who and what sells, and the portfolio as it stands today with
- * the things that need someone's attention.
+ * collected, how arizalar went, who and what sells, and the portfolio as it stands today.
  */
 export function DashboardPage() {
   const { t, tl } = useI18n()
@@ -54,8 +49,6 @@ export function DashboardPage() {
   const products = productsStore.useAll()
   const categories = categoriesStore.useAll()
   const rates = ratesStore.useAll()
-  const sales = salesStore.useAll()
-  const contacts = contactsStore.useAll()
   const [now] = useState(() => new Date())
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
   const bounds = boundsOf(period)
@@ -97,9 +90,6 @@ export function DashboardPage() {
     )
   const salesLine = series((range) => goods(salesIn(range)))
   const paidLine = series((range) => sumOf(paidIn(range)))
-  const trend = (values: (number | null)[]) => values.filter((v): v is number => v !== null)
-  const createdLine = series((range) => createdIn(range).length)
-  const joinedLine = series((range) => joinedIn(range).length)
   const changeLabel = t(
     previous?.partial ? `dashboard.vsSoFar.${period.unit}` : `dashboard.vs.${period.unit}`,
   )
@@ -157,68 +147,6 @@ export function DashboardPage() {
   const lateRemaining = lateBook.reduce((sum, item) => sum + item.remaining, 0)
   const overdue = lateBook.reduce((sum, item) => sum + item.overdue, 0)
   const par = outstanding ? (lateRemaining / outstanding) * 100 : 0
-  const owed = owedSales(sales)
-  const owedMerchants = new Set(owed.map((sale) => sale.merchantId)).size
-  const debtorIds = new Set(
-    applications
-      .filter((a) => a.status === 'handed' && progressOf(a, payments, now).overdue > 0)
-      .map((a) => a.clientId),
-  )
-  const broken = [...debtorIds].filter((id) => {
-    const call = contactsOf(contacts, id).find((contact) => contact.channel === 'call')
-    return call?.promiseDate && call.result === 'promised' && call.promiseDate < startOfDay(now)
-  }).length
-  const pending = applications.filter((a) => a.status === 'pending').length
-  const onboarding = merchants.filter((m) => m.status === 'onboarding').length
-
-  const attention: {
-    icon: LucideIcon
-    count: number
-    text: string
-    sub: string
-    to: string
-    tone: string
-  }[] = [
-    {
-      icon: ReceiptText,
-      count: pending,
-      text: t('dashboard.attn.pending', { count: String(pending) }),
-      sub: t('dashboard.attn.pending.sub'),
-      to: ROUTES.applications,
-      tone: 'bg-warning-soft text-warning',
-    },
-    {
-      icon: Wallet,
-      count: debtorIds.size,
-      text: t('dashboard.attn.debtors', { count: String(debtorIds.size) }),
-      sub: broken
-        ? t('dashboard.attn.debtors.broken', { count: String(broken) })
-        : formatSum(overdue),
-      to: ROUTES.collections,
-      tone: 'bg-danger-soft text-danger',
-    },
-    {
-      icon: HandCoins,
-      count: owedMerchants,
-      text: t('dashboard.attn.payouts', { count: String(owedMerchants) }),
-      sub: formatSum(sumOf(owed)),
-      to: ROUTES.payouts,
-      tone: 'bg-navy-100 text-brand',
-    },
-    ...(onboarding
-      ? [
-          {
-            icon: Store,
-            count: onboarding,
-            text: t('dashboard.attn.onboarding', { count: String(onboarding) }),
-            sub: t('dashboard.attn.onboarding.sub'),
-            to: ROUTES.merchants,
-            tone: 'bg-navy-100 text-brand',
-          },
-        ]
-      : []),
-  ].filter((item) => item.count > 0)
-
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.dashboard')} description={t('dashboard.description')} />
@@ -230,7 +158,6 @@ export function DashboardPage() {
           value={compactSum(goods(sold), unit)}
           change={compare(goods(sold), (r) => goods(salesIn(r)))}
           changeLabel={changeLabel}
-          trend={trend(salesLine)}
           noCompare={noCompare}
         />
         <KpiTile
@@ -238,7 +165,6 @@ export function DashboardPage() {
           value={compactSum(sumOf(paid), unit)}
           change={compare(sumOf(paid), (r) => sumOf(paidIn(r)))}
           changeLabel={changeLabel}
-          trend={trend(paidLine)}
           noCompare={noCompare}
         />
         <KpiTile
@@ -246,7 +172,6 @@ export function DashboardPage() {
           value={groupDigits(created.length)}
           change={compare(created.length, (r) => createdIn(r).length)}
           changeLabel={changeLabel}
-          trend={trend(createdLine)}
           noCompare={noCompare}
         />
         <KpiTile
@@ -254,7 +179,6 @@ export function DashboardPage() {
           value={groupDigits(joined.length)}
           change={compare(joined.length, (r) => joinedIn(r).length)}
           changeLabel={changeLabel}
-          trend={trend(joinedLine)}
           noCompare={noCompare}
         />
       </div>
@@ -365,76 +289,62 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card title={t('dashboard.portfolio.title')} note={t('dashboard.portfolio.note')}>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm text-ink-muted">{t('dashboard.portfolio.outstanding')}</span>
-              <span className="text-4xl font-bold [font-variant-numeric:normal]">
-                {formatSum(outstanding)}
-              </span>
+      <Card title={t('dashboard.portfolio.title')} note={t('dashboard.portfolio.note')}>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-ink-muted">{t('dashboard.portfolio.outstanding')}</span>
+          <span className="text-4xl font-bold [font-variant-numeric:normal]">
+            {formatSum(outstanding)}
+          </span>
+          <span className="text-sm text-ink-muted">
+            {t('dashboard.portfolio.outstanding.hint', { count: groupDigits(running.length) })}
+          </span>
+        </div>
+        <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+          <span className="bg-green-500" style={{ flexGrow: outstanding - lateRemaining }} />
+          <span className="bg-danger" style={{ flexGrow: lateRemaining }} />
+        </div>
+        <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+          {(
+            [
+              {
+                swatch: 'bg-green-500',
+                label: t('dashboard.portfolio.onTime'),
+                value: formatSum(outstanding - lateRemaining),
+                hint: t('dashboard.portfolio.onTime.hint', {
+                  count: groupDigits(running.length - lateBook.length),
+                }),
+              },
+              {
+                swatch: 'bg-danger',
+                label: t('dashboard.portfolio.late'),
+                value: formatSum(lateRemaining),
+                hint: t('dashboard.portfolio.late.hint', { count: groupDigits(lateBook.length) }),
+              },
+              {
+                swatch: null,
+                label: t('dashboard.portfolio.overdue'),
+                value: formatSum(overdue),
+                hint: t('dashboard.portfolio.overdue.hint'),
+              },
+              {
+                swatch: null,
+                label: t('dashboard.portfolio.par'),
+                value: `${par.toFixed(1).replace('.', ',')}%`,
+                hint: t('dashboard.portfolio.par.hint'),
+              },
+            ] as const
+          ).map((item) => (
+            <div key={item.label} className="flex flex-col gap-1">
+              <dt className="flex items-center gap-2 text-sm text-ink-muted">
+                {item.swatch && <span className={`size-2.5 shrink-0 rounded-sm ${item.swatch}`} />}
+                {item.label}
+              </dt>
+              <dd className="text-lg font-bold tabular-nums">{item.value}</dd>
+              <dd className="text-sm text-ink-subtle">{item.hint}</dd>
             </div>
-            <span className="text-sm text-ink-muted">
-              {t('dashboard.portfolio.running', { count: groupDigits(running.length) })}
-            </span>
-          </div>
-          <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
-            <span className="bg-green-500" style={{ flexGrow: outstanding - lateRemaining }} />
-            <span className="bg-danger" style={{ flexGrow: lateRemaining }} />
-          </div>
-          <dl className="grid gap-4 sm:grid-cols-4">
-            {(
-              [
-                [
-                  'bg-green-500',
-                  t('dashboard.portfolio.onTime'),
-                  formatSum(outstanding - lateRemaining),
-                ],
-                ['bg-danger', t('dashboard.portfolio.late'), formatSum(lateRemaining)],
-                [null, t('client.overdue'), formatSum(overdue)],
-                [null, t('dashboard.portfolio.par'), `${par.toFixed(1).replace('.', ',')}%`],
-              ] as const
-            ).map(([swatch, label, value]) => (
-              <div key={label} className="flex flex-col gap-1">
-                <dt className="flex items-center gap-2 text-sm text-ink-muted">
-                  {swatch && <span className={`size-2.5 rounded-sm ${swatch}`} />}
-                  {label}
-                </dt>
-                <dd className="font-bold tabular-nums">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="text-xs text-ink-subtle">{t('dashboard.portfolio.parHint')}</p>
-        </Card>
-
-        <Card title={t('dashboard.attn.title')}>
-          {attention.length === 0 ? (
-            <p className="text-sm text-ink-subtle">{t('dashboard.attn.none')}</p>
-          ) : (
-            <ul className="-mx-2 flex flex-col">
-              {attention.map((item) => (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    className="flex items-center gap-3 rounded-control p-2 hover:bg-surface"
-                  >
-                    <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-full ${item.tone}`}
-                    >
-                      <item.icon size={20} />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="font-semibold">{item.text}</span>
-                      <span className="truncate text-sm text-ink-muted">{item.sub}</span>
-                    </span>
-                    <ChevronRight size={18} className="shrink-0 text-ink-subtle" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
+          ))}
+        </dl>
+      </Card>
     </div>
   )
 }

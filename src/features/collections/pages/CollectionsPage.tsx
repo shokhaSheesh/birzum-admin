@@ -552,21 +552,7 @@ export function CollectionsPage() {
             ) : (
               <>
                 <PaymentsTable payments={paymentPager.rows} />
-                <Pagination
-                  pager={paymentPager}
-                  summary={
-                    <>
-                      {t('collections.chart.collected')}:{' '}
-                      <span className="font-semibold text-ink tabular-nums">
-                        {formatSum(
-                          paymentRows
-                            .filter((payment) => !payment.failed)
-                            .reduce((sum, payment) => sum + payment.amount, 0),
-                        )}
-                      </span>
-                    </>
-                  }
-                />
+                <Pagination pager={paymentPager} />
               </>
             )}
           </>

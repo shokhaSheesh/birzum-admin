@@ -25,6 +25,8 @@ type Props<T extends string> = {
   disabled?: boolean
   /** Popover width follows the button, or fits its longest option. */
   fit?: boolean
+  /** Open above the button, for one near the bottom of the page (e.g. rows per page). */
+  up?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ export function Listbox<T extends string>({
   id,
   disabled,
   fit,
+  up,
 }: Props<T>) {
   const { t } = useI18n()
   const { open, setOpen, ref } = usePopover()
@@ -99,7 +102,8 @@ export function Listbox<T extends string>({
       {open && (
         <div
           className={cn(
-            'popover absolute top-full left-0 z-30 mt-1.5 flex max-h-80 flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]',
+            up ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
+            'popover absolute left-0 z-30 flex max-h-80 flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]',
             fit ? 'w-max max-w-80 min-w-full' : 'w-full',
           )}
         >

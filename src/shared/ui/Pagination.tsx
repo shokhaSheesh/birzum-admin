@@ -1,5 +1,4 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { groupDigits } from '@/shared/lib/format'
@@ -25,22 +24,10 @@ function numbersFor(page: number, pages: number): (number | null)[] {
  * The bar under a long table: which rows are shown out of how many, rows per page, and the
  * pages. It hides itself when everything fits on one page of 20.
  */
-export function Pagination({
-  pager,
-  summary,
-}: {
-  pager: Pager
-  /** A total for the whole filtered list, e.g. the sum that came in. */
-  summary?: ReactNode
-}) {
+export function Pagination({ pager }: { pager: Pager }) {
   const { t } = useI18n()
   const { page, size, total, setPage, setSize } = pager
-  if (total <= 20 && size === 20)
-    return summary ? (
-      <div className="border-t border-line px-4 py-3 text-right text-sm text-ink-muted">
-        {summary}
-      </div>
-    ) : null
+  if (total <= 20 && size === 20) return null
   const pages = Math.max(1, Math.ceil(total / size))
   const from = total ? (page - 1) * size + 1 : 0
   const to = Math.min(total, page * size)
@@ -66,6 +53,7 @@ export function Pagination({
           onChange={(value) => setSize(Number(value))}
           ariaLabel={t('pagination.perPage')}
           fit
+          up
           triggerClassName="flex h-9 items-center gap-1.5 rounded-control border border-line bg-canvas pr-2 pl-3 text-sm text-ink hover:border-navy-400"
           trigger={({ open, selected }) => (
             <>
@@ -75,7 +63,6 @@ export function Pagination({
           )}
         />
       </div>
-      {summary && <div className="ml-auto text-sm text-ink-muted">{summary}</div>}
       <div className="flex items-center gap-1">
         <button
           type="button"
