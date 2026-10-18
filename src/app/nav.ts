@@ -3,6 +3,7 @@ import {
   FileText,
   FolderTree,
   HandCoins,
+  KeyRound,
   Headset,
   LayoutDashboard,
   Megaphone,
@@ -112,7 +113,10 @@ export const NAV: NavGroup[] = [
   },
   {
     title: 'navGroup.system',
-    items: [{ to: ROUTES.admins, icon: ShieldCheck, label: 'nav.admins', about: 'about.admins' }],
+    items: [
+      { to: ROUTES.admins, icon: ShieldCheck, label: 'nav.admins', about: 'about.admins' },
+      { to: ROUTES.roles, icon: KeyRound, label: 'nav.roles', about: 'about.roles' },
+    ],
   },
 ]
 

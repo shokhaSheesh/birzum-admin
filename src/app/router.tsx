@@ -5,6 +5,9 @@ import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
+import { AdminsPage } from '@/features/admins/pages/AdminsPage'
+import { RoleFormPage } from '@/features/admins/pages/RoleFormPage'
+import { RolesPage } from '@/features/admins/pages/RolesPage'
 import { BroadcastDetailPage } from '@/features/broadcasts/pages/BroadcastDetailPage'
 import { BroadcastFormPage } from '@/features/broadcasts/pages/BroadcastFormPage'
 import { BroadcastsPage } from '@/features/broadcasts/pages/BroadcastsPage'
@@ -46,6 +49,8 @@ const DESIGNED: string[] = [
   ROUTES.broadcasts,
   ROUTES.faq,
   ROUTES.documents,
+  ROUTES.admins,
+  ROUTES.roles,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -80,6 +85,10 @@ export const router = createBrowserRouter([
           { path: ROUTES.broadcasts, element: <BroadcastsPage /> },
           { path: ROUTES.faq, element: <FaqPage /> },
           { path: ROUTES.documents, element: <DocumentsPage /> },
+          { path: ROUTES.admins, element: <AdminsPage /> },
+          { path: ROUTES.roles, element: <RolesPage /> },
+          { path: ROUTES.roleNew, element: <RoleFormPage key="new" /> },
+          { path: ROUTES.roleEdit, element: <RoleFormPage key="edit" /> },
           { path: ROUTES.document, element: <DocumentPage /> },
           { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },
           { path: ROUTES.broadcast, element: <BroadcastDetailPage /> },

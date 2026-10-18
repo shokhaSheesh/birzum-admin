@@ -29,6 +29,9 @@ export const ROUTES = {
   documents: '/documents',
   document: '/documents/:id',
   admins: '/admins',
+  roles: '/roles',
+  roleNew: '/roles/new',
+  roleEdit: '/roles/:id/edit',
 } as const
 
 /** A merchant's detail page. */
@@ -58,3 +61,8 @@ export const broadcastEditPath = (id: string) => `/broadcasts/${id}/edit`
 
 /** A legal document's page. */
 export const documentPath = (id: string) => `/documents/${id}`
+
+/** A new role, optionally filled from another one. */
+export const roleNewPath = (from?: string) => (from ? `/roles/new?from=${from}` : '/roles/new')
+/** A role's form. */
+export const roleEditPath = (id: string) => `/roles/${id}/edit`
