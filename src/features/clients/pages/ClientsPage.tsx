@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
 import { clientStatusTone } from '@/entities/clients/clientStatus'
+import { paymentsStore } from '@/entities/collections/payments'
 import { clientsStore, fullName, initialsOf, type Client } from '@/entities/clients/clients'
 import { CLIENT_STATUSES, clientStatusOf, debtOf, type ClientStatus } from '@/entities/clients/debt'
 import { clientPath } from '@/shared/config/routes'
@@ -34,6 +35,7 @@ export function ClientsPage() {
   const navigate = useNavigate()
   const clients = clientsStore.useAll()
   const applications = applicationsStore.useAll()
+  const payments = paymentsStore.useAll()
   const [status, setStatus] = useState<'all' | ClientStatus>('all')
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState<LimitFilter>('')
@@ -43,8 +45,8 @@ export function ClientsPage() {
   const [today] = useState(() => new Date())
 
   const rowsAll = clients.map((client) => {
-    const debt = debtOf(client, applications, today)
-    return { client, debt, status: clientStatusOf(client, debt.running) }
+    const debt = debtOf(client, applications, payments, today)
+    return { client, debt, status: clientStatusOf(client, debt) }
   })
   const limitOf = (client: Client): Exclude<LimitFilter, ''> =>
     !client.limit ? 'none' : client.limit.validUntil < today ? 'expired' : 'has'
@@ -195,7 +197,7 @@ export function ClientsPage() {
                           </span>
                           {debt.overdue > 0 && (
                             <span className="text-xs whitespace-nowrap text-danger">
-                              {t('client.overdueDays', { days: String(client.overdueDays) })}
+                              {t('client.overdueDays', { days: String(debt.overdueDays) })}
                             </span>
                           )}
                         </div>

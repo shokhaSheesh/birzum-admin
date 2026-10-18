@@ -1,8 +1,9 @@
 import { ArrowLeft, Ban, ChevronRight, CircleX } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
 import { applicationsStore, financedOf } from '@/entities/applications/applications'
+import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { filialsStore } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
@@ -15,6 +16,7 @@ import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { ScheduleCard } from '@/features/collections/components/ScheduleCard'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
@@ -46,6 +48,8 @@ export function ApplicationDetailPage() {
   const filial = filialsStore.useAll().find((item) => item.id === application?.filialId)
   const sale = salesStore.useAll().find((item) => item.id === id)
   const payout = payoutsStore.useAll().find((item) => item.id === sale?.payoutId)
+  const payments = paymentsStore.useAll()
+  const [today] = useState(() => new Date())
 
   const back = (
     <button
@@ -67,6 +71,10 @@ export function ApplicationDetailPage() {
     )
   }
 
+  const progress =
+    application.status === 'handed' || application.status === 'closed'
+      ? progressOf(application, payments, today)
+      : null
   const months = (count: number) => t('term.months', { count: String(count) })
   const actorOf = (kind: 'staff' | 'customer' | 'system', name: string) =>
     kind === 'system' ? name : `${t(`application.actor.${kind}`)}: ${name}`
@@ -184,6 +192,8 @@ export function ApplicationDetailPage() {
               </p>
             )}
           </section>
+
+          {progress && <ScheduleCard items={progress.items} remaining={progress.remaining} />}
 
           <section className={card}>
             <h2 className="text-lg font-bold">{t('pricing.history')}</h2>

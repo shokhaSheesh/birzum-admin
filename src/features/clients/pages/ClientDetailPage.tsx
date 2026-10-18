@@ -1,11 +1,21 @@
-import { ArrowLeft, Ban, ShieldCheck, ShieldX } from 'lucide-react'
+import {
+  ArrowLeft,
+  Ban,
+  BellRing,
+  CircleAlert,
+  PhoneCall,
+  ShieldCheck,
+  ShieldX,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
 import { applicationsStore } from '@/entities/applications/applications'
 import { clientStatusTone } from '@/entities/clients/clientStatus'
 import { CARD_LOGOS, clientsStore, fullName, initialsOf } from '@/entities/clients/clients'
-import { clientStatusOf, debtOf, progressOf } from '@/entities/clients/debt'
+import { clientStatusOf, debtOf } from '@/entities/clients/debt'
+import { contactsOf, contactsStore } from '@/entities/collections/contacts'
+import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { applicationPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -17,7 +27,13 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { CallResultModal, ReminderDialog } from '@/features/collections/components/ContactDialogs'
+import { ContactLog } from '@/features/collections/components/ContactLog'
+import { PaymentsTable } from '@/features/collections/components/PaymentsTable'
 import { BlockModal, UnblockDialog } from '../components/BlockDialogs'
+
+const TABS = ['purchases', 'payments', 'contacts', 'cards'] as const
+type Tab = (typeof TABS)[number]
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
@@ -46,7 +62,14 @@ export function ClientDetailPage() {
   const client = clientsStore.useAll().find((item) => item.id === id)
   const applications = applicationsStore.useAll()
   const merchants = merchantsStore.useAll()
-  const [tab, setTab] = useState<'purchases' | 'cards'>('purchases')
+  const payments = paymentsStore.useAll()
+  const contacts = contactsStore.useAll()
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = TABS.find((item) => item === params.get('tab')) ?? 'purchases'
+  const setTab = (next: Tab) =>
+    setParams(next === 'purchases' ? {} : { tab: next }, { replace: true })
+  const [calling, setCalling] = useState(false)
+  const [reminding, setReminding] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
   const [today] = useState(() => new Date())
@@ -72,8 +95,10 @@ export function ClientDetailPage() {
   }
 
   const own = applications.filter((application) => application.clientId === client.id)
-  const debt = debtOf(client, applications, today)
-  const status = clientStatusOf(client, debt.running)
+  const debt = debtOf(client, applications, payments, today)
+  const status = clientStatusOf(client, debt)
+  const ownPayments = payments.filter((payment) => payment.clientId === client.id)
+  const ownContacts = contactsOf(contacts, client.id)
   const expired = !!client.limit && client.limit.validUntil < today
 
   return (
@@ -131,6 +156,39 @@ export function ClientDetailPage() {
         </div>
       )}
 
+      {debt.overdue > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-card bg-danger-soft p-4">
+          <CircleAlert size={22} className="shrink-0 text-danger" />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-danger">
+            <p className="font-bold tabular-nums">
+              {t('client.overdueBanner', { sum: formatSum(debt.overdue) })}
+            </p>
+            <p className="text-sm">
+              {t('collections.paymentsCount', { count: String(debt.overdueCount) })} ·{' '}
+              {t('client.overdueDays', { days: String(debt.overdueDays) })}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-canvas!"
+            onClick={() => setCalling(true)}
+          >
+            <PhoneCall size={18} />
+            {t('contact.call')}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-canvas!"
+            onClick={() => setReminding(true)}
+          >
+            <BellRing size={18} />
+            {t('contact.remind')}
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label={t('client.limit')}
@@ -158,7 +216,7 @@ export function ClientDetailPage() {
           value={formatSum(debt.overdue)}
           hint={
             debt.overdue > 0
-              ? t('client.overdueDays', { days: String(client.overdueDays) })
+              ? t('client.overdueDays', { days: String(debt.overdueDays) })
               : t('client.onTime')
           }
         />
@@ -171,13 +229,27 @@ export function ClientDetailPage() {
               label={fullName(client)}
               options={[
                 { value: 'purchases', label: t('client.purchases'), count: own.length },
+                {
+                  value: 'payments',
+                  label: t('collections.tab.payments'),
+                  count: ownPayments.length,
+                },
+                { value: 'contacts', label: t('client.contacts'), count: ownContacts.length },
                 { value: 'cards', label: t('client.cards'), count: client.cards.length },
               ]}
               value={tab}
               onChange={setTab}
             />
           </div>
-          {tab === 'cards' ? (
+          {tab === 'payments' ? (
+            ownPayments.length === 0 ? (
+              <EmptyState title={t('collections.payments.empty')} />
+            ) : (
+              <PaymentsTable payments={ownPayments} showClient={false} />
+            )
+          ) : tab === 'contacts' ? (
+            <ContactLog contacts={ownContacts} today={today} owing={debt.overdue > 0} />
+          ) : tab === 'cards' ? (
             <ul className="flex flex-col gap-3 p-5">
               {client.cards.map((item) => (
                 <li
@@ -215,7 +287,7 @@ export function ClientDetailPage() {
                 </thead>
                 <tbody>
                   {own.map((application) => {
-                    const progress = progressOf(application, client, today)
+                    const progress = progressOf(application, payments, today)
                     const merchant = merchants.find((item) => item.id === application.merchantId)
                     return (
                       <tr
@@ -292,6 +364,15 @@ export function ClientDetailPage() {
 
       {blocking && <BlockModal client={client} onClose={() => setBlocking(false)} />}
       {unblocking && <UnblockDialog client={client} onClose={() => setUnblocking(false)} />}
+      {calling && <CallResultModal client={client} onClose={() => setCalling(false)} />}
+      {reminding && (
+        <ReminderDialog
+          client={client}
+          overdue={debt.overdue}
+          days={debt.overdueDays}
+          onClose={() => setReminding(false)}
+        />
+      )}
     </div>
   )
 }

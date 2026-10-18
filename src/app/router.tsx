@@ -3,6 +3,7 @@ import { ApplicationDetailPage } from '@/features/applications/pages/Application
 import { ApplicationsPage } from '@/features/applications/pages/ApplicationsPage'
 import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
+import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -25,6 +26,7 @@ import { RequireAdmin } from './RequireAdmin'
 const DESIGNED: string[] = [
   ROUTES.applications,
   ROUTES.customers,
+  ROUTES.collections,
   ROUTES.merchants,
   ROUTES.payouts,
   ROUTES.products,
@@ -46,6 +48,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.application, element: <ApplicationDetailPage /> },
           { path: ROUTES.customers, element: <ClientsPage /> },
           { path: ROUTES.customer, element: <ClientDetailPage /> },
+          { path: ROUTES.collections, element: <CollectionsPage /> },
           { path: ROUTES.merchants, element: <MerchantsPage /> },
           { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },

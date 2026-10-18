@@ -36,8 +36,8 @@ export type Client = {
   /** Null until the shopper has had a limit worked out. */
   limit: { amount: number; validUntil: Date } | null
   cards: Card[]
-  /** Days the oldest unpaid monthly payment is late; 0 when on time. Sample value. */
-  overdueDays: number
+  /** Sample flag: this shopper misses their latest monthly payment. How late they are comes from the schedule. */
+  late: boolean
   block?: Block
 }
 
@@ -54,7 +54,7 @@ type Seed = [
   phone: string,
   born: [number, number, number],
   limit: number | null,
-  overdueDays: number,
+  late: number,
   photo?: string,
 ]
 
@@ -116,12 +116,12 @@ const seeds: Seed[] = [
     `9${String(10_000_000 + i * 3_761_113).slice(-8)}`,
     [1986 + (i % 16), 1 + (i % 12), 1 + ((i * 7) % 28)],
     i % 7 === 6 ? null : (10 + ((i * 7) % 40)) * 1_000_000,
-    i === 3 ? 21 : i === 11 ? 6 : 0,
+    i === 3 || i === 7 || i === 11 || i === 16 ? 1 : 0,
   ]),
 ]
 
 export const clientsStore = createStore<Client>(
-  seeds.map(([id, firstName, lastName, middleName, phone, born, limit, overdueDays, photo], i) => ({
+  seeds.map(([id, firstName, lastName, middleName, phone, born, limit, late, photo], i) => ({
     id,
     firstName,
     lastName,
@@ -161,7 +161,7 @@ export const clientsStore = createStore<Client>(
           ]
         : []),
     ],
-    overdueDays,
+    late: late > 0,
     block:
       id === 'c12'
         ? {
