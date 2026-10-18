@@ -1,7 +1,8 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { CHAT_TOPICS } from '@/entities/support/chats'
+import { topicsOf } from '@/entities/support/chats'
 import { repliesStore, type QuickReply } from '@/entities/support/replies'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
 import { emptyText, isComplete } from '@/shared/i18n/localized'
@@ -13,6 +14,8 @@ import { SelectField } from '@/shared/ui/SelectField'
 import { logAction } from '@/entities/audit/audit'
 
 type Props = {
+  /** Whose answers: Birzum's or a microloan brand's. */
+  app: Workspace
   /** The answer to edit, or null to create one. */
   reply: QuickReply | null
   onClose: () => void
@@ -20,13 +23,18 @@ type Props = {
 }
 
 /** Create or edit a ready answer: its topic, a short title and the text, in both languages. */
-export function ReplyModal({ reply, onClose, onDelete }: Props) {
+export function ReplyModal({ app, reply, onClose, onDelete }: Props) {
   const { t, tl } = useI18n()
   const [topic, setTopic] = useState<QuickReply['topic']>(reply?.topic ?? 'any')
   const [title, setTitle] = useState(reply?.title ?? emptyText())
   const [text, setText] = useState(reply?.text ?? emptyText())
   const [submitted, setSubmitted] = useState(false)
 
+  const ml = app !== 'birzum'
+  const audit = {
+    section: ml ? 'mlReplies' : 'quickReplies',
+    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
+  } as const
   const save = () => {
     setSubmitted(true)
     if (!isComplete(title) || !isComplete(text)) return
@@ -35,18 +43,18 @@ export function ReplyModal({ reply, onClose, onDelete }: Props) {
       repliesStore.update(reply.id, { topic, title: clean(title), text: clean(text) })
       toast(t('toast.saved'))
       logAction({
-        section: 'quickReplies',
+        ...audit,
         kind: 'update',
-        action: 'audit.a.replySaved',
+        action: ml ? 'audit.a.loanReplySaved' : 'audit.a.replySaved',
         target: tl(clean(title)),
       })
     } else {
-      repliesStore.save({ id: newId(), topic, title: clean(title), text: clean(text) })
+      repliesStore.save({ id: newId(), app, topic, title: clean(title), text: clean(text) })
       toast(t('replies.created'))
       logAction({
-        section: 'quickReplies',
+        ...audit,
         kind: 'create',
-        action: 'audit.a.replyCreated',
+        action: ml ? 'audit.a.loanReplyCreated' : 'audit.a.replyCreated',
         target: tl(clean(title)),
       })
     }
@@ -86,7 +94,7 @@ export function ReplyModal({ reply, onClose, onDelete }: Props) {
         hint={t('replies.topic.hint')}
         options={[
           { value: 'any', label: t('replies.topic.any') },
-          ...CHAT_TOPICS.map((value) => ({ value, label: t(`support.topic.${value}`) })),
+          ...topicsOf(app).map((value) => ({ value, label: t(`support.topic.${value}`) })),
         ]}
         value={topic}
         onChange={setTopic}

@@ -79,6 +79,11 @@ const DESIGNED: string[] = [
 /** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
 function brandRoutes(brand: Brand) {
   const designed = [
+    { path: brandPath(brand, 'support'), element: <SupportPage key={brand} app={brand} /> },
+    {
+      path: brandPath(brand, 'quick-replies'),
+      element: <QuickRepliesPage key={brand} app={brand} />,
+    },
     {
       path: brandPath(brand, 'decision'),
       element: <DecisionRulesPage key={brand} brand={brand} />,

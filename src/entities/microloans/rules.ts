@@ -29,7 +29,7 @@ export type DecisionRules = {
 
 /**
  * The contract and payment terms of a brand's loans: the payment day, when the card is charged
- * and how often again, the late fee, early repayment, and which cards are taken. A partial early
+ * and how often again, early repayment, and which cards are taken. A partial early
  * repayment always keeps the end date and lowers the payments (user decision).
  */
 export type ContractRules = {
@@ -41,13 +41,6 @@ export type ContractRules = {
   chargeHour: number
   /** How many more mornings a refused charge is tried. */
   retries: number
-  penaltyOn: boolean
-  /** Late fee, % of the overdue sum per day. */
-  penaltyPerDay: number
-  /** Days late before the fee starts. */
-  penaltyGraceDays: number
-  /** The fee never exceeds this share of the overdue sum, %. */
-  penaltyCap: number
   /** Early repayment allowed from this many days after payout. */
   earlyAfterDays: number
   earlyPartialMin: number
@@ -83,10 +76,6 @@ export const contractRulesStore = createStore<ContractRules>([
     payDay: 5,
     chargeHour: 9,
     retries: 2,
-    penaltyOn: false,
-    penaltyPerDay: 0.1,
-    penaltyGraceDays: 3,
-    penaltyCap: 50,
     earlyAfterDays: 0,
     earlyPartialMin: 100_000,
     earlyFee: 0,
@@ -99,10 +88,6 @@ export const contractRulesStore = createStore<ContractRules>([
     payDay: 5,
     chargeHour: 9,
     retries: 2,
-    penaltyOn: false,
-    penaltyPerDay: 0.1,
-    penaltyGraceDays: 3,
-    penaltyCap: 50,
     earlyAfterDays: 0,
     earlyPartialMin: 100_000,
     earlyFee: 0,

@@ -9,7 +9,7 @@ import logo from '@/shared/assets/logo.svg'
 import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
+import { brandPath, WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
 import { navOf } from '../nav'
 
 type Props = {
@@ -36,7 +36,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const checking = checksStore.useAll().filter((check) => check.state === 'waiting').length
   const unread = chatsStore
     .useAll()
-    .filter((chat) => chat.status === 'open' && chat.unread > 0).length
+    .filter((chat) => chat.app === workspace && chat.status === 'open' && chat.unread > 0).length
 
   return (
     <nav aria-label={t('common.menu')} className="flex h-full flex-col">
@@ -86,7 +86,8 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
                   ? pending
                   : to === ROUTES.checks
                     ? checking
-                    : to === ROUTES.support
+                    : to ===
+                        (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
                       ? unread
                       : fixed
               return (

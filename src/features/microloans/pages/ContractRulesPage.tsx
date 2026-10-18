@@ -20,13 +20,10 @@ import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { NumberField } from '@/shared/ui/NumberField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { Switch } from '@/shared/ui/Switch'
-import { TextField } from '@/shared/ui/TextField'
 import { RuleHistory } from '../components/RuleHistory'
 
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
 const now = () => new Date()
-// The late payment the example on the right works out the fee for
-const EXAMPLE = { sum: 1_000_000, days: 10 }
 
 function Group({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
@@ -63,12 +60,9 @@ function SwitchBox({
   )
 }
 
-/** A rate with a decimal, typed as text: "0,1". */
-const decimal = (text: string) => Number(text.replace(',', '.'))
-
 /**
  * Shartnoma va toʻlov of a microloan brand: the monthly payment day, when the card is charged
- * and how often again, the late fee (peni), early repayment, and which cards the app takes. What
+ * and how often again, early repayment, and which cards the app takes. What
  * a borrower would see is worked out on the right. The offer itself lives in Hujjatlar.
  */
 export function ContractRulesPage({ brand }: { brand: Brand }) {
@@ -76,24 +70,14 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
   const admin = useAdmin()
   const saved = contractRulesStore.useAll().find((rules) => rules.id === brand)!
   const [draft, setDraft] = useState<ContractRules>(saved)
-  const [perDay, setPerDay] = useState(String(saved.penaltyPerDay).replace('.', ','))
   const [submitted, setSubmitted] = useState(false)
   const set = (patch: Partial<ContractRules>) => setDraft({ ...draft, ...patch })
   const num = (value: number | null) => value ?? 0
-  const current: ContractRules = { ...draft, penaltyPerDay: decimal(perDay) }
 
   const errors = {
     payDay:
       draft.payDayMode === 'fixed' && (draft.payDay < 1 || draft.payDay > 28)
         ? t('mlRules.error.payDay')
-        : undefined,
-    perDay:
-      draft.penaltyOn && !(decimal(perDay) > 0 && decimal(perDay) <= 1)
-        ? t('mlRules.error.perDay')
-        : undefined,
-    cap:
-      draft.penaltyOn && (draft.penaltyCap <= 0 || draft.penaltyCap > 100)
-        ? t('mlRules.error.percent')
         : undefined,
     cards: !draft.uzcard && !draft.humo ? t('mlRules.error.cards') : undefined,
   }
@@ -107,17 +91,13 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
     label: string,
     show: (value: ContractRules[K]) => string,
   ) => {
-    if (current[key] !== saved[key])
-      changes.push({ label, from: show(saved[key]), to: show(current[key]) })
+    if (draft[key] !== saved[key])
+      changes.push({ label, from: show(saved[key]), to: show(draft[key]) })
   }
   track('payDayMode', t('mlRules.payDayMode'), (v) => t(`mlRules.payDayMode.${v}`))
   track('payDay', t('mlRules.payDay'), String)
   track('chargeHour', t('mlRules.chargeHour'), (v) => `${String(v).padStart(2, '0')}:00`)
   track('retries', t('mlRules.retries'), String)
-  track('penaltyOn', t('mlRules.penaltyOn'), yesNo)
-  track('penaltyPerDay', t('mlRules.penaltyPerDay'), pct)
-  track('penaltyGraceDays', t('mlRules.penaltyGraceDays'), days)
-  track('penaltyCap', t('mlRules.penaltyCap'), pct)
   track('earlyAfterDays', t('mlRules.earlyAfterDays'), days)
   track('earlyPartialMin', t('mlRules.earlyPartialMin'), (v) => formatSum(v))
   track('earlyFee', t('mlRules.earlyFee'), pct)
@@ -130,7 +110,7 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
       toast(t('pricing.error.form'), 'error')
       return
     }
-    contractRulesStore.update(brand, current)
+    contractRulesStore.update(brand, draft)
     ruleRevisionsStore.save({
       id: newId(),
       brand,
@@ -155,12 +135,6 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
     toast(t('rules.saved'))
   }
 
-  // The example: a late payment, its fee by these rules
-  const feeDays = Math.max(0, EXAMPLE.days - current.penaltyGraceDays)
-  const fee = Math.min(
-    (EXAMPLE.sum * current.penaltyPerDay * feeDays) / 100,
-    (EXAMPLE.sum * current.penaltyCap) / 100,
-  )
   const hours = Array.from({ length: 14 }, (_, i) => i + 7).map((h) => ({
     value: String(h),
     label: `${String(h).padStart(2, '0')}:00`,
@@ -179,10 +153,7 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
           variant="ghost"
           className="px-4!"
           disabled={changes.length === 0}
-          onClick={() => {
-            setDraft(saved)
-            setPerDay(String(saved.penaltyPerDay).replace('.', ','))
-          }}
+          onClick={() => setDraft(saved)}
         >
           {t('common.cancel')}
         </Button>
@@ -231,44 +202,6 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
                 hint={t('mlRules.retries.hint')}
               />
             </div>
-          </Group>
-
-          <Group title={t('mlRules.penalty')} hint={t('mlRules.penalty.hint')}>
-            <SwitchBox
-              label={t('mlRules.penaltyOn')}
-              hint={t('mlRules.penaltyOn.hint')}
-              checked={draft.penaltyOn}
-              onChange={(on) => set({ penaltyOn: on })}
-            />
-            {draft.penaltyOn && (
-              <div className="grid gap-4 sm:grid-cols-3">
-                <TextField
-                  label={t('mlRules.penaltyPerDay')}
-                  inputMode="decimal"
-                  value={perDay}
-                  onChange={(e) => setPerDay(e.target.value.replace(/[^\d.,]/g, '').slice(0, 5))}
-                  trailing={<span className="text-ink-subtle">%</span>}
-                  hint={t('mlRules.penaltyPerDay.hint')}
-                  error={submitted ? errors.perDay : undefined}
-                />
-                <NumberField
-                  label={t('mlRules.penaltyGraceDays')}
-                  value={draft.penaltyGraceDays}
-                  onChange={(v) => set({ penaltyGraceDays: num(v) })}
-                  suffix={t('mlRules.daysUnit')}
-                  maxDigits={2}
-                />
-                <NumberField
-                  label={t('mlRules.penaltyCap')}
-                  value={draft.penaltyCap}
-                  onChange={(v) => set({ penaltyCap: num(v) })}
-                  suffix="%"
-                  maxDigits={3}
-                  hint={t('mlRules.penaltyCap.hint')}
-                  error={submitted ? errors.cap : undefined}
-                />
-              </div>
-            )}
           </Group>
 
           <Group title={t('mlRules.early')} hint={t('mlRules.early.hint')}>
@@ -336,15 +269,6 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
                   hour: `${String(draft.chargeHour).padStart(2, '0')}:00`,
                   retries: String(draft.retries),
                 })}
-              </li>
-              <li>
-                {current.penaltyOn
-                  ? t('mlRules.sees.penalty', {
-                      sum: formatSum(EXAMPLE.sum),
-                      days: String(EXAMPLE.days),
-                      fee: formatSum(Math.round(fee)),
-                    })
-                  : t('mlRules.sees.noPenalty')}
               </li>
               <li>
                 {t(draft.earlyFee ? 'mlRules.sees.earlyFee' : 'mlRules.sees.early', {

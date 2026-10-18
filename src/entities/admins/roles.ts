@@ -65,6 +65,8 @@ export const PERMISSION_GROUPS: {
       { key: 'mlProducts', label: 'nav.mlProducts', ops: ALL },
       { key: 'mlDecision', label: 'nav.mlDecision', ops: ['read', 'update'] },
       { key: 'mlContract', label: 'nav.mlContract', ops: ['read', 'update'] },
+      { key: 'mlSupport', label: 'nav.mlSupport', ops: ['read', 'update'] },
+      { key: 'mlReplies', label: 'nav.mlReplies', ops: ALL },
     ],
   },
   {
@@ -144,7 +146,10 @@ export const rolesStore = createStore<Role>([
     id: 'support',
     name: 'Operator',
     description: 'Yordam chatida klientlarga javob beradi.',
-    access: grant(['support', 'quickReplies'], ['applications', 'customers', 'products', 'faq']),
+    access: grant(
+      ['support', 'quickReplies', 'mlSupport', 'mlReplies'],
+      ['applications', 'customers', 'products', 'faq'],
+    ),
     actions: [],
   },
   {

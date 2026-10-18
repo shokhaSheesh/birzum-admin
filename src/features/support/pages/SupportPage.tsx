@@ -9,7 +9,7 @@ import {
   SendHorizontal,
   UserRound,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
 import { applicationsStore } from '@/entities/applications/applications'
@@ -27,6 +27,12 @@ import {
 } from '@/entities/support/chats'
 import { repliesStore } from '@/entities/support/replies'
 import { applicationPath, clientPath, ROUTES } from '@/shared/config/routes'
+import {
+  brandClientPath,
+  brandPath,
+  WORKSPACE_INFO,
+  type Workspace,
+} from '@/shared/config/workspaces'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -43,24 +49,48 @@ import { Listbox, SelectChevron } from '@/shared/ui/Listbox'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { logAction } from '@/entities/audit/audit'
+import { loanClientsStore, type LoanClient } from '@/entities/microloans/loanClients'
+import { LoanClientPanel } from '@/features/microloans/components/LoanClientPanel'
 
 type Box = 'queue' | 'mine' | 'open' | 'closed'
 const BOXES: Box[] = ['queue', 'mine', 'open', 'closed']
 const now = () => new Date()
+/** Who wrote: a Birzum client or a brand's, in the few fields the chat shows. */
+type Person = { name: string; initials: string; photoUrl?: string; phone: string; href: string }
+const fromClient = (client: Client): Person => ({
+  name: fullName(client),
+  initials: initialsOf(client),
+  photoUrl: client.photoUrl,
+  phone: client.phone,
+  href: clientPath(client.id),
+})
+const fromLoanClient = (client: LoanClient): Person => ({
+  name: client.name,
+  initials: client.name
+    .split(' ')
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join(''),
+  phone: client.phone,
+  href: brandClientPath(client.brand, client.id),
+})
+
 const clock = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 
 /**
- * Where support staff answer shoppers' chats from the client app: the chats on the left
- * (waiting in the queue, mine, all open, closed), the conversation in the middle with a reply
- * or an internal note, and on the right who the shopper is and where their money stands.
+ * Where support staff answer chats from an app: Birzum's client app, or a microloan brand's
+ * (`app`). The chats on the left (waiting in the queue, mine, all open, closed), the
+ * conversation in the middle with a reply or an internal note, and on the right who the client
+ * is and where their money stands.
  */
-export function SupportPage() {
+export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t } = useI18n()
   const admin = useAdmin()
   const me = admin?.name ?? OPERATORS[0]
-  const chats = chatsStore.useAll()
+  const chats = chatsStore.useAll().filter((chat) => chat.app === app)
   const clients = clientsStore.useAll()
+  const loanClients = loanClientsStore.useAll()
   const [params, setParams] = useSearchParams()
   const [box, setBox] = useState<Box>('queue')
   const [query, setQuery] = useState('')
@@ -73,14 +103,23 @@ export function SupportPage() {
         (which === 'open' || (which === 'queue' ? !chat.assignee : chat.assignee === me))
   const needle = query.trim().toLowerCase()
   const clientOf = (chat: Chat) => clients.find((client) => client.id === chat.clientId)
+  const loanClientOf = (chat: Chat) => loanClients.find((client) => client.id === chat.clientId)
+  const personOf = (chat: Chat) => {
+    if (app === 'birzum') {
+      const client = clientOf(chat)
+      return client && fromClient(client)
+    }
+    const client = loanClientOf(chat)
+    return client && fromLoanClient(client)
+  }
   const list = chats
     .filter((chat) => inBox(chat, box))
     .filter((chat) => {
-      const client = clientOf(chat)
+      const person = personOf(chat)
       return (
         needle === '' ||
-        (!!client &&
-          (fullName(client).toLowerCase().includes(needle) || client.phone.includes(needle))) ||
+        (!!person &&
+          (person.name.toLowerCase().includes(needle) || person.phone.includes(needle))) ||
         chat.messages.some((m) => m.text.toLowerCase().includes(needle))
       )
     })
@@ -112,7 +151,14 @@ export function SupportPage() {
         )}
       >
         <div className="flex flex-col gap-3 px-4 pt-5">
-          <h1 className="text-xl font-bold">{t('nav.support')}</h1>
+          <div className="flex flex-col">
+            {app !== 'birzum' && (
+              <span className="text-xs font-semibold text-ink-muted">
+                {WORKSPACE_INFO[app].name}
+              </span>
+            )}
+            <h1 className="text-xl font-bold">{t('nav.support')}</h1>
+          </div>
           <label className="flex h-10 items-center gap-2 rounded-control bg-surface px-3 text-ink-subtle">
             <Search size={18} className="shrink-0" />
             <span className="sr-only">{t('support.search')}</span>
@@ -145,7 +191,7 @@ export function SupportPage() {
         ) : (
           <ul className="min-h-0 flex-1 overflow-y-auto p-2">
             {list.map((chat) => {
-              const client = clientOf(chat)
+              const person = personOf(chat)
               const last = lastMessageOf(chat)
               return (
                 <li key={chat.id}>
@@ -158,10 +204,7 @@ export function SupportPage() {
                       chat.id === openId ? 'bg-green-200' : 'hover:bg-surface',
                     )}
                   >
-                    <Avatar
-                      initials={client ? initialsOf(client) : '?'}
-                      photoUrl={client?.photoUrl}
-                    />
+                    <Avatar initials={person?.initials ?? '?'} photoUrl={person?.photoUrl} />
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="flex items-baseline gap-2">
                         <span
@@ -170,7 +213,7 @@ export function SupportPage() {
                             chat.unread ? 'font-bold' : 'font-semibold',
                           )}
                         >
-                          {client ? fullName(client) : '—'}
+                          {person?.name ?? '—'}
                         </span>
                         <span className="shrink-0 text-xs text-ink-subtle tabular-nums">
                           {when(last.at)}
@@ -218,9 +261,17 @@ export function SupportPage() {
         <Conversation
           key={current.id}
           chat={current}
-          client={clientOf(current)}
+          person={personOf(current)}
           me={me}
           onBack={() => setParams({}, { replace: true })}
+          panel={(() => {
+            if (app === 'birzum') {
+              const client = clientOf(current)
+              return client && <ClientPanel client={client} />
+            }
+            const client = loanClientOf(current)
+            return client && <LoanClientPanel brand={app} client={client} />
+          })()}
         />
       ) : (
         <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-surface text-ink-muted lg:flex">
@@ -235,14 +286,17 @@ export function SupportPage() {
 /** One chat: header with who answers it, the messages, and the reply box. */
 function Conversation({
   chat,
-  client,
+  person,
   me,
   onBack,
+  panel,
 }: {
   chat: Chat
-  client?: Client
+  person?: Person
   me: string
   onBack: () => void
+  /** Who the client is, on the right. */
+  panel: ReactNode
 }) {
   const { t, lang } = useI18n()
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
@@ -255,7 +309,10 @@ function Conversation({
   const [replyLang, setReplyLang] = useState<Lang>(lang)
   // Answers for this chat's topic first, then the general ones, then the rest
   const rank = (topic: string) => (topic === chat.topic ? 0 : topic === 'any' ? 1 : 2)
-  const replies = [...repliesStore.useAll()].sort((a, b) => rank(a.topic) - rank(b.topic))
+  const replies = repliesStore
+    .useAll()
+    .filter((reply) => reply.app === chat.app)
+    .sort((a, b) => rank(a.topic) - rank(b.topic))
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' })
@@ -288,11 +345,12 @@ function Conversation({
     save({ status: 'closed' }, line('system', t('support.sys.closed', { name: me })))
     toast(t('support.closed'))
     logAction({
-      section: 'support',
+      section: chat.app === 'birzum' ? 'support' : 'mlSupport',
       kind: 'update',
-      action: 'audit.a.chatClosed',
-      target: client && fullName(client),
-      href: client && clientPath(client.id),
+      action: chat.app === 'birzum' ? 'audit.a.chatClosed' : 'audit.a.loanChatClosed',
+      params: chat.app === 'birzum' ? undefined : { brand: WORKSPACE_INFO[chat.app].name },
+      target: person?.name,
+      href: person?.href,
     })
   }
   const reopen = () =>
@@ -337,10 +395,10 @@ function Conversation({
             <ArrowLeft size={20} />
           </button>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-bold">{client ? fullName(client) : '—'}</span>
+            <span className="truncate font-bold">{person?.name ?? '—'}</span>
             <span className="text-sm text-ink-muted">
               {t(`support.topic.${chat.topic}`)}
-              {client && ` · ${formatPhone(client.phone)}`}
+              {person && ` · ${formatPhone(person.phone)}`}
             </span>
           </div>
           {chat.status === 'open' ? (
@@ -390,7 +448,7 @@ function Conversation({
                     {dayLabel(message.at)}
                   </span>
                 )}
-                <Bubble message={message} client={client} />
+                <Bubble message={message} person={person} />
               </div>
             )
           })}
@@ -499,7 +557,11 @@ function Conversation({
                     ))}
                   </ul>
                   <Link
-                    to={ROUTES.quickReplies}
+                    to={
+                      chat.app === 'birzum'
+                        ? ROUTES.quickReplies
+                        : brandPath(chat.app, 'quick-replies')
+                    }
                     className="mt-1 flex items-center justify-between rounded-control border-t border-line px-3 pt-2.5 pb-1.5 text-sm font-semibold text-brand hover:bg-surface"
                   >
                     {t('replies.manage')}
@@ -537,13 +599,13 @@ function Conversation({
         </form>
       </section>
 
-      {client && <ClientPanel client={client} />}
+      {panel}
     </>
   )
 }
 
 /** One line of the chat: the shopper on the left, admins on the right, events in the middle. */
-function Bubble({ message, client }: { message: ChatMessage; client?: Client }) {
+function Bubble({ message, person }: { message: ChatMessage; person?: Person }) {
   const { t } = useI18n()
   if (message.from === 'system')
     return (
@@ -556,11 +618,7 @@ function Bubble({ message, client }: { message: ChatMessage; client?: Client }) 
     <div className={cn('flex max-w-[78%] gap-2', mine && 'self-end')}>
       {!mine && (
         <span className="mt-auto">
-          <Avatar
-            size="sm"
-            initials={client ? initialsOf(client) : '?'}
-            photoUrl={client?.photoUrl}
-          />
+          <Avatar size="sm" initials={person?.initials ?? '?'} photoUrl={person?.photoUrl} />
         </span>
       )}
       <div className={cn('flex flex-col gap-1', mine && 'items-end')}>

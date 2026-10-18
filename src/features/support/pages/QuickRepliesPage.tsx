@@ -1,7 +1,8 @@
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { CHAT_TOPICS } from '@/entities/support/chats'
+import { topicsOf } from '@/entities/support/chats'
 import { repliesStore, type QuickReply } from '@/entities/support/replies'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -16,12 +17,12 @@ import { logAction } from '@/entities/audit/audit'
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
 /**
- * The ready answers operators insert in Yordam chati, each in both languages. A row opens it
- * in a centred modal.
+ * The ready answers operators insert in Yordam chati, each in both languages: Birzum's, or a
+ * microloan brand's (`app`). A row opens it in a centred modal.
  */
-export function QuickRepliesPage() {
+export function QuickRepliesPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
-  const all = repliesStore.useAll()
+  const all = repliesStore.useAll().filter((reply) => reply.app === app)
   const [query, setQuery] = useState('')
   const [topic, setTopic] = useState('')
   // undefined: closed; null: creating; an answer: editing it
@@ -67,7 +68,7 @@ export function QuickRepliesPage() {
             options={[
               { value: '', label: t('replies.topic.all') },
               { value: 'any', label: t('replies.topic.any') },
-              ...CHAT_TOPICS.map((value) => ({ value, label: t(`support.topic.${value}`) })),
+              ...topicsOf(app).map((value) => ({ value, label: t(`support.topic.${value}`) })),
             ]}
             value={topic}
             onChange={setTopic}
@@ -131,6 +132,7 @@ export function QuickRepliesPage() {
 
       {editing !== undefined && (
         <ReplyModal
+          app={app}
           reply={editing}
           onClose={() => setEditing(undefined)}
           onDelete={(reply) => {
@@ -149,9 +151,10 @@ export function QuickRepliesPage() {
           setDeleting(null)
           toast(t('replies.deleted'))
           logAction({
-            section: 'quickReplies',
+            section: app === 'birzum' ? 'quickReplies' : 'mlReplies',
             kind: 'delete',
-            action: 'audit.a.replyDeleted',
+            action: app === 'birzum' ? 'audit.a.replyDeleted' : 'audit.a.loanReplyDeleted',
+            params: app === 'birzum' ? undefined : { brand: WORKSPACE_INFO[app].name },
             target: deleting ? tl(deleting.title) : undefined,
           })
         }}
