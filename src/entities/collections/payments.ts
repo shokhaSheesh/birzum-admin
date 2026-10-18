@@ -1,4 +1,4 @@
-import { createStore } from '@/shared/lib/createStore'
+import { createStore, newId } from '@/shared/lib/createStore'
 import { addDays, startOfDay } from '@/shared/lib/dates'
 import { applicationsStore, handedAtOf, type Application } from '../applications/applications'
 import { clientsStore } from '../clients/clients'
@@ -10,8 +10,16 @@ import { clientsStore } from '../clients/clients'
 export const PAYMENT_KINDS = ['monthly', 'extra', 'full'] as const
 export type PaymentKind = (typeof PAYMENT_KINDS)[number]
 
-/** `auto`: Birzum took it from the card on the payment day. `app`: the shopper paid in the app. */
-export type PaymentMethod = 'auto' | 'app'
+/**
+ * `auto`: Birzum took it from the card on the payment day. `app`: the shopper paid in the app.
+ * `charge`: an admin took it from the card by hand. `cash` and `transfer`: paid outside the
+ * apps (at a shop, or to Birzum's bank account) and entered by an admin.
+ */
+export const PAYMENT_METHODS = ['auto', 'app', 'charge', 'cash', 'transfer'] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+/** Methods an admin enters by hand, with a document number. */
+export const MANUAL_METHODS = ['cash', 'transfer'] as const
+export type ManualMethod = (typeof MANUAL_METHODS)[number]
 
 export const FAIL_REASONS = ['funds', 'cardBlocked', 'cardExpired'] as const
 export type FailReason = (typeof FAIL_REASONS)[number]
@@ -26,9 +34,15 @@ export type Payment = {
   amount: number
   kind: PaymentKind
   method: PaymentMethod
-  cardId: string
+  /** The card charged; none for cash and transfers. */
+  cardId?: string
   /** Set when the charge did not go through; no money came in. */
   failed?: FailReason
+  /** The receipt or payment order number of a cash or bank payment. */
+  reference?: string
+  /** The admin who charged the card or entered the payment. */
+  by?: string
+  note?: string
 }
 
 export type InstallmentState = 'paid' | 'due' | 'overdue'
@@ -208,3 +222,46 @@ function seed(): Payment[] {
 }
 
 export const paymentsStore = createStore<Payment>(seed())
+
+type Entry = Pick<Payment, 'at' | 'amount' | 'method' | 'cardId' | 'reference' | 'by' | 'note'>
+
+/**
+ * Records money in for one nasiya. It settles the earliest open months; when it covers the
+ * whole rest it is "Toʻliq yopish" and the nasiya closes.
+ */
+export function recordPayment(application: Application, entry: Entry, today: Date) {
+  const { remaining } = progressOf(application, paymentsStore.getAll(), today)
+  const full = entry.amount >= remaining
+  paymentsStore.save({
+    id: newId(),
+    applicationId: application.id,
+    clientId: application.clientId,
+    merchantId: application.merchantId,
+    kind: full ? 'full' : 'monthly',
+    ...entry,
+    amount: Math.min(entry.amount, remaining),
+  })
+  if (full)
+    applicationsStore.update(application.id, {
+      status: 'closed',
+      history: [
+        ...application.history,
+        { status: 'closed', at: entry.at, by: { kind: 'system', name: 'Birzum' } },
+      ],
+    })
+}
+
+/** Records a failed charge an admin tried, so it shows among the payments. */
+export function recordFailedCharge(
+  application: Application,
+  entry: Entry & { failed: FailReason },
+) {
+  paymentsStore.save({
+    id: newId(),
+    applicationId: application.id,
+    clientId: application.clientId,
+    merchantId: application.merchantId,
+    kind: 'monthly',
+    ...entry,
+  })
+}

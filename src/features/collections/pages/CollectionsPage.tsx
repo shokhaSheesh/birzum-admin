@@ -1,34 +1,40 @@
-import { BellRing, Eye, PhoneCall, Search } from 'lucide-react'
+import { BellRing, CreditCard, Eye, PhoneCall, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
 import { clientsStore, fullName, initialsOf, type Client } from '@/entities/clients/clients'
-import { AGE_BUCKETS, ageBucketOf, debtOf, type AgeBucket } from '@/entities/clients/debt'
+import { AGE_BUCKETS, ageBucketOf, type AgeBucket } from '@/entities/clients/debt'
 import { contactsOf, contactsStore } from '@/entities/collections/contacts'
 import {
+  daysLate,
   PAYMENT_KINDS,
+  PAYMENT_METHODS,
   paymentsStore,
   progressOf,
   type PaymentKind,
+  type PaymentMethod,
 } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { clientPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { addDays, ALL_TIME, inRange, startOfDay, type DateRange } from '@/shared/lib/dates'
+import { inRange, startOfDay } from '@/shared/lib/dates'
+import { boundsOf, bucketsOf, thisMonth, type Period } from '@/shared/lib/period'
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { Avatar } from '@/shared/ui/Avatar'
-import { DateRangePicker } from '@/shared/ui/DateRangePicker'
+import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { CallResultModal, ReminderDialog } from '../components/ContactDialogs'
-import { DailyIncomeChart, type Expected } from '../components/DailyIncomeChart'
+import { IncomeChart, type Expected } from '../components/IncomeChart'
+import { ChargeModal, ManualPaymentModal } from '../components/PaymentDialogs'
 import { PaymentsTable } from '../components/PaymentsTable'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -58,6 +64,9 @@ export function CollectionsPage() {
   const [tab, setTab] = useState<'debtors' | 'payments'>('debtors')
   const [calling, setCalling] = useState<Client | null>(null)
   const [reminding, setReminding] = useState<Client | null>(null)
+  const [charging, setCharging] = useState<Client | null>(null)
+  const [entering, setEntering] = useState(false)
+  const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
 
   // Debtors' filters
   const [query, setQuery] = useState('')
@@ -69,26 +78,41 @@ export function CollectionsPage() {
   const [kind, setKind] = useState<'' | PaymentKind>('')
   const [result, setResult] = useState<'' | 'ok' | 'failed'>('')
   const [payMerchant, setPayMerchant] = useState('')
-  const [period, setPeriod] = useState<DateRange>(ALL_TIME)
+  const [method, setMethod] = useState<'' | PaymentMethod>('')
 
   const todayStart = startOfDay(today)
-  const schedules = useMemo(
+  const bounds = boundsOf(period)
+  const inPeriod = (date: Date) => inRange(date, bounds)
+  const nasiyas = useMemo(
     () =>
       applications
-        .filter((application) => application.status === 'handed')
-        .map((application) => progressOf(application, payments, today).items),
+        .filter((application) => application.status === 'handed' || application.status === 'closed')
+        .map((application) => ({
+          application,
+          progress: progressOf(application, payments, today),
+        })),
     [applications, payments, today],
   )
-  const open = schedules
-    .flat()
+  const open = nasiyas
+    .flatMap(({ progress }) => progress.items)
     .filter((item) => item.state !== 'paid')
     .map((item): Expected => ({ date: item.dueDate, amount: item.amount - item.paid }))
 
+  // Debtors: shoppers with a late payment whose day falls in the period
   const debtors = clients
     .map((client) => {
-      const debt = debtOf(client, applications, payments, today)
-      const own = contactsOf(contacts, client.id)
-      const lastCall = own.find((contact) => contact.channel === 'call')
+      const own = nasiyas.filter(({ application }) => application.clientId === client.id)
+      const late = own.flatMap(({ application, progress }) =>
+        progress.items
+          .filter((item) => item.state === 'overdue' && inPeriod(item.dueDate))
+          .map((item) => ({ ...item, merchantId: application.merchantId })),
+      )
+      const since = late.reduce<Date | null>(
+        (oldest, item) => (!oldest || item.dueDate < oldest ? item.dueDate : oldest),
+        null,
+      )
+      const contactsOwn = contactsOf(contacts, client.id)
+      const lastCall = contactsOwn.find((contact) => contact.channel === 'call')
       const promise = lastCall?.result === 'promised' ? lastCall.promiseDate : undefined
       const state: ContactFilter = !lastCall
         ? 'none'
@@ -97,37 +121,55 @@ export function CollectionsPage() {
             ? 'broken'
             : 'promised'
           : ''
-      return { client, debt, last: own[0], promise, state }
+      return {
+        client,
+        overdue: late.reduce((sum, item) => sum + item.amount - item.paid, 0),
+        count: late.length,
+        days: since ? daysLate(since, today) : 0,
+        remaining: own.reduce((sum, { progress }) => sum + progress.remaining, 0),
+        merchantIds: late.map((item) => item.merchantId),
+        last: contactsOwn[0],
+        promise,
+        state,
+      }
     })
-    .filter((row) => row.debt.overdue > 0)
-    .sort((a, b) => b.debt.overdueDays - a.debt.overdueDays)
+    .filter((row) => row.overdue > 0)
+    .sort((a, b) => b.days - a.days)
 
-  // Figures
-  const inMonth = (date: Date) =>
-    date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
-  const monthPaid = payments.filter((payment) => !payment.failed && inMonth(payment.at))
-  const dueSoFar = schedules.flat().filter((item) => inMonth(item.dueDate) && item.dueDate <= today)
+  // Figures for the period
+  const paid = payments.filter((payment) => !payment.failed && inPeriod(payment.at))
+  const dueSoFar = nasiyas
+    .flatMap(({ progress }) => progress.items)
+    .filter((item) => inPeriod(item.dueDate) && item.dueDate <= today)
   const dueSum = dueSoFar.reduce((sum, item) => sum + item.amount, 0)
   const rate = dueSum
-    ? Math.floor((dueSoFar.reduce((sum, item) => sum + item.paid, 0) / dueSum) * 100)
-    : 100
-  const overdueSum = debtors.reduce((sum, row) => sum + row.debt.overdue, 0)
-  const soon = open.filter((item) => item.date > todayStart && item.date <= addDays(today, 30))
+    ? Math.floor(
+        (dueSoFar.reduce((sum, item) => sum + Math.min(item.paid, item.amount), 0) / dueSum) * 100,
+      )
+    : null
+  const overdueSum = debtors.reduce((sum, row) => sum + row.overdue, 0)
+  const coming = open.filter((item) => item.date >= todayStart && inPeriod(item.date))
   const aging = AGE_BUCKETS.map((bucket) => {
-    const rows = debtors.filter((row) => ageBucketOf(row.debt.overdueDays) === bucket)
-    return { bucket, count: rows.length, sum: rows.reduce((s, row) => s + row.debt.overdue, 0) }
+    const rows = debtors.filter((row) => ageBucketOf(row.days) === bucket)
+    return { bucket, count: rows.length, sum: rows.reduce((s, row) => s + row.overdue, 0) }
   })
+  const buckets = bucketsOf(
+    period,
+    new Date(2026, 8, 1),
+    // All time runs to the last payment still due
+    new Date(Math.max(today.getTime(), ...open.map((item) => item.date.getTime()))),
+  )
 
   // Debtors table
   const needle = query.trim().toLowerCase()
   const digits = needle.replace(/\D/g, '')
   const debtorRows = debtors.filter(
-    ({ client, debt, state }) =>
+    ({ client, days, merchantIds, state }) =>
       (needle === '' ||
         fullName(client).toLowerCase().includes(needle) ||
         (digits.length >= 3 && client.phone.includes(digits))) &&
-      (!age || ageBucketOf(debt.overdueDays) === age) &&
-      (!merchant || debt.lateApplications.some((a) => a.merchantId === merchant)) &&
+      (!age || ageBucketOf(days) === age) &&
+      (!merchant || merchantIds.includes(merchant)) &&
       (!contactState || state === contactState),
   )
 
@@ -144,7 +186,8 @@ export function CollectionsPage() {
       (!kind || payment.kind === kind) &&
       (!result || (result === 'failed') === !!payment.failed) &&
       (!payMerchant || payment.merchantId === payMerchant) &&
-      inRange(payment.at, period)
+      (!method || payment.method === method) &&
+      inPeriod(payment.at)
     )
   })
 
@@ -167,18 +210,29 @@ export function CollectionsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.collections')} description={t('collections.description')} />
+      <PageHeader
+        title={t('nav.collections')}
+        description={t('collections.description')}
+        actions={
+          <Button size="sm" onClick={() => setEntering(true)}>
+            <Plus size={18} />
+            {t('manual.title')}
+          </Button>
+        }
+      />
+
+      <PeriodFilter value={period} onChange={setPeriod} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
-          label={t('collections.stat.month')}
-          value={formatSum(monthPaid.reduce((sum, payment) => sum + payment.amount, 0))}
-          hint={t('collections.paymentsCount', { count: String(monthPaid.length) })}
+          label={t('collections.stat.paid')}
+          value={formatSum(paid.reduce((sum, payment) => sum + payment.amount, 0))}
+          hint={t('collections.paymentsCount', { count: groupDigits(paid.length) })}
         />
         <StatCard
           label={t('collections.stat.rate')}
-          value={`${rate}%`}
-          hint={t('collections.stat.rateHint')}
+          value={rate === null ? '—' : `${rate}%`}
+          hint={t(rate === null ? 'collections.stat.rateNone' : 'collections.stat.rateHint')}
         />
         <StatCard
           label={t('client.overdue')}
@@ -186,14 +240,14 @@ export function CollectionsPage() {
           hint={t('collections.stat.debtors', { count: String(debtors.length) })}
         />
         <StatCard
-          label={t('collections.stat.upcoming')}
-          value={formatSum(soon.reduce((sum, item) => sum + item.amount, 0))}
-          hint={t('collections.paymentsCount', { count: String(soon.length) })}
+          label={t('collections.chart.expected')}
+          value={formatSum(coming.reduce((sum, item) => sum + item.amount, 0))}
+          hint={t('collections.paymentsCount', { count: groupDigits(coming.length) })}
         />
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <DailyIncomeChart payments={payments} expected={open} today={today} />
+        <IncomeChart buckets={buckets} payments={payments} expected={open} now={today} />
 
         <section className="flex flex-col gap-4 rounded-card border border-line bg-canvas p-5">
           <div className="flex flex-col gap-1">
@@ -262,7 +316,11 @@ export function CollectionsPage() {
             label={t('nav.collections')}
             options={[
               { value: 'debtors', label: t('collections.tab.debtors'), count: debtors.length },
-              { value: 'payments', label: t('collections.tab.payments'), count: payments.length },
+              {
+                value: 'payments',
+                label: t('collections.tab.payments'),
+                count: payments.filter((payment) => inPeriod(payment.at)).length,
+              },
             ]}
             value={tab}
             onChange={setTab}
@@ -316,107 +374,114 @@ export function CollectionsPage() {
                       <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
                       <th className={th}>{t('collections.col.lastContact')}</th>
                       <th className={th}>{t('collections.col.promise')}</th>
-                      <th className="w-32" />
+                      <th className="w-44" />
                     </tr>
                   </thead>
                   <tbody>
-                    {debtorRows.map(({ client, debt, last, promise, state }) => (
-                      <tr
-                        key={client.id}
-                        onClick={() => navigate(`${clientPath(client.id)}?tab=contacts`)}
-                        className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
-                            <div className="flex min-w-0 flex-col">
-                              <span className="truncate font-semibold">{fullName(client)}</span>
-                              <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
-                                {formatPhone(client.phone)}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex flex-col">
-                            <span className="font-semibold whitespace-nowrap text-danger tabular-nums">
-                              {formatSum(debt.overdue)}
-                            </span>
-                            <span className="text-xs text-ink-muted">
-                              {t('collections.paymentsCount', {
-                                count: String(debt.overdueCount),
-                              })}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge tone={debt.overdueDays > 7 ? 'danger' : 'warning'}>
-                            {t('collections.days', { days: String(debt.overdueDays) })}
-                          </StatusBadge>
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                          {formatSum(debt.remaining)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {last ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm">
-                                {last.channel === 'call'
-                                  ? t(`contact.result.${last.result ?? 'noAnswer'}`)
-                                  : t('contact.reminded')}
-                              </span>
-                              <span className="text-xs text-ink-muted tabular-nums">
-                                {formatDate(last.at)}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-ink-subtle">
-                              {t('collections.contact.none')}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {promise ? (
-                            <span
-                              className={cn(
-                                'text-sm font-medium whitespace-nowrap tabular-nums',
-                                state === 'broken' ? 'text-danger' : 'text-success',
-                              )}
-                            >
-                              {formatDate(promise)}
-                              {state === 'broken' && (
-                                <span className="block text-xs font-normal">
-                                  {t('collections.contact.broken')}
+                    {debtorRows.map(
+                      ({ client, overdue, count, days, remaining, last, promise, state }) => (
+                        <tr
+                          key={client.id}
+                          onClick={() => navigate(`${clientPath(client.id)}?tab=contacts`)}
+                          className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
+                              <div className="flex min-w-0 flex-col">
+                                <span className="truncate font-semibold">{fullName(client)}</span>
+                                <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
+                                  {formatPhone(client.phone)}
                                 </span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-ink-subtle">—</span>
-                          )}
-                        </td>
-                        <td className="pr-3">
-                          <RowActions
-                            actions={[
-                              {
-                                icon: Eye,
-                                label: t('common.view'),
-                                onClick: () => navigate(`${clientPath(client.id)}?tab=contacts`),
-                              },
-                              {
-                                icon: PhoneCall,
-                                label: t('contact.call'),
-                                onClick: () => setCalling(client),
-                              },
-                              {
-                                icon: BellRing,
-                                label: t('contact.remind'),
-                                onClick: () => setReminding(client),
-                              },
-                            ]}
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex flex-col">
+                              <span className="font-semibold whitespace-nowrap text-danger tabular-nums">
+                                {formatSum(overdue)}
+                              </span>
+                              <span className="text-xs text-ink-muted">
+                                {t('collections.paymentsCount', {
+                                  count: String(count),
+                                })}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <StatusBadge tone={days > 7 ? 'danger' : 'warning'}>
+                              {t('collections.days', { days: String(days) })}
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                            {formatSum(remaining)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {last ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm">
+                                  {last.channel === 'call'
+                                    ? t(`contact.result.${last.result ?? 'noAnswer'}`)
+                                    : t('contact.reminded')}
+                                </span>
+                                <span className="text-xs text-ink-muted tabular-nums">
+                                  {formatDate(last.at)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-ink-subtle">
+                                {t('collections.contact.none')}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {promise ? (
+                              <span
+                                className={cn(
+                                  'text-sm font-medium whitespace-nowrap tabular-nums',
+                                  state === 'broken' ? 'text-danger' : 'text-success',
+                                )}
+                              >
+                                {formatDate(promise)}
+                                {state === 'broken' && (
+                                  <span className="block text-xs font-normal">
+                                    {t('collections.contact.broken')}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-ink-subtle">—</span>
+                            )}
+                          </td>
+                          <td className="pr-3">
+                            <RowActions
+                              actions={[
+                                {
+                                  icon: Eye,
+                                  label: t('common.view'),
+                                  onClick: () => navigate(`${clientPath(client.id)}?tab=contacts`),
+                                },
+                                {
+                                  icon: PhoneCall,
+                                  label: t('contact.call'),
+                                  onClick: () => setCalling(client),
+                                },
+                                {
+                                  icon: BellRing,
+                                  label: t('contact.remind'),
+                                  onClick: () => setReminding(client),
+                                },
+                                {
+                                  icon: CreditCard,
+                                  label: t('charge.title'),
+                                  onClick: () => setCharging(client),
+                                },
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -454,10 +519,17 @@ export function CollectionsPage() {
                 value={payMerchant}
                 onChange={setPayMerchant}
               />
-              <DateRangePicker
-                label={t('applications.period')}
-                value={period}
-                onChange={setPeriod}
+              <FilterSelect
+                label={t('collections.col.method')}
+                options={[
+                  { value: '', label: t('payment.method.all') },
+                  ...PAYMENT_METHODS.map((value) => ({
+                    value,
+                    label: t(`payment.method.${value}`),
+                  })),
+                ]}
+                value={method}
+                onChange={setMethod}
               />
             </div>
             {paymentRows.length === 0 ? (
@@ -481,12 +553,14 @@ export function CollectionsPage() {
         )}
       </div>
 
+      {charging && <ChargeModal client={charging} onClose={() => setCharging(null)} />}
+      {entering && <ManualPaymentModal onClose={() => setEntering(false)} />}
       {calling && <CallResultModal client={calling} onClose={() => setCalling(null)} />}
       {reminding && (
         <ReminderDialog
           client={reminding}
-          overdue={debtors.find((row) => row.client.id === reminding.id)?.debt.overdue ?? 0}
-          days={debtors.find((row) => row.client.id === reminding.id)?.debt.overdueDays ?? 0}
+          overdue={debtors.find((row) => row.client.id === reminding.id)?.overdue ?? 0}
+          days={debtors.find((row) => row.client.id === reminding.id)?.days ?? 0}
           onClose={() => setReminding(null)}
         />
       )}

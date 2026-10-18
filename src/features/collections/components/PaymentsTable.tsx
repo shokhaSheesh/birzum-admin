@@ -1,4 +1,4 @@
-import { Eye, UserRound } from 'lucide-react'
+import { Banknote, Eye, Landmark, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
 import { CARD_LOGOS, clientsStore, fullName } from '@/entities/clients/clients'
@@ -41,7 +41,7 @@ export function PaymentsTable({
             {showClient && <th className={th}>{t('applications.col.client')}</th>}
             <th className={th}>{t('payout.col.ariza')}</th>
             <th className={th}>{t('collections.col.kind')}</th>
-            <th className={th}>{t('collections.col.card')}</th>
+            <th className={th}>{t('collections.col.method')}</th>
             <th className={`${th} text-right`}>{t('payouts.col.amount')}</th>
             <th className={th}>{t('merchants.status')}</th>
             <th className={showClient ? 'w-24' : 'w-14'} />
@@ -78,7 +78,7 @@ export function PaymentsTable({
                   <div className="flex items-center gap-2">
                     {merchant && <MerchantLogo merchant={merchant} size="xs" />}
                     <div className="flex min-w-0 flex-col">
-                      <span className="text-sm font-semibold tabular-nums">
+                      <span className="text-sm font-semibold whitespace-nowrap tabular-nums">
                         № {groupDigits(application?.number ?? payment.applicationId)}
                       </span>
                       <span className="truncate text-xs text-ink-muted">{merchant?.name}</span>
@@ -89,21 +89,32 @@ export function PaymentsTable({
                   {t(`payment.kind.${payment.kind}`)}
                 </td>
                 <td className="px-4 py-3">
-                  {card && (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {card ? (
                       <img
                         src={CARD_LOGOS[card.brand]}
                         alt={card.brand}
                         className="h-6 w-9 shrink-0 rounded object-contain"
                       />
-                      <div className="flex flex-col">
-                        <span className="text-sm tabular-nums">•••• {card.last4}</span>
-                        <span className="text-xs whitespace-nowrap text-ink-muted">
-                          {t(`payment.method.${payment.method}`)}
-                        </span>
-                      </div>
+                    ) : (
+                      <span className="grid h-6 w-9 shrink-0 place-items-center rounded bg-surface text-ink-muted">
+                        {payment.method === 'cash' ? (
+                          <Banknote size={16} />
+                        ) : (
+                          <Landmark size={16} />
+                        )}
+                      </span>
+                    )}
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-sm whitespace-nowrap tabular-nums">
+                        {card ? `•••• ${card.last4}` : t(`payment.method.${payment.method}`)}
+                      </span>
+                      <span className="text-xs whitespace-nowrap text-ink-muted">
+                        {card ? t(`payment.method.${payment.method}`) : payment.reference}
+                        {payment.by && ` · ${payment.by}`}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </td>
                 <td
                   className={cn(

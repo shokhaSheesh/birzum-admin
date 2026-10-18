@@ -10,6 +10,7 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 |---|---|---|
 | Pick one of a few to many options in a form | `SelectField` | `<select>` |
 | Filter a table by one value | `FilterSelect` | `<select>` |
+| One period for a whole page (figures, chart and tables) | `PeriodFilter` (Kun · Hafta · Oy · Yil · Oraliq · Butun davr, ‹ › to step) | a date range per card |
 | Filter by a period | `DateRangePicker` | `<input type="date">`, two date inputs |
 | Pick one date in a form | `DateField` (calendar popover, same calendar as the range picker) | `<input type="date">` |
 | Tick a row in a table, select all | `TableCheckbox` (with the mixed state for "some") | a bare `<input type="checkbox">` |

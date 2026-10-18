@@ -3,7 +3,9 @@ import {
   Ban,
   BellRing,
   CircleAlert,
+  CreditCard,
   PhoneCall,
+  Plus,
   ShieldCheck,
   ShieldX,
 } from 'lucide-react'
@@ -29,6 +31,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { CallResultModal, ReminderDialog } from '@/features/collections/components/ContactDialogs'
 import { ContactLog } from '@/features/collections/components/ContactLog'
+import { ChargeModal, ManualPaymentModal } from '@/features/collections/components/PaymentDialogs'
 import { PaymentsTable } from '@/features/collections/components/PaymentsTable'
 import { BlockModal, UnblockDialog } from '../components/BlockDialogs'
 
@@ -70,6 +73,8 @@ export function ClientDetailPage() {
     setParams(next === 'purchases' ? {} : { tab: next }, { replace: true })
   const [calling, setCalling] = useState(false)
   const [reminding, setReminding] = useState(false)
+  const [charging, setCharging] = useState(false)
+  const [entering, setEntering] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
   const [today] = useState(() => new Date())
@@ -121,6 +126,12 @@ export function ClientDetailPage() {
             {t('client.since', { date: formatDate(client.registeredAt) })}
           </p>
         </div>
+        {debt.running > 0 && (
+          <Button size="sm" variant="secondary" onClick={() => setEntering(true)}>
+            <Plus size={18} />
+            {t('manual.title')}
+          </Button>
+        )}
         {client.block ? (
           <Button size="sm" variant="secondary" onClick={() => setUnblocking(true)}>
             <ShieldCheck size={18} />
@@ -185,6 +196,10 @@ export function ClientDetailPage() {
           >
             <BellRing size={18} />
             {t('contact.remind')}
+          </Button>
+          <Button size="sm" onClick={() => setCharging(true)}>
+            <CreditCard size={18} />
+            {t('charge.title')}
           </Button>
         </div>
       )}
@@ -364,6 +379,8 @@ export function ClientDetailPage() {
 
       {blocking && <BlockModal client={client} onClose={() => setBlocking(false)} />}
       {unblocking && <UnblockDialog client={client} onClose={() => setUnblocking(false)} />}
+      {charging && <ChargeModal client={client} onClose={() => setCharging(false)} />}
+      {entering && <ManualPaymentModal client={client} onClose={() => setEntering(false)} />}
       {calling && <CallResultModal client={client} onClose={() => setCalling(false)} />}
       {reminding && (
         <ReminderDialog
