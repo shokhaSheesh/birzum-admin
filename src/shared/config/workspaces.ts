@@ -26,3 +26,6 @@ export function workspaceOf(pathname: string): Workspace {
 
 /** A microloan page's path within a brand, e.g. brandPath('vodiy', 'products'). */
 export const brandPath = (brand: Brand, page = '') => (page ? `/${brand}/${page}` : `/${brand}`)
+
+/** A microloan ariza's page within its brand. */
+export const loanAppPath = (brand: Brand, id: string) => brandPath(brand, `applications/${id}`)

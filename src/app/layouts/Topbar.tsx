@@ -1,7 +1,9 @@
-import { ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
+import { Check, ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
 import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAdmin } from '@/entities/session/session'
 import { signOut } from '@/features/auth/api/mockAuth'
+import { WORKSPACE_INFO, WORKSPACES, workspaceOf } from '@/shared/config/workspaces'
 import { LANG_NAMES, LANGS } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -11,12 +13,17 @@ import { Avatar } from '@/shared/ui/Avatar'
 const iconButton =
   'grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-surface hover:text-ink'
 
-/** Across the top of every page: global search, language, theme and the admin. */
+/**
+ * Across the top of every page: global search, language, theme and the admin. The admin's menu
+ * also switches the business: Birzum or one of the microloan brands.
+ */
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { t, lang, setLang } = useI18n()
   const { theme, setTheme } = useTheme()
   const admin = useAdmin()
   const [menu, setMenu] = useState(false)
+  const navigate = useNavigate()
+  const workspace = workspaceOf(useLocation().pathname)
   const dark =
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -88,8 +95,38 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
               <div className="fixed inset-0 z-30" onClick={() => setMenu(false)} />
               <div
                 role="menu"
-                className="absolute top-full right-0 z-40 mt-2 w-56 rounded-card border border-line bg-canvas p-1.5 shadow-xl"
+                className="absolute top-full right-0 z-40 mt-2 w-64 rounded-card border border-line bg-canvas p-1.5 shadow-xl"
               >
+                <p className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-ink-subtle uppercase">
+                  {t('workspace.label')}
+                </p>
+                {WORKSPACES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={value === workspace}
+                    onClick={() => {
+                      setMenu(false)
+                      if (value !== workspace) navigate(WORKSPACE_INFO[value].home)
+                    }}
+                    className={cn(
+                      'flex h-11 w-full items-center gap-2.5 rounded-control px-2.5 text-left text-sm font-medium hover:bg-surface',
+                      value === workspace && 'bg-surface',
+                    )}
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-md bg-white p-0.5 ring-1 ring-line">
+                      <img
+                        src={WORKSPACE_INFO[value].mark}
+                        alt=""
+                        className="max-h-full max-w-full"
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{WORKSPACE_INFO[value].name}</span>
+                    {value === workspace && <Check size={16} className="shrink-0 text-brand" />}
+                  </button>
+                ))}
+                <hr className="my-1.5 border-line" />
                 <p className="truncate px-3 py-2 text-sm text-ink-muted">@{admin?.username}</p>
                 <button
                   type="button"

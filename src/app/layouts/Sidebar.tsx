@@ -11,7 +11,6 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
 import { navOf } from '../nav'
-import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 type Props = {
   onNavigate?: () => void
@@ -22,8 +21,8 @@ type Props = {
 }
 
 /**
- * The left navigation: the logo, the business being run (Birzum or a microloan brand), then that
- * business's pages in titled groups, then the collapse button.
+ * The left navigation: the logo of the business being run (Birzum or a microloan brand), then
+ * that business's pages in titled groups, then the collapse button.
  */
 export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const { t } = useI18n()
@@ -42,7 +41,24 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   return (
     <nav aria-label={t('common.menu')} className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto px-3 py-5">
-        {collapsed ? (
+        {workspace !== 'birzum' ? (
+          // A microloan brand: its mark, and its name beside it when there is room
+          <div className={cn('flex items-center gap-2.5', collapsed ? 'justify-center' : 'px-3')}>
+            <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-line">
+              <img src={WORKSPACE_INFO[workspace].mark} alt="" className="max-h-full max-w-full" />
+            </span>
+            {!collapsed && (
+              <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                <span className="truncate text-[17px] font-bold">
+                  {WORKSPACE_INFO[workspace].name}
+                </span>
+                <span className="text-[11px] font-bold tracking-wide text-ink-subtle uppercase">
+                  Admin
+                </span>
+              </span>
+            )}
+          </div>
+        ) : collapsed ? (
           <img src={logoMark} alt="Birzum" className="mx-auto size-8" />
         ) : (
           <div className="flex items-center gap-2 px-3">
@@ -53,8 +69,6 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
             </span>
           </div>
         )}
-
-        <WorkspaceSwitcher collapsed={collapsed} />
 
         {navOf(workspace).map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
