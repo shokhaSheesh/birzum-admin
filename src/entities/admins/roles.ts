@@ -67,6 +67,10 @@ export const PERMISSION_GROUPS: {
       { key: 'mlContract', label: 'nav.mlContract', ops: ['read', 'update'] },
       { key: 'mlSupport', label: 'nav.mlSupport', ops: ['read', 'update'] },
       { key: 'mlReplies', label: 'nav.mlReplies', ops: ALL },
+      { key: 'mlBroadcasts', label: 'nav.mlBroadcasts', ops: ALL },
+      { key: 'mlFaq', label: 'nav.mlFaq', ops: ALL },
+      { key: 'mlDocuments', label: 'nav.mlDocuments', ops: ['read', 'update'] },
+      { key: 'mlContacts', label: 'nav.mlContacts', ops: ALL },
     ],
   },
   {

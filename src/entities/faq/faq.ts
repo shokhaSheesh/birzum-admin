@@ -1,18 +1,93 @@
+import type { Brand, Workspace } from '@/shared/config/workspaces'
 import type { LocalizedText } from '@/shared/i18n/dictionaries'
 import { createStore } from '@/shared/lib/createStore'
 
-/** One question in the client app's Savol-javoblar, in the order shoppers see them. */
+/** One question in an app's Savol-javoblar (Birzum's or a brand's), in the order people see them. */
 export type Faq = {
   id: string
+  app: Workspace
   question: LocalizedText
   answer: LocalizedText
   /** Hidden: kept here, not shown in the app. */
   visible: boolean
 }
 
+// The questions the microloan apps show today; only the collateral answer names each brand's own
+// products. Replace with the API.
+const COLLATERAL: Record<Brand, LocalizedText> = {
+  fortuna: {
+    uz: 'Rivoj va Tezkor garovsiz. Ishonch takroriy mijozlar uchun, 3-shaxs kafilligi asosida beriladi.',
+    ru: 'Rivoj и Tezkor — без залога. Ishonch — для повторных клиентов, под поручительство третьего лица.',
+  },
+  vodiy: {
+    uz: 'Zar garovsiz va kafilsiz. Ishonch takroriy mijozlar uchun, 3-shaxs kafilligi asosida; Koʻmak garov yoki sugʻurta polisi bilan.',
+    ru: 'Zar — без залога и поручителя. Ishonch — для повторных клиентов, под поручительство; Koʻmak — под залог или страховой полис.',
+  },
+}
+const loanFaq = (brand: Brand): Faq[] =>
+  (
+    [
+      [
+        { uz: 'Kim qarz olishi mumkin?', ru: 'Кто может получить займ?' },
+        {
+          uz: '18 yoshdan katta, pasporti yoki ID-kartasi bor va MyID orqali shaxsini tasdiqlagan Oʻzbekiston fuqarosi.',
+          ru: 'Гражданин Узбекистана старше 18 лет с паспортом или ID-картой, подтвердивший личность через MyID.',
+        },
+      ],
+      [
+        { uz: 'Garov yoki kafil kerakmi?', ru: 'Нужен ли залог или поручитель?' },
+        COLLATERAL[brand],
+      ],
+      [
+        { uz: 'Qaror qancha vaqtda chiqadi?', ru: 'Сколько ждать решения?' },
+        {
+          uz: 'Odatda bir necha daqiqada. Natija ilovaga keladi, filialga borish shart emas.',
+          ru: 'Обычно несколько минут. Ответ приходит в приложение, в филиал идти не нужно.',
+        },
+      ],
+      [
+        { uz: 'Pul qanday tushadi?', ru: 'Как приходят деньги?' },
+        {
+          uz: 'Shartnomani SMS-kod bilan imzolaganingizdan keyin pul tanlagan Uzcard yoki Humo kartangizga oʻtkaziladi.',
+          ru: 'После подписи договора SMS-кодом деньги переводятся на выбранную карту Uzcard или Humo.',
+        },
+      ],
+      [
+        { uz: 'Toʻlov qanday yechiladi?', ru: 'Как списываются платежи?' },
+        {
+          uz: 'Har oyning toʻlov kunida summa kartangizdan avtomatik yechiladi. Ilovada oldinroq oʻzingiz ham toʻlashingiz mumkin.',
+          ru: 'В день платежа сумма списывается с карты автоматически. В приложении можно оплатить и раньше.',
+        },
+      ],
+      [
+        { uz: 'Muddatidan oldin yopsam boʻladimi?', ru: 'Можно ли погасить досрочно?' },
+        {
+          uz: 'Ha, istalgan vaqtda: toʻliq yoki qisman. Qisman toʻlasangiz, oylik toʻlov kamayadi, muddat oʻzgarmaydi.',
+          ru: 'Да, в любой момент — полностью или частично. При частичном платёж в месяц уменьшается, срок прежний.',
+        },
+      ],
+      [
+        { uz: 'Toʻlovni kechiktirsam nima boʻladi?', ru: 'Что будет, если опоздать с платежом?' },
+        {
+          uz: 'Ilova va SMS orqali eslatamiz. Kechikish kredit tarixingizga taʼsir qiladi, shuning uchun muammo boʻlsa, oldindan yozing.',
+          ru: 'Мы напомним в приложении и по SMS. Просрочка влияет на кредитную историю, поэтому при трудностях напишите заранее.',
+        },
+      ],
+    ] as [LocalizedText, LocalizedText][]
+  ).map(([question, answer], i) => ({
+    id: `${brand}-f${i + 1}`,
+    app: brand,
+    question,
+    answer,
+    visible: true,
+  }))
+
 // The questions the client app shows today. Replace with the API.
 export const faqStore = createStore<Faq>([
+  ...loanFaq('fortuna'),
+  ...loanFaq('vodiy'),
   {
+    app: 'birzum',
     id: 'q1',
     visible: true,
     question: { uz: 'Limit qanday hisoblanadi?', ru: 'Как рассчитывается лимит?' },
@@ -22,6 +97,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q2',
     visible: true,
     question: { uz: 'Limit qancha muddat amal qiladi?', ru: 'Сколько действует лимит?' },
@@ -31,6 +107,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q3',
     visible: true,
     question: { uz: 'Muddatidan oldin toʻlasam boʻladimi?', ru: 'Можно ли погасить досрочно?' },
@@ -40,6 +117,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q4',
     visible: true,
     question: { uz: 'Toʻlovni kechiktirsam nima boʻladi?', ru: 'Что будет при просрочке?' },
@@ -49,6 +127,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q5',
     visible: true,
     question: { uz: 'Kartani qanday almashtiraman?', ru: 'Как сменить карту?' },
@@ -58,6 +137,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q6',
     visible: true,
     question: { uz: 'Buyurtmani qanday bekor qilaman?', ru: 'Как отменить заказ?' },
@@ -67,6 +147,7 @@ export const faqStore = createStore<Faq>([
     },
   },
   {
+    app: 'birzum',
     id: 'q7',
     visible: false,
     question: { uz: 'Mahsulotni qaytarsam boʻladimi?', ru: 'Можно ли вернуть товар?' },

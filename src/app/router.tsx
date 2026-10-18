@@ -18,6 +18,7 @@ import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { DocumentsPage } from '@/features/documents/pages/DocumentsPage'
 import { FaqPage } from '@/features/faq/pages/FaqPage'
+import { BrandContactsPage } from '@/features/microloans/pages/BrandContactsPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
 import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
@@ -79,6 +80,25 @@ const DESIGNED: string[] = [
 /** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
 function brandRoutes(brand: Brand) {
   const designed = [
+    { path: brandPath(brand, 'broadcasts'), element: <BroadcastsPage key={brand} app={brand} /> },
+    {
+      path: brandPath(brand, 'broadcasts/new'),
+      element: <BroadcastFormPage key={`${brand}-new`} app={brand} />,
+    },
+    {
+      path: brandPath(brand, 'broadcasts/:id'),
+      element: <BroadcastDetailPage key={brand} app={brand} />,
+    },
+    {
+      path: brandPath(brand, 'broadcasts/:id/edit'),
+      element: <BroadcastFormPage key={`${brand}-edit`} app={brand} />,
+    },
+    { path: brandPath(brand, 'faq'), element: <FaqPage key={brand} app={brand} /> },
+    { path: brandPath(brand, 'documents'), element: <DocumentsPage key={brand} app={brand} /> },
+    {
+      path: brandPath(brand, 'contacts'),
+      element: <BrandContactsPage key={brand} brand={brand} />,
+    },
     { path: brandPath(brand, 'support'), element: <SupportPage key={brand} app={brand} /> },
     {
       path: brandPath(brand, 'quick-replies'),

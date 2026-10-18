@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { broadcastsStore, type Broadcast } from '@/entities/broadcasts/broadcasts'
 import { useAdmin } from '@/entities/session/session'
-import { broadcastEditPath, ROUTES } from '@/shared/config/routes'
+import { broadcastEditPath, broadcastsPath } from '@/shared/config/routes'
+import type { Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 
 /** Copy, cancel and delete, shared by the list and the detail page. */
-export function useBroadcastActions() {
+export function useBroadcastActions(app: Workspace = 'birzum') {
   const navigate = useNavigate()
   const admin = useAdmin()
   const { t } = useI18n()
@@ -36,8 +37,9 @@ export function useBroadcastActions() {
         createdBy: admin?.name ?? '—',
       })
       toast(t('broadcast.copied'))
-      navigate(broadcastEditPath(id))
+      navigate(broadcastEditPath(id, app))
     },
-    afterDelete: () => navigate(ROUTES.broadcasts),
+    afterDelete: () => navigate(broadcastsPath(app)),
+    app,
   }
 }

@@ -7,7 +7,8 @@ import {
   type Broadcast,
   type BroadcastStatus,
 } from '@/entities/broadcasts/broadcasts'
-import { broadcastEditPath, broadcastPath, ROUTES } from '@/shared/config/routes'
+import { broadcastEditPath, broadcastNewPath, broadcastPath } from '@/shared/config/routes'
+import type { Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDateTime, groupDigits } from '@/shared/lib/format'
 import { usePagination } from '@/shared/lib/usePagination'
@@ -27,15 +28,15 @@ import { useBroadcastActions } from '../model/useBroadcastActions'
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
 /**
- * Every message Birzum sent or will send: figures for this month, then the list by status.
- * "Xabar yuborish" opens the full form.
+ * Every message Birzum or a microloan brand (`app`) sent or will send: figures for this month,
+ * then the list by status. "Xabar yuborish" opens the full form.
  */
-export function BroadcastsPage() {
+export function BroadcastsPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
   const navigate = useNavigate()
-  const all = broadcastsStore.useAll()
+  const all = broadcastsStore.useAll().filter((b) => b.app === app)
   const audienceText = useAudienceText()
-  const actions = useBroadcastActions()
+  const actions = useBroadcastActions(app)
   const [tab, setTab] = useState<'all' | BroadcastStatus>('all')
   const [query, setQuery] = useState('')
   const [today] = useState(() => new Date())
@@ -66,13 +67,13 @@ export function BroadcastsPage() {
   const nextOut = scheduled.map((b) => b.sendAt!).sort((a, b) => a.getTime() - b.getTime())[0]
 
   const rowActions = (b: Broadcast) => [
-    { icon: Eye, label: t('common.view'), onClick: () => navigate(broadcastPath(b.id)) },
+    { icon: Eye, label: t('common.view'), onClick: () => navigate(broadcastPath(b.id, app)) },
     ...(b.status === 'draft' || b.status === 'scheduled'
       ? [
           {
             icon: Pencil,
             label: t('common.edit'),
-            onClick: () => navigate(broadcastEditPath(b.id)),
+            onClick: () => navigate(broadcastEditPath(b.id, app)),
           },
         ]
       : []),
@@ -103,7 +104,7 @@ export function BroadcastsPage() {
       <PageHeader
         title={t('nav.broadcasts')}
         actions={
-          <Button onClick={() => navigate(ROUTES.broadcastNew)}>
+          <Button onClick={() => navigate(broadcastNewPath(app))}>
             <Plus size={20} />
             {t('broadcast.new')}
           </Button>
@@ -183,7 +184,7 @@ export function BroadcastsPage() {
                     return (
                       <tr
                         key={b.id}
-                        onClick={() => navigate(broadcastPath(b.id))}
+                        onClick={() => navigate(broadcastPath(b.id, app))}
                         className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
                       >
                         <td className="max-w-[320px] px-4 py-3">

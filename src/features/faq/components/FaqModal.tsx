@@ -2,6 +2,7 @@ import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { faqStore, type Faq } from '@/entities/faq/faq'
 import { emptyText, isComplete } from '@/shared/i18n/localized'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
@@ -11,6 +12,8 @@ import { Modal } from '@/shared/ui/Modal'
 import { logAction } from '@/entities/audit/audit'
 
 type Props = {
+  /** Whose app's questions. */
+  app: Workspace
   /** The question to edit, or null to add one. */
   item: Faq | null
   onClose: () => void
@@ -18,12 +21,17 @@ type Props = {
 }
 
 /** Add or edit a question: the question and its answer, both in Uzbek and Russian. */
-export function FaqModal({ item, onClose, onDelete }: Props) {
+export function FaqModal({ app, item, onClose, onDelete }: Props) {
   const { t, tl } = useI18n()
   const [question, setQuestion] = useState(item?.question ?? emptyText())
   const [answer, setAnswer] = useState(item?.answer ?? emptyText())
   const [submitted, setSubmitted] = useState(false)
 
+  const ml = app !== 'birzum'
+  const audit = {
+    section: ml ? 'mlFaq' : 'faq',
+    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
+  } as const
   const save = () => {
     setSubmitted(true)
     if (!isComplete(question) || !isComplete(answer)) return
@@ -32,22 +40,22 @@ export function FaqModal({ item, onClose, onDelete }: Props) {
       faqStore.update(item.id, { question: clean(question), answer: clean(answer) })
       toast(t('toast.saved'))
       logAction({
-        section: 'faq',
+        ...audit,
         kind: 'update',
-        action: 'audit.a.faqSaved',
+        action: ml ? 'audit.a.loanFaqSaved' : 'audit.a.faqSaved',
         target: tl(clean(question)),
       })
     } else {
       // New questions go to the end of the list; drag them up if they matter more
       faqStore.replaceAll([
         ...faqStore.getAll(),
-        { id: newId(), question: clean(question), answer: clean(answer), visible: true },
+        { id: newId(), app, question: clean(question), answer: clean(answer), visible: true },
       ])
       toast(t('faq.created'))
       logAction({
-        section: 'faq',
+        ...audit,
         kind: 'create',
-        action: 'audit.a.faqCreated',
+        action: ml ? 'audit.a.loanFaqCreated' : 'audit.a.faqCreated',
         target: tl(clean(question)),
       })
     }

@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { documentsStore, type DocFile, type LegalDoc } from '@/entities/documents/documents'
 import { useAdmin } from '@/entities/session/session'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
@@ -18,12 +19,13 @@ const sizeOf = (bytes: number) =>
     : `${Math.round(bytes / 1024)} KB`
 
 /**
- * The client app's legal documents, each as one PDF per language. The app links to these
- * three, so there is nothing to add or delete: only upload or replace a file.
+ * An app's legal documents (Birzum's three, or a microloan brand's offer and privacy policy),
+ * each as one PDF per language. The app links to these, so there is nothing to add or delete:
+ * only upload or replace a file.
  */
-export function DocumentsPage() {
+export function DocumentsPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t } = useI18n()
-  const docs = documentsStore.useAll()
+  const docs = documentsStore.useAll().filter((doc) => doc.app === app)
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -39,7 +41,7 @@ export function DocumentsPage() {
                 <FileText size={22} />
               </span>
               <div className="flex min-w-0 flex-1 flex-col">
-                <h2 className="text-lg font-bold">{t(`document.${doc.id}`)}</h2>
+                <h2 className="text-lg font-bold">{t(`document.${doc.doc}`)}</h2>
                 <p className="text-sm text-ink-muted">
                   {t('document.usedIn')}:{' '}
                   {doc.usedIn.map((place) => t(`document.place.${place}`)).join(', ')}
@@ -81,10 +83,12 @@ function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFil
       },
     })
     toast(t(file ? 'document.replaced' : 'document.uploaded'))
+    const ml = doc.app !== 'birzum'
     logAction({
-      section: 'documents',
+      section: ml ? 'mlDocuments' : 'documents',
       kind: 'update',
-      action: 'audit.a.documentUploaded',
+      action: ml ? 'audit.a.loanDocumentUploaded' : 'audit.a.documentUploaded',
+      params: ml ? { brand: WORKSPACE_INFO[doc.app].name } : undefined,
       target: `${picked.name} (${lang.toUpperCase()})`,
     })
   }

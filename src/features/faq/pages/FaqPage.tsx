@@ -1,6 +1,18 @@
-import { EyeOff, GripVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import {
+  ChevronRight,
+  EyeOff,
+  GripVertical,
+  MapPin,
+  MessageSquareText,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { contactsInfoStore, faqStore, type Faq } from '@/entities/faq/faq'
+import { brandPath, WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatPhone } from '@/shared/lib/phone'
@@ -24,14 +36,27 @@ function reorder(all: Faq[], moved: Faq, target: Faq, after: boolean) {
   return [...rest.slice(0, at), moved, ...rest.slice(at)]
 }
 
+/** One app's list moved in the whole store, the other apps' questions kept where they are. */
+function placeBack(store: Faq[], app: Workspace, list: Faq[]) {
+  const queue = [...list]
+  return store.map((item) => (item.app === app ? queue.shift()! : item))
+}
+
 /**
- * The client app's Savol-javoblar: the questions in the order shoppers see them, dragged by
- * their handle to reorder, each with a switch to show or hide it. On the right, the support
- * contacts the app shows under the questions.
+ * An app's Savol-javoblar (Birzum's client app, or a microloan brand's): the questions in the
+ * order people see them, dragged by their handle to reorder, each with a switch to show or hide
+ * it. On the right, Birzum's support contacts the app shows under the questions; a brand's app
+ * points to its chat and its Kontaktlar page instead.
  */
-export function FaqPage() {
+export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
-  const all = faqStore.useAll()
+  const store = faqStore.useAll()
+  const all = store.filter((item) => item.app === app)
+  const ml = app !== 'birzum'
+  const audit = {
+    section: ml ? 'mlFaq' : 'faq',
+    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
+  } as const
   const contacts = contactsInfoStore.useAll()[0]
   const [query, setQuery] = useState('')
   // undefined: closed; null: adding; a question: editing it
@@ -61,7 +86,7 @@ export function FaqPage() {
   }
   const dropOn = (target: Faq) => {
     if (dragged && drop && dragged !== target)
-      faqStore.replaceAll(reorder(all, dragged, target, drop.after))
+      faqStore.replaceAll(placeBack(store, app, reorder(all, dragged, target, drop.after)))
     setDragged(null)
     setDrop(null)
   }
@@ -70,15 +95,16 @@ export function FaqPage() {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const target = all[all.indexOf(item) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target) faqStore.replaceAll(reorder(all, item, target, e.key === 'ArrowDown'))
+    if (target)
+      faqStore.replaceAll(placeBack(store, app, reorder(all, item, target, e.key === 'ArrowDown')))
   }
   const toggle = (item: Faq) => {
     faqStore.update(item.id, { visible: !item.visible })
     toast(t(item.visible ? 'faq.hidden' : 'faq.shown'))
     logAction({
-      section: 'faq',
+      ...audit,
       kind: 'update',
-      action: 'audit.a.faqSaved',
+      action: ml ? 'audit.a.loanFaqSaved' : 'audit.a.faqSaved',
       target: tl(item.question),
     })
   }
@@ -193,34 +219,60 @@ export function FaqPage() {
         </section>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          <section className="flex flex-col gap-3 rounded-card border border-line bg-canvas p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-bold">{t('faq.contacts')}</p>
-              <Button size="sm" variant="ghost" onClick={() => setEditingContacts(true)}>
-                <Pencil size={16} />
-                {t('common.edit')}
-              </Button>
-            </div>
-            <dl className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-muted">{t('faq.contacts.phone')}</dt>
-                <dd className="font-semibold tabular-nums">{formatPhone(contacts.phone)}</dd>
+          {ml ? (
+            <section className="flex flex-col gap-1 rounded-card border border-line bg-canvas p-2">
+              <p className="px-3 pt-2 pb-1 text-sm text-ink-muted">{t('faq.loan.below')}</p>
+              {(
+                [
+                  [MessageSquareText, 'nav.support', 'faq.loan.chat', 'support'],
+                  [MapPin, 'nav.contacts', 'faq.loan.contacts', 'contacts'],
+                ] as const
+              ).map(([Icon, label, hint, page]) => (
+                <Link
+                  key={page}
+                  to={brandPath(app, page)}
+                  className="flex items-center gap-3 rounded-control p-3 hover:bg-surface"
+                >
+                  <Icon size={20} className="shrink-0 text-brand" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-semibold">{t(label)}</span>
+                    <span className="text-sm text-ink-muted">{t(hint)}</span>
+                  </span>
+                  <ChevronRight size={18} className="text-ink-subtle" />
+                </Link>
+              ))}
+            </section>
+          ) : (
+            <section className="flex flex-col gap-3 rounded-card border border-line bg-canvas p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold">{t('faq.contacts')}</p>
+                <Button size="sm" variant="ghost" onClick={() => setEditingContacts(true)}>
+                  <Pencil size={16} />
+                  {t('common.edit')}
+                </Button>
               </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-muted">{t('faq.contacts.hours')}</dt>
-                <dd className="text-right font-semibold">{tl(contacts.hours)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-muted">Telegram</dt>
-                <dd className="font-semibold">@{contacts.telegram}</dd>
-              </div>
-            </dl>
-          </section>
+              <dl className="flex flex-col gap-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">{t('faq.contacts.phone')}</dt>
+                  <dd className="font-semibold tabular-nums">{formatPhone(contacts.phone)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">{t('faq.contacts.hours')}</dt>
+                  <dd className="text-right font-semibold">{tl(contacts.hours)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">Telegram</dt>
+                  <dd className="font-semibold">@{contacts.telegram}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
         </aside>
       </div>
 
       {editing !== undefined && (
         <FaqModal
+          app={app}
           item={editing}
           onClose={() => setEditing(undefined)}
           onDelete={(item) => {
@@ -242,9 +294,9 @@ export function FaqPage() {
           setDeleting(null)
           toast(t('faq.deleted'))
           logAction({
-            section: 'faq',
+            ...audit,
             kind: 'delete',
-            action: 'audit.a.faqDeleted',
+            action: ml ? 'audit.a.loanFaqDeleted' : 'audit.a.faqDeleted',
             target: deleting ? tl(deleting.question) : undefined,
           })
         }}

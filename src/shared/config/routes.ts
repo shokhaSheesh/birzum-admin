@@ -1,3 +1,5 @@
+import type { Workspace } from './workspaces'
+
 export const ROUTES = {
   login: '/login',
   dashboard: '/',
@@ -61,10 +63,16 @@ export const applicationPath = (id: string) => `/applications/${id}`
 /** A shopper's detail page. */
 export const clientPath = (id: string) => `/customers/${id}`
 
+/** Xabarnomalar of Birzum or of a microloan brand. */
+export const broadcastsPath = (app: Workspace = 'birzum') =>
+  app === 'birzum' ? ROUTES.broadcasts : `/${app}/broadcasts`
+export const broadcastNewPath = (app: Workspace = 'birzum') => `${broadcastsPath(app)}/new`
 /** A broadcast's detail page. */
-export const broadcastPath = (id: string) => `/broadcasts/${id}`
+export const broadcastPath = (id: string, app: Workspace = 'birzum') =>
+  `${broadcastsPath(app)}/${id}`
 /** A draft or scheduled broadcast's form. */
-export const broadcastEditPath = (id: string) => `/broadcasts/${id}/edit`
+export const broadcastEditPath = (id: string, app: Workspace = 'birzum') =>
+  `${broadcastsPath(app)}/${id}/edit`
 
 /** A new role, optionally filled from another one. */
 export const roleNewPath = (from?: string) => (from ? `/roles/new?from=${from}` : '/roles/new')

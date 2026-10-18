@@ -2,7 +2,8 @@ import { ArrowLeft, Ban, Copy, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { broadcastsStore } from '@/entities/broadcasts/broadcasts'
-import { broadcastEditPath, ROUTES } from '@/shared/config/routes'
+import { broadcastEditPath, broadcastsPath } from '@/shared/config/routes'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -23,20 +24,20 @@ const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
  * One broadcast: how it did (sent, delivered, opened, tapped), its text in both languages,
  * who it went to and when, and the phone as people saw it.
  */
-export function BroadcastDetailPage() {
+export function BroadcastDetailPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl, lang: appLang } = useI18n()
   const navigate = useNavigate()
   const { id } = useParams()
-  const broadcast = broadcastsStore.useAll().find((item) => item.id === id)
+  const broadcast = broadcastsStore.useAll().find((item) => item.id === id && item.app === app)
   const audienceText = useAudienceText()
-  const { countOf } = useAudience()
-  const actions = useBroadcastActions()
+  const { countOf } = useAudience(app)
+  const actions = useBroadcastActions(app)
   const [previewLang, setPreviewLang] = useState<Lang>(appLang)
 
   const back = (
     <button
       type="button"
-      onClick={() => navigate(ROUTES.broadcasts)}
+      onClick={() => navigate(broadcastsPath(app))}
       className="flex items-center gap-1.5 self-start text-sm font-semibold text-ink-muted hover:text-ink"
     >
       <ArrowLeft size={18} />
@@ -91,7 +92,7 @@ export function BroadcastDetailPage() {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => navigate(broadcastEditPath(broadcast.id))}
+              onClick={() => navigate(broadcastEditPath(broadcast.id, app))}
             >
               <Pencil size={18} />
               {t('common.edit')}
@@ -225,7 +226,15 @@ export function BroadcastDetailPage() {
             title={broadcast.title}
             body={broadcast.body}
             image={broadcast.image}
-            appName={broadcast.audience.kind === 'clients' ? 'Birzum' : 'Birzum Biznes'}
+            appName={
+              app !== 'birzum'
+                ? WORKSPACE_INFO[app].name
+                : broadcast.audience.kind === 'clients'
+                  ? 'Birzum'
+                  : 'Birzum Biznes'
+            }
+            mark={WORKSPACE_INFO[app].mark}
+            listLabel={app === 'birzum' ? undefined : t('broadcast.preview.notifications')}
           />
         </aside>
       </div>

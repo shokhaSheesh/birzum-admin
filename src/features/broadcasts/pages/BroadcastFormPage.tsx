@@ -1,4 +1,4 @@
-import { CalendarClock, Send, Store, Users } from 'lucide-react'
+import { CalendarClock, ListChecks, Send, Store, UserCheck, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -10,7 +10,11 @@ import {
 import { fullName, initialsOf } from '@/entities/clients/clients'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { useAdmin } from '@/entities/session/session'
-import { broadcastPath, ROUTES } from '@/shared/config/routes'
+import { CLIENT_SEGMENTS, segmentOf, type ClientSegment } from '@/entities/microloans/loanClients'
+import { loanApplicationsStore } from '@/entities/microloans/applications'
+import { loansStore } from '@/entities/microloans/loans'
+import { broadcastPath, broadcastsPath } from '@/shared/config/routes'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { emptyText, isComplete } from '@/shared/i18n/localized'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -23,6 +27,7 @@ import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/Button'
+import { Checkbox } from '@/shared/ui/Checkbox'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { DateField } from '@/shared/ui/DateField'
@@ -44,22 +49,44 @@ const TIMES = Array.from({ length: 28 }, (_, i) => {
 const clockOf = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 
+/** Who a microloan brand's broadcast goes to: everyone, groups by where they are, or people. */
+type LoanWho = 'all' | 'segments' | 'people'
+
 /**
- * Write a broadcast: who gets it (every shopper or merchant, or the ones picked), the text in
- * both languages with an optional picture, and when. A phone on the right shows it as it will
- * arrive.
+ * Write a broadcast: who gets it (in Birzum every shopper or merchant, or the ones picked; in a
+ * microloan brand everyone, some groups, or some people), the text in both languages with an
+ * optional picture, and when. A phone on the right shows it as it will arrive.
  */
-export function BroadcastFormPage() {
+export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl, lang: appLang } = useI18n()
   const navigate = useNavigate()
   const admin = useAdmin()
   const { id } = useParams()
-  const existing = broadcastsStore.useAll().find((item) => item.id === id)
-  const { clients, merchants, countOf } = useAudience()
+  const existing = broadcastsStore.useAll().find((item) => item.id === id && item.app === app)
+  const { clients, merchants, loanClients, countOf } = useAudience(app)
+  const ml = app !== 'birzum'
+  const back = broadcastsPath(app)
+  const loanApps = loanApplicationsStore.useAll().filter((item) => item.brand === app)
+  const loans = loansStore.useAll().filter((item) => item.brand === app)
+  const segmentCount = (segment: ClientSegment) =>
+    loanClients.filter((client) => segmentOf(client, loanApps, loans) === segment).length
+  const [who, setWho] = useState<LoanWho>(
+    !existing || existing.audience.all ? 'all' : existing.audience.segments ? 'segments' : 'people',
+  )
+  const [segments, setSegments] = useState<ClientSegment[]>(
+    existing?.audience.segments ?? ['active'],
+  )
+  const [people, setPeople] = useState<MultiValue>(
+    existing?.audience.kind === 'loanClients' && !existing.audience.segments
+      ? existing.audience
+      : { all: false, ids: [] },
+  )
 
-  const [kind, setKind] = useState<Audience['kind']>(existing?.audience.kind ?? 'clients')
+  const [kind, setKind] = useState<'clients' | 'merchants'>(
+    existing?.audience.kind === 'merchants' ? 'merchants' : 'clients',
+  )
   // Each app keeps its own pick, so switching between them loses nothing
-  const [picks, setPicks] = useState<Record<Audience['kind'], MultiValue>>({
+  const [picks, setPicks] = useState<Record<'clients' | 'merchants', MultiValue>>({
     clients: existing?.audience.kind === 'clients' ? existing.audience : { all: true, ids: [] },
     merchants: existing?.audience.kind === 'merchants' ? existing.audience : { all: true, ids: [] },
   })
@@ -76,7 +103,13 @@ export function BroadcastFormPage() {
   const [confirming, setConfirming] = useState(false)
 
   const pick = picks[kind]
-  const audience: Audience = { kind, all: pick.all, ids: pick.all ? [] : pick.ids }
+  const audience: Audience = !ml
+    ? { kind, all: pick.all, ids: pick.all ? [] : pick.ids }
+    : who === 'all' || (who === 'people' && people.all)
+      ? { kind: 'loanClients', all: true, ids: [] }
+      : who === 'segments'
+        ? { kind: 'loanClients', all: false, ids: [], segments }
+        : { kind: 'loanClients', all: false, ids: people.ids }
   const reach = countOf(audience)
   const sendDate = (() => {
     const date = parseDate(day)
@@ -102,6 +135,7 @@ export function BroadcastFormPage() {
   const store = (status: Broadcast['status']) => {
     const record: Broadcast = {
       id: existing?.id ?? newId(),
+      app,
       audience,
       title: { uz: title.uz.trim(), ru: title.ru.trim() },
       body: { uz: body.uz.trim(), ru: body.ru.trim() },
@@ -118,7 +152,7 @@ export function BroadcastFormPage() {
   const saveDraft = () => {
     store('draft')
     toast(t('broadcast.drafted'))
-    navigate(ROUTES.broadcasts)
+    navigate(back)
   }
   const ask = () => {
     setSubmitted(true)
@@ -128,13 +162,20 @@ export function BroadcastFormPage() {
     const record = store(when === 'now' ? 'sent' : 'scheduled')
     toast(t(when === 'now' ? 'broadcast.sent' : 'broadcast.scheduled'))
     logAction({
-      section: 'broadcasts',
+      section: ml ? 'mlBroadcasts' : 'broadcasts',
       kind: 'create',
-      action: when === 'now' ? 'audit.a.broadcastSent' : 'audit.a.broadcastScheduled',
+      action: ml
+        ? when === 'now'
+          ? 'audit.a.loanBroadcastSent'
+          : 'audit.a.loanBroadcastScheduled'
+        : when === 'now'
+          ? 'audit.a.broadcastSent'
+          : 'audit.a.broadcastScheduled',
+      params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
       target: tl(record.title),
-      href: broadcastPath(record.id),
+      href: broadcastPath(record.id, app),
     })
-    navigate(broadcastPath(record.id))
+    navigate(broadcastPath(record.id, app))
   }
 
   return (
@@ -142,14 +183,9 @@ export function BroadcastFormPage() {
       <ActionBar
         eyebrow={t('nav.broadcasts')}
         title={existing ? tl(existing.title) || t('broadcast.new') : t('broadcast.new')}
-        onBack={() => navigate(ROUTES.broadcasts)}
+        onBack={() => navigate(back)}
       >
-        <Button
-          size="sm"
-          variant="ghost"
-          className="px-4!"
-          onClick={() => navigate(ROUTES.broadcasts)}
-        >
+        <Button size="sm" variant="ghost" className="px-4!" onClick={() => navigate(back)}>
           {t('common.cancel')}
         </Button>
         <Button size="sm" variant="secondary" className="px-4!" onClick={saveDraft}>
@@ -164,50 +200,116 @@ export function BroadcastFormPage() {
       <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="flex flex-col gap-6">
           <FormSection title={t('broadcast.audience')}>
-            <ChoiceGrid
-              label={t('broadcast.audience.kind')}
-              columns={2}
-              options={[
-                { value: 'clients', label: t('nav.customers'), icon: Users },
-                { value: 'merchants', label: t('nav.merchants'), icon: Store },
-              ]}
-              value={kind}
-              onChange={setKind}
-            />
-            {kind === 'clients' ? (
-              <MultiSelectField
-                key="clients"
-                label={t('nav.customers')}
-                allLabel={t('broadcast.allClients')}
-                placeholder={t('broadcast.pickClients')}
-                options={clients.map((client) => ({
-                  value: client.id,
-                  label: fullName(client),
-                  sub: formatPhone(client.phone),
-                  leading: (
-                    <Avatar size="sm" initials={initialsOf(client)} photoUrl={client.photoUrl} />
-                  ),
-                }))}
-                value={picks.clients}
-                onChange={(value) => setPicks({ ...picks, clients: value })}
-                error={submitted ? errors.reach : undefined}
-              />
+            {ml ? (
+              <>
+                <ChoiceGrid
+                  label={t('broadcast.loan.who')}
+                  columns={3}
+                  options={[
+                    { value: 'all', label: t('broadcast.loan.all'), icon: Users },
+                    { value: 'segments', label: t('broadcast.loan.segments'), icon: ListChecks },
+                    { value: 'people', label: t('broadcast.loan.people'), icon: UserCheck },
+                  ]}
+                  value={who}
+                  onChange={setWho}
+                />
+                {who === 'segments' && (
+                  <div className="flex flex-col gap-1">
+                    <div className="grid gap-x-6 sm:grid-cols-2">
+                      {CLIENT_SEGMENTS.map((segment) => (
+                        <Checkbox
+                          key={segment}
+                          label={t(`mlClients.segment.${segment}`)}
+                          description={t('broadcast.loan.people.count', {
+                            count: groupDigits(segmentCount(segment)),
+                          })}
+                          checked={segments.includes(segment)}
+                          onChange={(on) =>
+                            setSegments(
+                              on
+                                ? CLIENT_SEGMENTS.filter(
+                                    (item) => item === segment || segments.includes(item),
+                                  )
+                                : segments.filter((item) => item !== segment),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                    {submitted && errors.reach && (
+                      <p className="text-sm text-danger">{errors.reach}</p>
+                    )}
+                    <p className="text-sm text-ink-muted">{t('broadcast.loan.segments.hint')}</p>
+                  </div>
+                )}
+                {who === 'people' && (
+                  <MultiSelectField
+                    label={t('nav.borrowers')}
+                    allLabel={t('broadcast.loan.all')}
+                    placeholder={t('broadcast.pickClients')}
+                    options={loanClients.map((client) => ({
+                      value: client.id,
+                      label: client.name,
+                      sub: formatPhone(client.phone),
+                    }))}
+                    value={people}
+                    onChange={setPeople}
+                    error={submitted ? errors.reach : undefined}
+                  />
+                )}
+              </>
             ) : (
-              <MultiSelectField
-                key="merchants"
-                label={t('nav.merchants')}
-                allLabel={t('broadcast.allMerchants')}
-                placeholder={t('broadcast.pickMerchants')}
-                options={merchants.map((merchant) => ({
-                  value: merchant.id,
-                  label: merchant.name,
-                  leading: <MerchantLogo merchant={merchant} size="xs" />,
-                }))}
-                value={picks.merchants}
-                onChange={(value) => setPicks({ ...picks, merchants: value })}
-                hint={t('broadcast.merchants.hint')}
-                error={submitted ? errors.reach : undefined}
-              />
+              <>
+                <ChoiceGrid
+                  label={t('broadcast.audience.kind')}
+                  columns={2}
+                  options={[
+                    { value: 'clients', label: t('nav.customers'), icon: Users },
+                    { value: 'merchants', label: t('nav.merchants'), icon: Store },
+                  ]}
+                  value={kind}
+                  onChange={setKind}
+                />
+                {kind === 'clients' ? (
+                  <MultiSelectField
+                    key="clients"
+                    label={t('nav.customers')}
+                    allLabel={t('broadcast.allClients')}
+                    placeholder={t('broadcast.pickClients')}
+                    options={clients.map((client) => ({
+                      value: client.id,
+                      label: fullName(client),
+                      sub: formatPhone(client.phone),
+                      leading: (
+                        <Avatar
+                          size="sm"
+                          initials={initialsOf(client)}
+                          photoUrl={client.photoUrl}
+                        />
+                      ),
+                    }))}
+                    value={picks.clients}
+                    onChange={(value) => setPicks({ ...picks, clients: value })}
+                    error={submitted ? errors.reach : undefined}
+                  />
+                ) : (
+                  <MultiSelectField
+                    key="merchants"
+                    label={t('nav.merchants')}
+                    allLabel={t('broadcast.allMerchants')}
+                    placeholder={t('broadcast.pickMerchants')}
+                    options={merchants.map((merchant) => ({
+                      value: merchant.id,
+                      label: merchant.name,
+                      leading: <MerchantLogo merchant={merchant} size="xs" />,
+                    }))}
+                    value={picks.merchants}
+                    onChange={(value) => setPicks({ ...picks, merchants: value })}
+                    hint={t('broadcast.merchants.hint')}
+                    error={submitted ? errors.reach : undefined}
+                  />
+                )}
+              </>
             )}
           </FormSection>
 
@@ -301,7 +403,11 @@ export function BroadcastFormPage() {
             title={title}
             body={body}
             image={image}
-            appName={kind === 'clients' ? 'Birzum' : 'Birzum Biznes'}
+            appName={
+              ml ? WORKSPACE_INFO[app].name : kind === 'clients' ? 'Birzum' : 'Birzum Biznes'
+            }
+            mark={WORKSPACE_INFO[app].mark}
+            listLabel={ml ? t('broadcast.preview.notifications') : undefined}
           />
           <p className="text-center text-xs text-ink-subtle">{t('broadcast.preview.langHint')}</p>
           <dl className="flex flex-col gap-2 rounded-card border border-line bg-canvas p-4 text-sm">
