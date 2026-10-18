@@ -29,6 +29,7 @@ export const ROUTES = {
   broadcast: '/broadcasts/:id',
   broadcastEdit: '/broadcasts/:id/edit',
   faq: '/faq',
+  onboarding: '/onboarding',
   documents: '/documents',
   admins: '/admins',
   roles: '/roles',

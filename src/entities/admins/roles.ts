@@ -50,6 +50,7 @@ export const PERMISSION_GROUPS: {
       { key: 'quickReplies', label: 'nav.quickReplies', ops: ALL },
       { key: 'broadcasts', label: 'nav.broadcasts', ops: ALL },
       { key: 'faq', label: 'nav.faq', ops: ALL },
+      { key: 'onboarding', label: 'nav.onboarding', ops: ALL },
       { key: 'documents', label: 'nav.documents', ops: ['read', 'update'] },
     ],
   },
