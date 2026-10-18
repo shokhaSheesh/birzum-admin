@@ -16,6 +16,7 @@ import { applicationsStore } from '@/entities/applications/applications'
 import { clientStatusTone } from '@/entities/clients/clientStatus'
 import { CARD_LOGOS, clientsStore, fullName, initialsOf } from '@/entities/clients/clients'
 import { clientStatusOf, debtOf } from '@/entities/clients/debt'
+import { limitHistoryOf, limitsStore } from '@/entities/clients/limits'
 import { contactsOf, contactsStore } from '@/entities/collections/contacts'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
@@ -34,8 +35,9 @@ import { ContactLog } from '@/features/collections/components/ContactLog'
 import { ChargeModal, ManualPaymentModal } from '@/features/collections/components/PaymentDialogs'
 import { PaymentsTable } from '@/features/collections/components/PaymentsTable'
 import { BlockModal, UnblockDialog } from '../components/BlockDialogs'
+import { LimitModal, RecalculateDialog } from '../components/LimitDialogs'
 
-const TABS = ['purchases', 'payments', 'contacts', 'cards'] as const
+const TABS = ['purchases', 'payments', 'contacts', 'cards', 'limit'] as const
 type Tab = (typeof TABS)[number]
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -77,6 +79,9 @@ export function ClientDetailPage() {
   const [entering, setEntering] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
+  const [editingLimit, setEditingLimit] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
+  const limits = limitsStore.useAll()
   const [today] = useState(() => new Date())
 
   const back = (
@@ -105,6 +110,10 @@ export function ClientDetailPage() {
   const ownPayments = payments.filter((payment) => payment.clientId === client.id)
   const ownContacts = contactsOf(contacts, client.id)
   const expired = !!client.limit && client.limit.validUntil < today
+  const limitHistory = limitHistoryOf(limits, client.id)
+  // What the running nasiyalar take out of the limit, and what is left for new ones
+  const used = Math.min(debt.remaining, client.limit?.amount ?? 0)
+  const free = Math.max(0, (client.limit?.amount ?? 0) - debt.remaining)
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -251,6 +260,7 @@ export function ClientDetailPage() {
                 },
                 { value: 'contacts', label: t('client.contacts'), count: ownContacts.length },
                 { value: 'cards', label: t('client.cards'), count: client.cards.length },
+                { value: 'limit', label: t('limit.history'), count: limitHistory.length },
               ]}
               value={tab}
               onChange={setTab}
@@ -264,6 +274,38 @@ export function ClientDetailPage() {
             )
           ) : tab === 'contacts' ? (
             <ContactLog contacts={ownContacts} today={today} owing={debt.overdue > 0} />
+          ) : tab === 'limit' ? (
+            limitHistory.length === 0 ? (
+              <EmptyState title={t('limit.history.empty')} />
+            ) : (
+              <ul className="flex flex-col border-t border-line">
+                {limitHistory.map((change) => (
+                  <li
+                    key={change.id}
+                    className="flex flex-wrap items-start gap-x-6 gap-y-1 border-b border-line px-5 py-4 last:border-b-0"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <p className="font-semibold tabular-nums">
+                        {change.from === null
+                          ? formatSum(change.to)
+                          : `${formatSum(change.from)} → ${formatSum(change.to)}`}
+                      </p>
+                      <p className="text-sm text-ink-muted">
+                        {change.source === 'scoring'
+                          ? t('limit.source.scoring')
+                          : `${change.by} · ${t(`limit.reason.${change.reason!}`)}`}
+                        {' · '}
+                        {t('client.limit.until', { date: formatDate(change.validUntil) })}
+                      </p>
+                      {change.comment && <p className="text-sm">{change.comment}</p>}
+                    </div>
+                    <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
+                      {formatDateTime(change.at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )
           ) : tab === 'cards' ? (
             <ul className="flex flex-col gap-3 p-5">
               {client.cards.map((item) => (
@@ -359,6 +401,55 @@ export function ClientDetailPage() {
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           <section className={card}>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-bold">{t('client.limit')}</h2>
+              {client.limit && (
+                <span className={expired ? 'text-sm text-danger' : 'text-sm text-ink-muted'}>
+                  {expired
+                    ? t('clients.limit.expired')
+                    : t('client.limit.until', { date: formatDate(client.limit.validUntil) })}
+                </span>
+              )}
+            </div>
+            {client.limit ? (
+              <>
+                <p className="text-2xl font-bold tabular-nums">{formatSum(client.limit.amount)}</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="h-2 overflow-hidden rounded-full bg-surface">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${(used / client.limit.amount) * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-ink-muted tabular-nums">
+                    <span>{t('limit.used', { sum: formatSum(used) })}</span>
+                    <span>{t('limit.free', { sum: formatSum(free) })}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-ink-muted">{t('clients.limit.none')}</p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setEditingLimit(true)}
+              >
+                {t('limit.edit')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1"
+                onClick={() => setRecalculating(true)}
+              >
+                {t('limit.recalc')}
+              </Button>
+            </div>
+          </section>
+          <section className={card}>
             <h2 className="font-bold">{t('client.myid')}</h2>
             <Rows
               rows={[
@@ -377,6 +468,10 @@ export function ClientDetailPage() {
         </aside>
       </div>
 
+      {editingLimit && <LimitModal client={client} onClose={() => setEditingLimit(false)} />}
+      {recalculating && (
+        <RecalculateDialog client={client} onClose={() => setRecalculating(false)} />
+      )}
       {blocking && <BlockModal client={client} onClose={() => setBlocking(false)} />}
       {unblocking && <UnblockDialog client={client} onClose={() => setUnblocking(false)} />}
       {charging && <ChargeModal client={client} onClose={() => setCharging(false)} />}
