@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   daysLate,
+  lateOf,
   LOAN_STATES,
   loansStore,
   loanStateTone,
@@ -71,7 +72,7 @@ export function LoansPage({ brand }: { brand: Brand }) {
   const open = all.filter((loan) => !loan.closedAt)
   const late = open.filter((loan) => loan.overdueSince)
   const portfolio = open.reduce((sum, loan) => sum + progressOf(loan).principalLeft, 0)
-  const lateSum = late.reduce((sum, loan) => sum + (progressOf(loan).next?.amount ?? 0), 0)
+  const lateSum = late.reduce((sum, loan) => sum + lateOf(loan, today).amount, 0)
   // Issued and closed in the period; portfolio and late are how things stand today
   const issued = all.filter((loan) => inRange(loan.issuedAt, bounds))
   const closed = all.filter((loan) => loan.closedAt && inRange(loan.closedAt, bounds))

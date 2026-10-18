@@ -60,6 +60,7 @@ export const PERMISSION_GROUPS: {
       { key: 'mlApplications', label: 'nav.mlApplications', ops: ['read', 'update'] },
       { key: 'mlLoans', label: 'nav.mlLoans', ops: ['read'] },
       { key: 'mlPayments', label: 'nav.mlPayments', ops: ['read', 'create'] },
+      { key: 'mlOverdue', label: 'nav.mlOverdue', ops: ['read', 'update'] },
       { key: 'mlProducts', label: 'nav.mlProducts', ops: ALL },
     ],
   },

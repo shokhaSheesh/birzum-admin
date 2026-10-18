@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { logAction } from '@/entities/audit/audit'
 import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
-import { cardText, loansStore, progressOf, scheduleOf } from '@/entities/microloans/loans'
+import { cardText, lateOf, loansStore, overdueAfter, scheduleOf } from '@/entities/microloans/loans'
 import { brandLoanPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -39,6 +39,7 @@ type Method = '' | 'auto' | 'app' | 'cash' | 'transfer'
 export function LoanPaymentsPage({ brand }: { brand: Brand }) {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const [today] = useState(() => new Date())
   const loans = loansStore.useAll().filter((loan) => loan.brand === brand)
   const all = paymentsOf(loans)
   const [tab, setTab] = useState<Tab>('all')
@@ -97,7 +98,7 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
     loansStore.update(loan.id, {
       paidCount,
       paidOn: { ...loan.paidOn, [paidCount]: now },
-      overdueSince: undefined,
+      overdueSince: overdueAfter(loan, paidCount, now),
       ...(done ? { closedAt: now } : {}),
     })
     logAction({
@@ -146,9 +147,7 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
           label={t('loanPay.stat.failed')}
           value={String(failing.length)}
           hint={t('loanPay.stat.failedHint', {
-            sum: formatSum(
-              failing.reduce((total, loan) => total + (progressOf(loan).next?.amount ?? 0), 0),
-            ),
+            sum: formatSum(failing.reduce((total, loan) => total + lateOf(loan, today).amount, 0)),
           })}
         />
       </div>

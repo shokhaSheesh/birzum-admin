@@ -1,9 +1,19 @@
-import { ArrowLeft, ChevronRight, CircleAlert, FileText, Plus, ReceiptText } from 'lucide-react'
+import {
+  ArrowLeft,
+  BellRing,
+  ChevronRight,
+  CircleAlert,
+  FileText,
+  PhoneCall,
+  Plus,
+  ReceiptText,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { loanApplicationsStore } from '@/entities/microloans/applications'
 import {
   daysLate,
+  lateOf,
   loansStore,
   loanStateTone,
   progressOf,
@@ -11,6 +21,7 @@ import {
   type Installment,
   type Loan,
 } from '@/entities/microloans/loans'
+import { contactsOfLoan, loanContactsStore } from '@/entities/microloans/loanContacts'
 import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
 import { loanProductsStore } from '@/entities/microloans/products'
 import { brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
@@ -23,6 +34,7 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
+import { LoanCallModal, LoanReminderDialog } from '../components/LoanContactDialogs'
 import { LoanManualPaymentModal } from '../components/LoanManualPaymentModal'
 import { LoanReceiptModal } from '../components/LoanReceiptModal'
 
@@ -51,16 +63,16 @@ const monthTone: Record<MonthState, StatusTone> = {
   upcoming: 'neutral',
   settled: 'neutral',
 }
-const monthStateOf = (loan: Loan, item: Installment): MonthState =>
+const monthStateOf = (loan: Loan, item: Installment, today: Date): MonthState =>
   item.n <= loan.paidCount
     ? 'paid'
     : loan.closedAt
       ? 'settled'
-      : item.n === loan.paidCount + 1
-        ? loan.overdueSince
-          ? 'late'
-          : 'next'
-        : 'upcoming'
+      : loan.overdueSince && item.due <= today
+        ? 'late'
+        : item.n === loan.paidCount + 1 || (loan.overdueSince && item.n === loan.paidCount + 1)
+          ? 'next'
+          : 'upcoming'
 
 /**
  * One microloan, read-only: what was issued and what is left, the late payment if any, the full
@@ -78,6 +90,9 @@ export function LoanPage({ brand }: { brand: Brand }) {
   const [today] = useState(() => new Date())
   const [receipt, setReceipt] = useState<LoanPayment | null>(null)
   const [entering, setEntering] = useState(false)
+  const [calling, setCalling] = useState(false)
+  const [reminding, setReminding] = useState(false)
+  const contacts = contactsOfLoan(loanContactsStore.useAll(), id ?? '')
 
   const back = (
     <button
@@ -136,9 +151,9 @@ export function LoanPage({ brand }: { brand: Brand }) {
             </p>
             <p className="text-sm">
               {t('loan.late.text', {
-                n: String(next.n),
-                sum: formatSum(next.amount),
-                date: formatDate(next.due),
+                months: String(lateOf(loan, today).months.length),
+                sum: formatSum(lateOf(loan, today).amount),
+                date: formatDate(loan.overdueSince!),
               })}
             </p>
           </div>
@@ -171,6 +186,12 @@ export function LoanPage({ brand }: { brand: Brand }) {
                 : 'loan.closedOnTime',
             )}
           />
+        ) : state === 'overdue' ? (
+          <StatCard
+            label={t('overdue.col.amount')}
+            value={formatSum(lateOf(loan, today).amount)}
+            hint={t('overdue.months', { count: String(lateOf(loan, today).months.length) })}
+          />
         ) : (
           <StatCard
             label={t('loans.col.next')}
@@ -198,7 +219,7 @@ export function LoanPage({ brand }: { brand: Brand }) {
                 </thead>
                 <tbody>
                   {schedule.map((item) => {
-                    const month = monthStateOf(loan, item)
+                    const month = monthStateOf(loan, item, today)
                     return (
                       <tr
                         key={item.n}
@@ -287,6 +308,50 @@ export function LoanPage({ brand }: { brand: Brand }) {
               </ul>
             )}
           </section>
+
+          {(state === 'overdue' || contacts.length > 0) && (
+            <section className={card}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-bold">{t('overdue.log')}</h2>
+                {state === 'overdue' && (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setReminding(true)}>
+                      <BellRing size={18} />
+                      {t('contact.remind')}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setCalling(true)}>
+                      <PhoneCall size={18} />
+                      {t('contact.call')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {contacts.length === 0 ? (
+                <p className="text-sm text-ink-muted">{t('contact.empty')}</p>
+              ) : (
+                <ol className="flex flex-col">
+                  {contacts.map((contact) => (
+                    <li
+                      key={contact.id}
+                      className="flex flex-col gap-0.5 border-b border-line py-3 last:border-b-0"
+                    >
+                      <span className="font-medium">
+                        {contact.channel === 'reminder'
+                          ? t('overdue.log.reminder')
+                          : contact.result === 'promised' && contact.promiseDate
+                            ? t('contact.promise', { date: formatDate(contact.promiseDate) })
+                            : t(`contact.result.${contact.result ?? 'noAnswer'}`)}
+                      </span>
+                      <span className="text-sm text-ink-muted">
+                        {formatDateTime(contact.at)} · {contact.by}
+                      </span>
+                      {contact.comment && <span className="text-sm">{contact.comment}</span>}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
@@ -341,6 +406,15 @@ export function LoanPage({ brand }: { brand: Brand }) {
       {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
       {entering && (
         <LoanManualPaymentModal brand={brand} loan={loan} onClose={() => setEntering(false)} />
+      )}
+      {calling && <LoanCallModal loan={loan} onClose={() => setCalling(false)} />}
+      {reminding && (
+        <LoanReminderDialog
+          loan={loan}
+          amount={lateOf(loan, today).amount}
+          days={daysLate(loan, today)}
+          onClose={() => setReminding(false)}
+        />
       )}
     </div>
   )

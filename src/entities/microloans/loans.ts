@@ -172,11 +172,12 @@ function build(
     const left = schedule.slice(after).reduce((sum, item) => sum + item.principal, 0)
     loan.prepayments = [{ at: when, amount: Math.round(left), kind: 'full', afterPaid: after }]
     loan.closedAt = when
-  } else if (roll < 0.3 && due >= 1) {
-    // Missed the latest payment
-    loan.paidCount = due - 1
+  } else if (roll < 0.4 && due >= 1) {
+    // Missed the latest payment, or the last two or three
+    const months = Math.min(due, 1 + Math.floor(next() * 3))
+    loan.paidCount = due - months
+    loan.overdueSince = schedule[loan.paidCount].due
     const missed = schedule[due - 1]
-    loan.overdueSince = missed.due
     // Refused on the day, then tried again each morning, up to three times
     const reason = (['funds', 'funds', 'blocked', 'expired'] as const)[Math.floor(next() * 4)]
     const late = Math.max(1, Math.floor((NOW.getTime() - missed.due.getTime()) / 86_400_000))
@@ -303,9 +304,22 @@ export function enterPayment(loan: Loan, amount: number, at: Date, entry: Entere
     paidCount,
     paidOn: { ...loan.paidOn, [paidCount]: at },
     prepayments,
-    overdueSince: undefined,
+    overdueSince: overdueAfter(loan, paidCount, at),
     entered,
     ...(done ? { closedAt: at } : {}),
   })
   return done
+}
+
+/** The monthly payments due by today and not paid yet, and what they come to. */
+export function lateOf(loan: Loan, today: Date) {
+  if (!loan.overdueSince || loan.closedAt) return { months: [] as Installment[], amount: 0 }
+  const months = scheduleOf(loan).filter((item) => item.n > loan.paidCount && item.due <= today)
+  return { months, amount: months.reduce((sum, item) => sum + item.amount, 0) }
+}
+
+/** After a payment: still late from the next missed day, or not late any more. */
+export function overdueAfter(loan: Loan, paidCount: number, today: Date) {
+  const next = scheduleOf(loan)[paidCount]
+  return next && next.due <= today ? next.due : undefined
 }
