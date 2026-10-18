@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useFilialsOf } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
+import { staffOfFilial, staffStore } from '@/entities/merchants/staff'
 import { payoutsStore } from '@/entities/payouts/payouts'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
@@ -17,6 +18,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
 import { MerchantPayouts } from '../components/MerchantPayouts'
+import { MerchantStaff } from '../components/MerchantStaff'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -48,7 +50,8 @@ export function MerchantDetailPage() {
   const merchant = merchantsStore.useAll().find((item) => item.id === id)
   const filials = useFilialsOf(id)
   const [deleting, setDeleting] = useState(false)
-  const [tab, setTab] = useState<'filials' | 'payouts'>('filials')
+  const [tab, setTab] = useState<'filials' | 'staff' | 'payouts'>('filials')
+  const staff = staffStore.useAll().filter((user) => user.merchantId === id)
   const payoutCount = payoutsStore.useAll().filter((payout) => payout.merchantId === id).length
 
   const back = (
@@ -124,6 +127,7 @@ export function MerchantDetailPage() {
               label={merchant.name}
               options={[
                 { value: 'filials', label: t('merchant.filials'), count: filials.length },
+                { value: 'staff', label: t('staff.title'), count: staff.length },
                 { value: 'payouts', label: t('merchant.payouts'), count: payoutCount },
               ]}
               value={tab}
@@ -132,6 +136,8 @@ export function MerchantDetailPage() {
           </div>
           {tab === 'payouts' ? (
             <MerchantPayouts merchant={merchant} />
+          ) : tab === 'staff' ? (
+            <MerchantStaff merchant={merchant} />
           ) : filials.length === 0 ? (
             <EmptyState
               title={t('merchant.filials.empty')}
@@ -162,7 +168,9 @@ export function MerchantDetailPage() {
                         {formatPhone(filial.phone)}
                       </td>
                       <td className="px-4 py-3 text-sm tabular-nums">{filial.hours}</td>
-                      <td className="px-4 py-3 text-sm tabular-nums">{filial.staff}</td>
+                      <td className="px-4 py-3 text-sm tabular-nums">
+                        {staffOfFilial(staff, merchant.id, filial.id).length}
+                      </td>
                       <td className="px-4 py-3">
                         <StatusBadge tone={filial.active ? 'success' : 'neutral'}>
                           {t(filial.active ? 'filial.open' : 'filial.closed')}
