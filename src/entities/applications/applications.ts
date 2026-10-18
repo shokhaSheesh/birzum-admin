@@ -20,7 +20,8 @@ export const APPLICATION_STATUSES = [
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number]
 
 export const REJECT_REASONS = ['noStock', 'unverified', 'limit', 'clientDeclined', 'other'] as const
-export type RejectReason = (typeof REJECT_REASONS)[number]
+/** `risk`: Birzum's check said no, so the shop could not hand the goods over. */
+export type RejectReason = (typeof REJECT_REASONS)[number] | 'risk'
 
 /** Who made a change: merchant staff, the shopper, or the system. */
 export type Actor = { kind: 'staff' | 'customer' | 'system'; name: string }
@@ -88,7 +89,7 @@ const ADDRESSES = [
   'Samarqand, Rudakiy koʻchasi, 44',
   'Toshkent, Mirzo Ulugʻbek, Buyuk Ipak Yoʻli 150',
 ]
-const NOTES: Record<RejectReason, string> = {
+const NOTES: Record<(typeof REJECT_REASONS)[number], string> = {
   noStock: 'Bu rang tugab qoldi, yangi partiya 2 haftada.',
   unverified: 'Pasport rasmi MyID bilan mos kelmadi.',
   limit: 'Limit yetmadi, klient boshlangʻich toʻlovni oshirmadi.',

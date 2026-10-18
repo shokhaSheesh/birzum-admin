@@ -45,3 +45,4 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 - Every visible string goes through `t()` with both Uzbek and Russian.
 - Check every page in the headless browser before saying it works; say what was not checked.
 - Every action that changes data calls `logAction()` from `entities/audit/audit` right where it succeeds, next to its toast: the section key, a kind (create, update, delete, money, access), an `audit.a.*` text, the target with a link, and before → after `changes` for status, role or amounts. The Faoliyat jurnali page (`/audit`) reads it; entries are never edited or deleted.
+- Tekshiruv (`/checks`): Birzum's check of each ariza before hand-over. Scoring from 70 approves alone, except a late payment now or a sum from 18 mln; the rest wait for an admin, who approves or rejects (reason + comment, the ariza becomes Rad etilgan with reason `risk`). The admin never edits the score.

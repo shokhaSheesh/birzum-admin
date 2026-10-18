@@ -21,6 +21,7 @@ export const PERMISSION_GROUPS: {
     title: 'navGroup.sales',
     sections: [
       { key: 'applications', label: 'nav.applications', ops: ['read'] },
+      { key: 'checks', label: 'nav.checks', ops: ['read', 'update'] },
       { key: 'customers', label: 'nav.customers', ops: ['read', 'update'] },
       { key: 'collections', label: 'nav.collections', ops: ['read', 'create', 'update'] },
     ],
