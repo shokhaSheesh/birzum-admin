@@ -85,7 +85,6 @@ export function ChecksPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.checks')}
-        description={t('checks.description')}
         actions={
           <Button
             size="sm"

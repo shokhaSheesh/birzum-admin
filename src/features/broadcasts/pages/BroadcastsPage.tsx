@@ -102,7 +102,6 @@ export function BroadcastsPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.broadcasts')}
-        description={t('broadcasts.description')}
         actions={
           <Button onClick={() => navigate(ROUTES.broadcastNew)}>
             <Plus size={20} />

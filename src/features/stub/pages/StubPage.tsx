@@ -9,13 +9,14 @@ export function StubPage({ item }: { item: NavItem }) {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t(item.label)} description={t(item.about)} />
+      <PageHeader title={t(item.label)} />
       <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-line bg-canvas px-6 py-16 text-center">
         <span className="grid size-14 place-items-center rounded-full bg-green-200 text-brand">
           <PencilRuler size={26} />
         </span>
         <p className="text-lg font-bold">{t('stub.title')}</p>
-        <p className="text-ink-muted">{t('stub.next')}</p>
+        <p className="max-w-xl text-ink-muted">{t(item.about)}</p>
+        <p className="text-sm text-ink-subtle">{t('stub.next')}</p>
       </div>
     </div>
   )

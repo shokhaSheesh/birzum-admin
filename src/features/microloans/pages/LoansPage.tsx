@@ -81,7 +81,7 @@ export function LoansPage({ brand }: { brand: Brand }) {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.loans')} description={t('loans.description')} />
+      <PageHeader title={t('nav.loans')} />
 
       <PeriodFilter value={period} onChange={setPeriod} />
 

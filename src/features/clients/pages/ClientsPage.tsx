@@ -69,7 +69,7 @@ export function ClientsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.customers')} description={t('clients.description')} />
+      <PageHeader title={t('nav.customers')} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t('clients.stat.total')} value={String(clients.length)} />

@@ -67,7 +67,7 @@ export function AuditLogPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.audit')} description={t('audit.description')} />
+      <PageHeader title={t('nav.audit')} />
       <PeriodFilter value={period} onChange={setPeriod} />
 
       <div className="flex flex-col rounded-card border border-line bg-canvas">

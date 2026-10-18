@@ -65,7 +65,7 @@ export function ProductsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.products')} description={t('products.description')} />
+      <PageHeader title={t('nav.products')} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t('products.stat.total')} value={String(all.length)} />

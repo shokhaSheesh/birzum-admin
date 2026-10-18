@@ -217,7 +217,6 @@ export function CategoriesPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.categories')}
-        description={t('categories.description')}
         actions={
           <Button onClick={() => setEditing(null)}>
             <Plus size={20} />

@@ -152,7 +152,6 @@ export function DashboardPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.dashboard')}
-        description={t('dashboard.description')}
         actions={<ExportMenu section="dashboard" period={period} />}
       />
       <PeriodFilter value={period} onChange={setPeriod} />

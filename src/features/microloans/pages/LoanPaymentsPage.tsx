@@ -116,7 +116,6 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.loanPayments')}
-        description={t('loanPay.description')}
         actions={
           <Button size="sm" onClick={() => setEntering(true)}>
             <Plus size={18} />

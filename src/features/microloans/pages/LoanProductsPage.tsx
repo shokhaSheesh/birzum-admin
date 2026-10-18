@@ -1,11 +1,10 @@
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { logAction } from '@/entities/audit/audit'
-import { loanProductsStore, type LoanProduct } from '@/entities/microloans/products'
+import { loanProductsStore, rateRangeOf, type LoanProduct } from '@/entities/microloans/products'
 import { brandPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { formatSum } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -16,6 +15,10 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { LoanProductModal } from '../components/LoanProductModal'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
+const rateText = (item: LoanProduct) => {
+  const { from, to } = rateRangeOf(item)
+  return from === to ? `${from}%` : `${from}–${to}%`
+}
 const millions = (sum: number) => String(Math.round((sum / 1_000_000) * 10) / 10)
 
 /**
@@ -51,7 +54,6 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.products')}
-        description={t('mlProducts.description', { brand: brandName })}
         actions={
           <Button onClick={() => setEditing(null)}>
             <Plus size={20} />
@@ -94,7 +96,6 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
                       <p className={cn('font-semibold', !item.enabled && 'text-ink-muted')}>
                         {item.name}
                       </p>
-                      <p className="text-sm text-ink-muted">{tl(item.kind)}</p>
                       <p className="max-w-80 truncate text-xs text-ink-subtle">{tl(item.for)}</p>
                     </td>
                     <td className="px-4 py-3.5 text-sm whitespace-nowrap tabular-nums">
@@ -102,14 +103,12 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
                         min: millions(item.min),
                         max: millions(item.max),
                       })}
-                      <p className="text-xs text-ink-subtle">
-                        {t('mlProducts.stepShort', { step: formatSum(item.step) })}
-                      </p>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-semibold whitespace-nowrap tabular-nums">
-                      {item.rateFrom === item.rateTo
-                        ? `${item.rateFrom}%`
-                        : `${item.rateFrom}–${item.rateTo}%`}
+                      {rateText(item)}
+                      <span className="block text-xs font-normal text-ink-muted">
+                        {t(`mlProducts.mode.${item.rateMode}`)}
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm whitespace-nowrap tabular-nums">
                       {t('mlProducts.termRange', {

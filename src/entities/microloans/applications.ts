@@ -1,4 +1,4 @@
-import { loanProductsStore, monthlyOf, termsOf } from '@/entities/microloans/products'
+import { loanProductsStore, monthlyOf, rateOf, termsOf } from '@/entities/microloans/products'
 import type { StatusTone } from '@/shared/ui/StatusBadge'
 import type { Brand } from '@/shared/config/workspaces'
 import { createStore } from '@/shared/lib/createStore'
@@ -157,7 +157,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
     const steps = Math.max(1, Math.floor((product.max - product.min) / 1_000_000 / 4))
     const amount = product.min + Math.floor(next() * steps) * 1_000_000 * 2
     const term = pick(termsOf(product))
-    const rate = term <= 12 ? product.rateFrom : product.rateTo
+    const rate = rateOf(product, amount, term)
     const monthly = monthlyOf(amount, rate, term)
     const income = Math.round(monthly / (0.18 + next() * 0.42) / 100_000) * 100_000
     const load = Math.round((monthly / income) * 100)

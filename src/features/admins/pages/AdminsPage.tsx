@@ -74,7 +74,6 @@ export function AdminsPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.admins')}
-        description={t('admins.description')}
         actions={
           <Button onClick={() => setEditing(null)}>
             <Plus size={20} />

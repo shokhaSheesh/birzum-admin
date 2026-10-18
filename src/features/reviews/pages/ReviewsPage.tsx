@@ -94,7 +94,7 @@ export function ReviewsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.reviews')} description={t('reviews.description')} />
+      <PageHeader title={t('nav.reviews')} />
       <PeriodFilter value={period} onChange={setPeriod} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

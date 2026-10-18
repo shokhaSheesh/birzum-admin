@@ -11,13 +11,23 @@ type Props = {
   children: ReactNode
   /** Buttons pinned to the bottom: delete on the left, cancel and save on the right. */
   footer: ReactNode
+  /** `wide` for a form that holds a table, e.g. a product's rates. */
+  size?: 'default' | 'wide'
 }
 
 /**
  * A centred dialog for creating or editing a small record (a category, a brand) without leaving
  * the list. Big records (a merchant) get their own page instead.
  */
-export function Modal({ open, onClose, title, eyebrow, children, footer }: Props) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  eyebrow,
+  children,
+  footer,
+  size = 'default',
+}: Props) {
   const { t } = useI18n()
 
   useEffect(() => {
@@ -37,7 +47,7 @@ export function Modal({ open, onClose, title, eyebrow, children, footer }: Props
         role="dialog"
         aria-modal
         aria-labelledby="modal-title"
-        className="modal relative flex max-h-[min(720px,calc(100dvh-2rem))] w-full max-w-lg flex-col rounded-card bg-canvas shadow-xl"
+        className={`modal relative flex max-h-[min(720px,calc(100dvh-2rem))] w-full flex-col rounded-card bg-canvas shadow-xl ${size === 'wide' ? 'max-w-3xl' : 'max-w-lg'}`}
       >
         <header className="flex items-start gap-3 border-b border-line px-6 py-4">
           <div className="flex min-w-0 flex-1 flex-col">
