@@ -12,6 +12,8 @@ type Props<T extends string> = {
   hint?: string
   error?: string
   disabled?: boolean
+  /** Shown while nothing is picked. */
+  placeholder?: string
 }
 
 /** Pick one of many options in a form: the same box as a text field, opening our list. */
@@ -23,6 +25,7 @@ export function SelectField<T extends string>({
   hint,
   error,
   disabled,
+  placeholder,
 }: Props<T>) {
   const id = useId()
 
@@ -40,7 +43,11 @@ export function SelectField<T extends string>({
         )}
         trigger={({ open, selected }) => (
           <>
-            <span className="min-w-0 truncate">{selected?.label}</span>
+            {selected ? (
+              <span className="min-w-0 truncate">{selected.label}</span>
+            ) : (
+              <span className="min-w-0 truncate text-ink-subtle">{placeholder}</span>
+            )}
             <SelectChevron open={open} />
           </>
         )}

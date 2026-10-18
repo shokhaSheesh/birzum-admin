@@ -1,7 +1,7 @@
 import { createStore } from '@/shared/lib/createStore'
 
-/** `invited`: created, has not signed in with the temporary password yet. */
-export type AdminStatus = 'active' | 'invited' | 'blocked'
+/** `blocked`: cannot sign in; what they did stays in the history. */
+export type AdminStatus = 'active' | 'blocked'
 
 /** A person who signs in to this panel. What they may do comes from their role. */
 export type AdminUser = {
@@ -24,12 +24,16 @@ export const initialsOfName = (name: string) =>
     .join('')
     .toUpperCase()
 
-/** A readable temporary password, e.g. "Bz-4821-kq". The admin changes it at first sign-in. */
-export function tempPassword() {
+/** A strong password to suggest, e.g. "Bz4821-kqmt": letters and digits, 11 characters. */
+export function suggestPassword() {
   const letters = 'abcdefghjkmnpqrstuvwxyz'
   const pick = () => letters[Math.floor(Math.random() * letters.length)]
-  return `Bz-${Math.floor(1000 + Math.random() * 9000)}-${pick()}${pick()}`
+  return `Bz${Math.floor(1000 + Math.random() * 9000)}-${pick()}${pick()}${pick()}${pick()}`
 }
+
+/** At least 8 characters with both letters and digits. */
+export const strongEnough = (password: string) =>
+  password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password)
 
 const at = (month: number, day: number, hour = 10, minute = 0) =>
   new Date(2026, month, day, hour, minute)
@@ -92,7 +96,7 @@ export const adminsStore = createStore<AdminUser>([
     login: 'bobur.t',
     phone: '946541230',
     roleId: 'support',
-    status: 'invited',
+    status: 'active',
     createdAt: at(9, 17, 15),
   },
   {

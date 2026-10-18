@@ -56,7 +56,23 @@ export function Listbox<T extends string>({
   const shown = options.filter((option) => option.label.toLowerCase().includes(needle))
   const searchable = options.length > 8
 
+  // Open upwards when the scrolling box around (a modal, the page) has no room below
+  const [flip, setFlip] = useState<{ up: boolean; max: number } | null>(null)
+  const place = () => {
+    const box = ref.current
+    if (!box) return
+    let clip: HTMLElement | null = box.parentElement
+    while (clip && !/(auto|scroll|hidden)/.test(getComputedStyle(clip).overflowY))
+      clip = clip.parentElement
+    const area = clip?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight }
+    const rect = box.getBoundingClientRect()
+    const below = Math.min(area.bottom, window.innerHeight) - rect.bottom - 12
+    const above = rect.top - Math.max(area.top, 0) - 12
+    const goUp = !!up || (below < 240 && above > below)
+    setFlip({ up: goUp, max: Math.max(160, Math.min(320, goUp ? above : below)) })
+  }
   const show = () => {
+    place()
     setQuery('')
     setActive(Math.max(0, options.indexOf(selected!)))
     setOpen(true)
@@ -102,10 +118,11 @@ export function Listbox<T extends string>({
       {open && (
         <div
           className={cn(
-            up ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
-            'popover absolute left-0 z-30 flex max-h-80 flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]',
+            (flip?.up ?? up) ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
+            'popover absolute left-0 z-30 flex flex-col rounded-card border border-line bg-canvas p-1.5 shadow-[0_12px_32px_-12px_rgb(7_42_60/0.35)]',
             fit ? 'w-max max-w-80 min-w-full' : 'w-full',
           )}
+          style={{ maxHeight: flip?.max ?? 320 }}
         >
           {searchable && (
             <label className="mb-1 flex h-9 shrink-0 items-center gap-2 rounded-control bg-surface px-2.5 text-ink-subtle">

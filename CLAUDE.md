@@ -38,7 +38,8 @@ Every control the admin sees is our own component, drawn with our tokens. Never 
 - The body background is the canvas colour; never a dark colour that shows when the page bounces.
 
 - Small records are created and edited in a centred `Modal`; big ones (a merchant, a payout) get their own page with the fixed `ActionBar`.
-- Every table row ends with `RowActions`.
+- Every table row ends with `RowActions`, kept short: edit and delete. A status change (active / blocked) belongs in the edit modal, not as more row icons.
+- Dropdowns (`Listbox`, so `SelectField` and `FilterSelect`) open upwards by themselves when the modal or page around them has no room below; no fake "pick one" option in the list, use `placeholder`.
 - Read-only pages (Arizalar, Mahsulotlar) say so in their description and never show edit or delete.
 - Every visible string goes through `t()` with both Uzbek and Russian.
 - Check every page in the headless browser before saying it works; say what was not checked.

@@ -1,10 +1,9 @@
-import { Ban, KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   adminsStore,
   initialsOfName,
-  tempPassword,
   type AdminStatus,
   type AdminUser,
 } from '@/entities/admins/admins'
@@ -24,20 +23,18 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { AdminModal, PasswordModal } from '../components/AdminDialogs'
+import { AdminModal } from '../components/AdminDialogs'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const tones: Record<AdminStatus, StatusTone> = {
   active: 'success',
-  invited: 'info',
   blocked: 'neutral',
 }
-type Confirm = { kind: 'block' | 'unblock' | 'reset' | 'delete'; admin: AdminUser }
 
 /**
  * The people who sign in to this panel, each with one role. Small records, so adding and
- * editing is a modal. Nobody can block or delete themselves, and the last active Bosh admin
- * stays.
+ * editing (password and Faol / Bloklangan too) is a modal; rows only edit and delete. Nobody
+ * can block or delete themselves, and the last active Bosh admin stays.
  */
 export function AdminsPage() {
   const { t } = useI18n()
@@ -48,8 +45,7 @@ export function AdminsPage() {
   const [query, setQuery] = useState('')
   const [roleId, setRoleId] = useState('')
   const [editing, setEditing] = useState<AdminUser | null | undefined>(undefined)
-  const [password, setPassword] = useState<{ admin: AdminUser; value: string; reset?: boolean }>()
-  const [confirm, setConfirm] = useState<Confirm | null>(null)
+  const [deleting, setDeleting] = useState<AdminUser | null>(null)
 
   const roleOf = (admin: AdminUser) => roles.find((role) => role.id === admin.roleId)
   const isMe = (admin: AdminUser) => admin.login === me?.username || admin.name === me?.name
@@ -69,23 +65,9 @@ export function AdminsPage() {
   )
   const rows = filtered.filter((admin) => tab === 'all' || admin.status === tab)
 
-  const run = () => {
-    if (!confirm) return
-    const { kind, admin } = confirm
-    if (kind === 'block') {
-      adminsStore.update(admin.id, { status: 'blocked' })
-      toast(t('admin.blocked'))
-    } else if (kind === 'unblock') {
-      adminsStore.update(admin.id, { status: admin.lastSeenAt ? 'active' : 'invited' })
-      toast(t('admin.unblocked'))
-    } else if (kind === 'delete') {
-      adminsStore.remove(admin.id)
-      toast(t('admin.deleted'))
-    } else {
-      setPassword({ admin, value: tempPassword(), reset: true })
-    }
-    setConfirm(null)
-  }
+  // Nobody changes their own status or deletes themselves; one active Bosh admin always stays
+  const lockReason = (admin: AdminUser) =>
+    isMe(admin) ? t('admin.locked.self') : lastOwner(admin) ? t('admin.locked.owner') : undefined
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -104,7 +86,7 @@ export function AdminsPage() {
         <div className="px-4 pt-2">
           <UnderlineTabs
             label={t('nav.admins')}
-            options={(['all', 'active', 'invited', 'blocked'] as const).map((value) => ({
+            options={(['all', 'active', 'blocked'] as const).map((value) => ({
               value,
               label: value === 'all' ? t('common.all') : t(`admin.status.${value}`),
               count: filtered.filter((a) => value === 'all' || a.status === value).length,
@@ -153,7 +135,7 @@ export function AdminsPage() {
                 {rows.map((admin) => {
                   const role = roleOf(admin)
                   const self = isMe(admin)
-                  const locked = self || lastOwner(admin)
+                  const locked = !!lockReason(admin)
                   return (
                     <tr
                       key={admin.id}
@@ -207,35 +189,16 @@ export function AdminsPage() {
                               label: t('common.edit'),
                               onClick: () => setEditing(admin),
                             },
-                            {
-                              icon: KeyRound,
-                              label: t('admin.reset'),
-                              onClick: () => setConfirm({ kind: 'reset', admin }),
-                            },
                             ...(locked
                               ? []
-                              : admin.status === 'blocked'
-                                ? [
-                                    {
-                                      icon: ShieldCheck,
-                                      label: t('admin.unblock'),
-                                      onClick: () => setConfirm({ kind: 'unblock', admin }),
-                                    },
-                                    {
-                                      icon: Trash2,
-                                      label: t('common.delete'),
-                                      onClick: () => setConfirm({ kind: 'delete', admin }),
-                                      danger: true,
-                                    },
-                                  ]
-                                : [
-                                    {
-                                      icon: Ban,
-                                      label: t('admin.block'),
-                                      onClick: () => setConfirm({ kind: 'block', admin }),
-                                      danger: true,
-                                    },
-                                  ]),
+                              : [
+                                  {
+                                    icon: Trash2,
+                                    label: t('common.delete'),
+                                    onClick: () => setDeleting(admin),
+                                    danger: true,
+                                  },
+                                ]),
                           ]}
                         />
                       </td>
@@ -251,40 +214,22 @@ export function AdminsPage() {
       {editing !== undefined && (
         <AdminModal
           admin={editing}
+          locked={editing ? lockReason(editing) : undefined}
           onClose={() => setEditing(undefined)}
-          onCreated={(admin, value) => {
-            setEditing(undefined)
-            setPassword({ admin, value })
-          }}
-        />
-      )}
-      {password && (
-        <PasswordModal
-          admin={password.admin}
-          password={password.value}
-          reset={password.reset}
-          onClose={() => setPassword(undefined)}
         />
       )}
       <ConfirmDialog
-        open={!!confirm}
-        onClose={() => setConfirm(null)}
-        tone={confirm?.kind === 'block' || confirm?.kind === 'delete' ? 'danger' : 'primary'}
-        title={confirm ? t(`admin.${confirm.kind}.title`, { name: confirm.admin.name }) : ''}
-        confirmLabel={
-          confirm
-            ? t(
-                confirm.kind === 'delete'
-                  ? 'common.delete'
-                  : confirm.kind === 'reset'
-                    ? 'admin.reset'
-                    : `admin.${confirm.kind}`,
-              )
-            : ''
-        }
-        onConfirm={run}
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title={t('admin.delete.title', { name: deleting?.name ?? '' })}
+        confirmLabel={t('common.delete')}
+        onConfirm={() => {
+          if (deleting) adminsStore.remove(deleting.id)
+          setDeleting(null)
+          toast(t('admin.deleted'))
+        }}
       >
-        <p>{confirm ? t(`admin.${confirm.kind}.message`) : ''}</p>
+        <p>{t('admin.delete.message')}</p>
       </ConfirmDialog>
     </div>
   )
