@@ -13,7 +13,6 @@ import { BroadcastFormPage } from '@/features/broadcasts/pages/BroadcastFormPage
 import { BroadcastsPage } from '@/features/broadcasts/pages/BroadcastsPage'
 import { BrandsPage } from '@/features/catalog/pages/BrandsPage'
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
-import { DocumentPage } from '@/features/documents/pages/DocumentPage'
 import { DocumentsPage } from '@/features/documents/pages/DocumentsPage'
 import { FaqPage } from '@/features/faq/pages/FaqPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -89,7 +88,6 @@ export const router = createBrowserRouter([
           { path: ROUTES.roles, element: <RolesPage /> },
           { path: ROUTES.roleNew, element: <RoleFormPage key="new" /> },
           { path: ROUTES.roleEdit, element: <RoleFormPage key="edit" /> },
-          { path: ROUTES.document, element: <DocumentPage /> },
           { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },
           { path: ROUTES.broadcast, element: <BroadcastDetailPage /> },
           { path: ROUTES.broadcastEdit, element: <BroadcastFormPage key="edit" /> },

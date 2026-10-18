@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { adminsStore, initialsOfName } from '@/entities/admins/admins'
 import {
-  PERMISSION_GROUPS,
+  reachOf,
   rolesStore,
   SECTION_KEYS,
+  SECTIONS,
   SPECIAL_ACTIONS,
-  type Access,
+  type Op,
   type Role,
   type SpecialAction,
 } from '@/entities/admins/roles'
@@ -22,15 +23,15 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { FormSection } from '@/shared/ui/FormSection'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
-import { AccessPicker } from '../components/AccessPicker'
+import { PermissionTable } from '../components/PermissionTable'
 
 const blank = () =>
-  Object.fromEntries(SECTION_KEYS.map((key) => [key, 'none'])) as Record<string, Access>
+  Object.fromEntries(SECTION_KEYS.map((key) => [key, [] as Op[]])) as Record<string, Op[]>
 
 /**
- * Create or edit a role: its name and what it is for, then every page with Yoʻq · Koʻrish ·
- * Boshqarish (with a quick setting per group), then the sensitive actions, each only possible
- * where the role can manage the page. "Nusxa olish" opens it filled from another role.
+ * Create or edit a role: its name and what it is for, then every page with Koʻrish ·
+ * Yaratish · Tahrirlash · Oʻchirish, then the sensitive actions, each only possible with the
+ * permission it needs on its page. "Nusxa olish" opens it filled from another role.
  */
 export function RoleFormPage() {
   const { t } = useI18n()
@@ -46,7 +47,7 @@ export function RoleFormPage() {
     existing?.name ?? (source ? `${source.name} (${t('role.copyName')})` : ''),
   )
   const [description, setDescription] = useState(source?.description ?? '')
-  const [access, setAccess] = useState<Record<string, Access>>(
+  const [access, setAccess] = useState<Record<string, Op[]>>(
     source ? { ...source.access } : blank(),
   )
   const [actions, setActions] = useState<SpecialAction[]>(
@@ -65,22 +66,14 @@ export function RoleFormPage() {
     (role) => role.id !== existing?.id && role.name.toLowerCase() === name.trim().toLowerCase(),
   )
   const nameError = !name.trim() ? t('error.required') : taken ? t('role.error.taken') : undefined
-  const open = SECTION_KEYS.filter((key) => access[key] !== 'none').length
-  const manage = SECTION_KEYS.filter((key) => access[key] === 'manage').length
-  // An action needs "Boshqarish" on its page; lowering the page drops the action
-  const allowed = (key: SpecialAction) =>
-    access[SPECIAL_ACTIONS.find((a) => a.key === key)!.section] === 'manage'
+  const { open, manage } = reachOf(access)
+  // An action needs its permission on its page; taking that away drops the action
+  const allowed = (key: SpecialAction) => {
+    const action = SPECIAL_ACTIONS.find((a) => a.key === key)!
+    return !!access[action.section]?.includes(action.op)
+  }
   const liveActions = actions.filter(allowed)
   const people = existing ? admins.filter((admin) => admin.roleId === existing.id) : []
-
-  const setOne = (key: string, value: Access) => setAccess({ ...access, [key]: value })
-  const setGroup = (keys: { key: string; viewOnly?: boolean }[], value: Access) =>
-    setAccess({
-      ...access,
-      ...Object.fromEntries(
-        keys.map((s) => [s.key, value === 'manage' && s.viewOnly ? 'view' : value]),
-      ),
-    })
 
   const save = () => {
     setSubmitted(true)
@@ -136,54 +129,14 @@ export function RoleFormPage() {
               <h2 className="text-lg font-bold">{t('role.pages')}</h2>
               <p className="text-sm text-ink-muted">{t('role.pages.hint')}</p>
             </div>
-            {PERMISSION_GROUPS.map((group) => (
-              <div key={group.title} className="border-t border-line">
-                <div className="flex flex-wrap items-center gap-2 bg-surface/60 px-6 py-2.5">
-                  <span className="flex-1 text-xs font-bold tracking-wide text-ink-muted uppercase">
-                    {t(group.title)}
-                  </span>
-                  {group.sections.length > 1 &&
-                    (['none', 'view', 'manage'] as const).map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setGroup(group.sections, level)}
-                        className="rounded-full px-2.5 py-1 text-xs font-semibold text-brand hover:bg-canvas"
-                      >
-                        {t('role.all', { level: t(`access.${level}`) })}
-                      </button>
-                    ))}
-                </div>
-                <ul>
-                  {group.sections.map((section) => (
-                    <li
-                      key={section.key}
-                      className="flex flex-wrap items-center gap-3 border-t border-line px-6 py-2.5 first:border-t-0"
-                    >
-                      <span className="min-w-40 flex-1 font-medium">{t(section.label)}</span>
-                      {section.viewOnly && (
-                        <span className="text-xs text-ink-subtle">{t('role.viewOnly')}</span>
-                      )}
-                      <AccessPicker
-                        label={t(section.label)}
-                        value={access[section.key]}
-                        onChange={(value) => setOne(section.key, value)}
-                        viewOnly={section.viewOnly}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <PermissionTable access={access} onChange={setAccess} />
           </section>
 
           <FormSection title={t('role.actions')} hint={t('role.actions.hint')}>
             <ul className="-my-2 flex flex-col">
               {SPECIAL_ACTIONS.map((action) => {
                 const can = allowed(action.key)
-                const page = PERMISSION_GROUPS.flatMap((g) => g.sections).find(
-                  (s) => s.key === action.section,
-                )!
+                const page = SECTIONS.find((s) => s.key === action.section)!
                 return (
                   <li
                     key={action.key}
@@ -194,7 +147,10 @@ export function RoleFormPage() {
                       <span className="text-sm text-ink-muted">
                         {can
                           ? t(`role.action.${action.key}.hint`)
-                          : t('role.action.needs', { page: t(page.label) })}
+                          : t('role.action.needs', {
+                              page: t(page.label),
+                              op: t(`op.${action.op}`),
+                            })}
                       </span>
                     </div>
                     {can ? (
@@ -208,7 +164,7 @@ export function RoleFormPage() {
                         label={t(`role.action.${action.key}`)}
                       />
                     ) : (
-                      <span className="text-xs text-ink-subtle">{t('access.none')}</span>
+                      <span className="text-xs text-ink-subtle">{t('op.no')}</span>
                     )}
                   </li>
                 )

@@ -66,7 +66,7 @@ export function RolesPage() {
       {view === 'cards' ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {roles.map((role) => {
-            const reach = reachOf(role)
+            const reach = reachOf(role.access)
             const people = holders(role)
             return (
               <section
@@ -186,7 +186,7 @@ export function RolesPage() {
                       </td>
                       {roles.map((role) => (
                         <td key={role.id} className="px-4 py-2.5">
-                          <AccessMark access={role.access[section.key]} />
+                          <AccessMark section={section.key} ops={role.access[section.key] ?? []} />
                         </td>
                       ))}
                     </tr>
@@ -208,7 +208,11 @@ export function RolesPage() {
                   </td>
                   {roles.map((role) => (
                     <td key={role.id} className="px-4 py-2.5">
-                      <AccessMark access={role.actions.includes(action.key) ? 'manage' : 'none'} />
+                      {role.actions.includes(action.key) ? (
+                        <span className="text-sm font-semibold text-success">{t('op.yes')}</span>
+                      ) : (
+                        <span className="text-sm text-ink-subtle">—</span>
+                      )}
                     </td>
                   ))}
                 </tr>

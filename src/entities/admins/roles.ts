@@ -1,74 +1,79 @@
 import type { TranslationKey } from '@/shared/i18n/dictionaries'
 import { createStore } from '@/shared/lib/createStore'
 
-/** What a role may do on a page: nothing, look, or also create, change and delete. */
-export type Access = 'none' | 'view' | 'manage'
+/** The four things a role may do on a page: see it, add, change, delete. */
+export const OPS = ['read', 'create', 'update', 'delete'] as const
+export type Op = (typeof OPS)[number]
 
 /** Every page of the panel a role can open, in the sidebar's groups and order. */
+const ALL = OPS
+
 export const PERMISSION_GROUPS: {
   title: TranslationKey
-  sections: { key: string; label: TranslationKey; viewOnly?: boolean }[]
+  /** `ops`: what the page lets anyone do at all; Arizalar, for one, only shows. */
+  sections: { key: string; label: TranslationKey; ops: readonly Op[] }[]
 }[] = [
   {
     title: 'nav.dashboard',
-    sections: [{ key: 'dashboard', label: 'nav.dashboard', viewOnly: true }],
+    sections: [{ key: 'dashboard', label: 'nav.dashboard', ops: ['read'] }],
   },
   {
     title: 'navGroup.sales',
     sections: [
-      { key: 'applications', label: 'nav.applications', viewOnly: true },
-      { key: 'customers', label: 'nav.customers' },
-      { key: 'collections', label: 'nav.collections' },
+      { key: 'applications', label: 'nav.applications', ops: ['read'] },
+      { key: 'customers', label: 'nav.customers', ops: ['read', 'update'] },
+      { key: 'collections', label: 'nav.collections', ops: ['read', 'create', 'update'] },
     ],
   },
   {
     title: 'navGroup.partners',
     sections: [
-      { key: 'merchants', label: 'nav.merchants' },
-      { key: 'payouts', label: 'nav.payouts' },
-      { key: 'reviews', label: 'nav.reviews' },
+      { key: 'merchants', label: 'nav.merchants', ops: ALL },
+      { key: 'payouts', label: 'nav.payouts', ops: ALL },
+      { key: 'reviews', label: 'nav.reviews', ops: ['read', 'update', 'delete'] },
     ],
   },
   {
     title: 'navGroup.catalog',
     sections: [
-      { key: 'products', label: 'nav.products', viewOnly: true },
-      { key: 'categories', label: 'nav.categories' },
-      { key: 'brands', label: 'nav.brands' },
+      { key: 'products', label: 'nav.products', ops: ['read'] },
+      { key: 'categories', label: 'nav.categories', ops: ALL },
+      { key: 'brands', label: 'nav.brands', ops: ALL },
     ],
   },
-  { title: 'navGroup.rules', sections: [{ key: 'pricing', label: 'nav.pricing' }] },
+  { title: 'navGroup.rules', sections: [{ key: 'pricing', label: 'nav.pricing', ops: ALL }] },
   {
     title: 'navGroup.communication',
     sections: [
-      { key: 'support', label: 'nav.support' },
-      { key: 'quickReplies', label: 'nav.quickReplies' },
-      { key: 'broadcasts', label: 'nav.broadcasts' },
-      { key: 'faq', label: 'nav.faq' },
-      { key: 'documents', label: 'nav.documents' },
+      { key: 'support', label: 'nav.support', ops: ['read', 'update'] },
+      { key: 'quickReplies', label: 'nav.quickReplies', ops: ALL },
+      { key: 'broadcasts', label: 'nav.broadcasts', ops: ALL },
+      { key: 'faq', label: 'nav.faq', ops: ALL },
+      { key: 'documents', label: 'nav.documents', ops: ['read', 'update'] },
     ],
   },
   {
     title: 'navGroup.system',
     sections: [
-      { key: 'admins', label: 'nav.admins' },
-      { key: 'roles', label: 'nav.roles' },
+      { key: 'admins', label: 'nav.admins', ops: ALL },
+      { key: 'roles', label: 'nav.roles', ops: ALL },
     ],
   },
 ]
-export const SECTION_KEYS = PERMISSION_GROUPS.flatMap((group) => group.sections.map((s) => s.key))
+export const SECTIONS = PERMISSION_GROUPS.flatMap((group) => group.sections)
+export const SECTION_KEYS = SECTIONS.map((s) => s.key)
+export const opsOf = (key: string) => SECTIONS.find((s) => s.key === key)!.ops
 
 /**
- * Actions that move money or reach many people. Each needs "Boshqarish" on its page and is
- * granted on its own on top of it.
+ * Actions that move money or reach many people. Each needs one permission on its page
+ * (e.g. Yaratish on Toʻlovlar va qarzlar) and is granted on its own on top of it.
  */
 export const SPECIAL_ACTIONS = [
-  { key: 'chargeCard', section: 'collections' },
-  { key: 'manualPayment', section: 'collections' },
-  { key: 'markPaid', section: 'payouts' },
-  { key: 'blockClient', section: 'customers' },
-  { key: 'sendBroadcast', section: 'broadcasts' },
-  { key: 'publishDocument', section: 'documents' },
+  { key: 'chargeCard', section: 'collections', op: 'create' },
+  { key: 'manualPayment', section: 'collections', op: 'create' },
+  { key: 'markPaid', section: 'payouts', op: 'update' },
+  { key: 'blockClient', section: 'customers', op: 'update' },
+  { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
 ] as const
 export type SpecialAction = (typeof SPECIAL_ACTIONS)[number]['key']
 
@@ -76,27 +81,21 @@ export type Role = {
   id: string
   name: string
   description: string
-  access: Record<string, Access>
+  /** What it may do on each page; an empty list hides the page. */
+  access: Record<string, Op[]>
   actions: SpecialAction[]
   /** The owners' role: everything, cannot be changed or deleted. */
   system?: boolean
 }
 
-const VIEW_ONLY = PERMISSION_GROUPS.flatMap((g) => g.sections)
-  .filter((s) => s.viewOnly)
-  .map((s) => s.key)
-// A page that only shows things never gets more than "Koʻrish"
+/** Full rights on `manage` pages (whatever each page offers), Koʻrish only on `view` ones. */
 const grant = (manage: string[], view: string[] = []) =>
   Object.fromEntries(
     SECTION_KEYS.map((key) => [
       key,
-      manage.includes(key) && !VIEW_ONLY.includes(key)
-        ? 'manage'
-        : manage.includes(key) || view.includes(key)
-          ? 'view'
-          : 'none',
+      manage.includes(key) ? [...opsOf(key)] : view.includes(key) ? ['read'] : [],
     ]),
-  ) as Record<string, Access>
+  ) as Record<string, Op[]>
 
 // The roles Birzum works with today. Replace with the API.
 export const rolesStore = createStore<Role>([
@@ -144,8 +143,8 @@ export const rolesStore = createStore<Role>([
   },
 ])
 
-/** How many pages a role can open, and how many of those it can also change. */
-export const reachOf = (role: Role) => ({
-  open: SECTION_KEYS.filter((key) => role.access[key] !== 'none').length,
-  manage: SECTION_KEYS.filter((key) => role.access[key] === 'manage').length,
+/** How many pages a role can open, and on how many it can also add, change or delete. */
+export const reachOf = (access: Record<string, Op[]>) => ({
+  open: SECTION_KEYS.filter((key) => access[key]?.includes('read')).length,
+  manage: SECTION_KEYS.filter((key) => access[key]?.some((op) => op !== 'read')).length,
 })

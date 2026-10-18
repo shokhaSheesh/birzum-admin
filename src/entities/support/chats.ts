@@ -32,7 +32,7 @@ export type Chat = {
   messages: ChatMessage[]
 }
 
-/** Support staff who answer chats. Sample names; the real list comes from Adminlar va rollar. */
+/** Support staff who answer chats. Sample names; the real list comes from Adminlar. */
 export const OPERATORS = ['Sardor Saidov', 'Malika Rasulova', 'Sardor Nematov']
 
 export const lastMessageOf = (chat: Chat) =>
