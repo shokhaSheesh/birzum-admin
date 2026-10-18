@@ -5,7 +5,6 @@ import {
   FileSignature,
   MapPin,
   Scale,
-  Settings,
   FileText,
   FolderTree,
   GalleryHorizontal,
@@ -210,17 +209,6 @@ export function brandNav(brand: Brand): NavGroup[] {
           about: 'about.ml.documents',
         },
         { to: to('contacts'), icon: MapPin, label: 'nav.contacts', about: 'about.ml.contacts' },
-      ],
-    },
-    {
-      title: 'navGroup.system',
-      items: [
-        {
-          to: to('settings'),
-          icon: Settings,
-          label: 'nav.brandSettings',
-          about: 'about.ml.settings',
-        },
       ],
     },
   ]

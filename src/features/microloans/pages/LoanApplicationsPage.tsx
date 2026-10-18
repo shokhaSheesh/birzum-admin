@@ -26,6 +26,7 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { IntakeBanner, IntakeSwitch } from '../components/IntakeSwitch'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -72,7 +73,8 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader title={t('nav.applications')} />
+      <PageHeader title={t('nav.applications')} actions={<IntakeSwitch brand={brand} />} />
+      <IntakeBanner brand={brand} />
 
       <PeriodFilter value={period} onChange={setPeriod} />
 

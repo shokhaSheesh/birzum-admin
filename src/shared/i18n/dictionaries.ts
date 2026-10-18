@@ -1325,7 +1325,6 @@ const uz = {
   'nav.decision': 'Qaror qoidalari',
   'nav.contractRules': 'Shartnoma va toʻlov',
   'nav.contacts': 'Kontaktlar va filiallar',
-  'nav.brandSettings': 'Brend sozlamalari',
   'nav.mlProducts': 'Mikroqarz mahsulotlari',
   'about.ml.dashboard':
     'Berilgan qarzlar, portfel, kechikish ulushi va arizalar oqimi shu brend boʻyicha.',
@@ -1350,7 +1349,6 @@ const uz = {
   'about.ml.documents': 'Ommaviy oferta va maxfiylik siyosati, ikki tilda.',
   'about.ml.contacts':
     'Telefonlar, email, manzil, ish vaqti, ijtimoiy tarmoqlar va filiallar roʻyxati.',
-  'about.ml.settings': 'Brend nomi, qoʻllab-quvvatlash telefoni, fiskal chek uchun STIR, logotip.',
   'audit.a.loanProductCreated': '{brand}: mikroqarz mahsulotini qoʻshdi',
   'audit.a.loanProductSaved': '{brand}: mikroqarz mahsulotini oʻzgartirdi',
   'audit.a.loanProductDeleted': '{brand}: mikroqarz mahsulotini oʻchirdi',
@@ -1913,6 +1911,21 @@ const uz = {
   'mlDash.book.late.hint': '{count} ta qarz, toʻlovi kechikmoqda',
   'mlDash.book.par.hint': 'Kechikkan qarzlarning qolgan qismi, butun portfelga nisbatan',
   'broadcast.image.hint.loan': 'Ixtiyoriy. Faqat ilovadagi Bildirishnomalarda, 2:1, JPG yoki PNG.',
+  'mlIntake.label': 'Arizalar qabuli',
+  'mlIntake.pause': 'Toʻxtatish',
+  'mlIntake.pause.title': 'Arizalar qabulini toʻxtatasizmi?',
+  'mlIntake.pause.hint':
+    'Ilovada Qarz olish oʻrniga shu matn chiqadi. Mijozlar qarzlarini koʻrib, toʻlay oladi; yuborilgan arizalar odatdagidek koʻrib chiqiladi.',
+  'mlIntake.message': 'Ilovada koʻrinadigan matn',
+  'mlIntake.open': 'Qayta ochish',
+  'mlIntake.open.title': 'Arizalar qabulini qayta ochasizmi?',
+  'mlIntake.open.message': 'Ilovada Qarz olish yana ishlaydi.',
+  'mlIntake.paused': 'Arizalar qabuli toʻxtatildi',
+  'mlIntake.opened': 'Arizalar qabuli ochildi',
+  'mlIntake.banner': 'Yangi arizalar qabuli toʻxtatilgan: {date}, {name}',
+  'mlIntake.banner.app': 'Ilovada:',
+  'audit.a.loanIntakePaused': '{brand}: arizalar qabulini toʻxtatdi',
+  'audit.a.loanIntakeOpened': '{brand}: arizalar qabulini ochdi',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -3220,7 +3233,6 @@ const ru: Record<TranslationKey, string> = {
   'nav.decision': 'Правила решения',
   'nav.contractRules': 'Договор и платежи',
   'nav.contacts': 'Контакты и филиалы',
-  'nav.brandSettings': 'Настройки бренда',
   'nav.mlProducts': 'Продукты микрозаймов',
   'about.ml.dashboard': 'Выдано, портфель, доля просрочки и поток заявок по этому бренду.',
   'about.ml.applications':
@@ -3241,7 +3253,6 @@ const ru: Record<TranslationKey, string> = {
   'about.ml.faq': 'Вопросы и ответы в приложении.',
   'about.ml.documents': 'Публичная оферта и политика конфиденциальности на двух языках.',
   'about.ml.contacts': 'Телефоны, email, адрес, часы работы, соцсети и список филиалов.',
-  'about.ml.settings': 'Название бренда, телефон поддержки, ИНН для фискальных чеков, логотип.',
   'audit.a.loanProductCreated': '{brand}: добавление продукта микрозайма',
   'audit.a.loanProductSaved': '{brand}: изменение продукта микрозайма',
   'audit.a.loanProductDeleted': '{brand}: удаление продукта микрозайма',
@@ -3801,6 +3812,21 @@ const ru: Record<TranslationKey, string> = {
   'mlDash.book.late.hint': '{count} займов с просроченным платежом',
   'mlDash.book.par.hint': 'Остаток просроченных займов от всего портфеля',
   'broadcast.image.hint.loan': 'Необязательно. Только в разделе «Уведомления», 2:1, JPG или PNG.',
+  'mlIntake.label': 'Приём заявок',
+  'mlIntake.pause': 'Остановить',
+  'mlIntake.pause.title': 'Остановить приём заявок?',
+  'mlIntake.pause.hint':
+    'В приложении вместо «Взять займ» появится этот текст. Клиенты видят и оплачивают свои займы; отправленные заявки рассматриваются как обычно.',
+  'mlIntake.message': 'Текст в приложении',
+  'mlIntake.open': 'Открыть снова',
+  'mlIntake.open.title': 'Снова открыть приём заявок?',
+  'mlIntake.open.message': '«Взять займ» в приложении снова заработает.',
+  'mlIntake.paused': 'Приём заявок остановлен',
+  'mlIntake.opened': 'Приём заявок открыт',
+  'mlIntake.banner': 'Приём новых заявок остановлен: {date}, {name}',
+  'mlIntake.banner.app': 'В приложении:',
+  'audit.a.loanIntakePaused': '{brand}: остановка приёма заявок',
+  'audit.a.loanIntakeOpened': '{brand}: открытие приёма заявок',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }
