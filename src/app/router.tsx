@@ -35,6 +35,8 @@ import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { LoanApplicationPage } from '@/features/microloans/pages/LoanApplicationPage'
 import { LoanApplicationsPage } from '@/features/microloans/pages/LoanApplicationsPage'
 import { LoanPage } from '@/features/microloans/pages/LoanPage'
+import { ContractRulesPage } from '@/features/microloans/pages/ContractRulesPage'
+import { DecisionRulesPage } from '@/features/microloans/pages/DecisionRulesPage'
 import { LoanClientPage } from '@/features/microloans/pages/LoanClientPage'
 import { LoanClientsPage } from '@/features/microloans/pages/LoanClientsPage'
 import { LoanOverduePage } from '@/features/microloans/pages/LoanOverduePage'
@@ -77,6 +79,14 @@ const DESIGNED: string[] = [
 /** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
 function brandRoutes(brand: Brand) {
   const designed = [
+    {
+      path: brandPath(brand, 'decision'),
+      element: <DecisionRulesPage key={brand} brand={brand} />,
+    },
+    {
+      path: brandPath(brand, 'contract'),
+      element: <ContractRulesPage key={brand} brand={brand} />,
+    },
     { path: brandPath(brand, 'customers'), element: <LoanClientsPage key={brand} brand={brand} /> },
     {
       path: brandPath(brand, 'customers/:id'),

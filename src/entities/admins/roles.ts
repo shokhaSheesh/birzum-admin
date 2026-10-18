@@ -63,6 +63,8 @@ export const PERMISSION_GROUPS: {
       { key: 'mlOverdue', label: 'nav.mlOverdue', ops: ['read', 'update'] },
       { key: 'mlClients', label: 'nav.mlClients', ops: ['read', 'update'] },
       { key: 'mlProducts', label: 'nav.mlProducts', ops: ALL },
+      { key: 'mlDecision', label: 'nav.mlDecision', ops: ['read', 'update'] },
+      { key: 'mlContract', label: 'nav.mlContract', ops: ['read', 'update'] },
     ],
   },
   {

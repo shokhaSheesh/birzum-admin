@@ -8,6 +8,7 @@ import {
   type LoanAppStatus,
 } from '@/entities/microloans/applications'
 import { loanProductsStore, monthlyOf } from '@/entities/microloans/products'
+import { decisionRulesStore } from '@/entities/microloans/rules'
 import { useAdmin } from '@/entities/session/session'
 import { loanAppPath, WORKSPACE_INFO } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -20,9 +21,6 @@ import { SelectField } from '@/shared/ui/SelectField'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
 
 export type Decision = 'approve' | 'counter' | 'decline'
-
-// How long the borrower has to sign an offer
-const OFFER_DAYS = 3
 
 /**
  * An admin's decision on an ariza the rules left open: approve the sum asked, offer a smaller
@@ -40,6 +38,8 @@ export function LoanDecisionModal({
   const { t } = useI18n()
   const admin = useAdmin()
   const product = loanProductsStore.useAll().find((p) => p.id === app.productId)
+  // How long the borrower has to sign an offer, from Qaror qoidalari
+  const rules = decisionRulesStore.useAll().find((item) => item.id === app.brand)!
   const [offered, setOffered] = useState<number | null>(null)
   const [reason, setReason] = useState<DeclineReason>('income')
   const [comment, setComment] = useState('')
@@ -65,7 +65,7 @@ export function LoanDecisionModal({
       decision === 'approve' ? 'approved' : decision === 'counter' ? 'counter' : 'declined'
     const by = { admin: admin?.name ?? '—' }
     const offerUntil =
-      decision === 'decline' ? undefined : new Date(at.getTime() + OFFER_DAYS * 86_400_000)
+      decision === 'decline' ? undefined : new Date(at.getTime() + rules.offerDays * 86_400_000)
     loanApplicationsStore.update(app.id, {
       status,
       offered: decision === 'counter' ? offered! : undefined,
@@ -144,7 +144,7 @@ export function LoanDecisionModal({
             sum: formatSum(app.amount),
             term: String(app.term),
             monthly: formatSum(monthlyOf(app.amount, app.rate, app.term)),
-            days: String(OFFER_DAYS),
+            days: String(rules.offerDays),
           })}
         </p>
       )}
@@ -153,7 +153,7 @@ export function LoanDecisionModal({
           <p className="text-ink-muted">
             {t('loanDecision.counter.text', {
               sum: formatSum(app.amount),
-              days: String(OFFER_DAYS),
+              days: String(rules.offerDays),
             })}
           </p>
           <NumberField

@@ -17,6 +17,7 @@ import {
   type LoanAppEvent,
 } from '@/entities/microloans/applications'
 import { loanProductsStore } from '@/entities/microloans/products'
+import { decisionRulesStore } from '@/entities/microloans/rules'
 import { brandClientPath, brandLoanPath, brandPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -28,8 +29,6 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { LoanDecisionModal, type Decision } from '../components/LoanDecisionModal'
 
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
-// The share of income a monthly payment may take before the rules stop (Qaror qoidalari)
-const LOAD_LIMIT = 50
 
 /** Label and value rows inside a card. */
 function Rows({ rows }: { rows: [string, ReactNode][] }) {
@@ -87,6 +86,8 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
   const app = loanApplicationsStore.useAll().find((item) => item.id === id && item.brand === brand)
   const product = loanProductsStore.useAll().find((p) => p.id === app?.productId)
   const [deciding, setDeciding] = useState<Decision | null>(null)
+  // The limits come from Qaror qoidalari
+  const rules = decisionRulesStore.useAll().find((item) => item.id === brand)!
 
   const back = (
     <button
@@ -142,7 +143,7 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
                 ? t('loanApp.manual.credit', { count: String(checks.lateCount ?? 1) })
                 : t('loanApp.manual.load', {
                     load: String(checks.load),
-                    limit: String(LOAD_LIMIT),
+                    limit: String(rules.approveUpTo),
                   })}
             </p>
           </div>
@@ -227,14 +228,14 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
                 }
               />
               <Check
-                ok={checks.load <= 45}
-                warn={checks.load > 45 && checks.load <= 55}
+                ok={checks.load <= rules.approveUpTo}
+                warn={checks.load > rules.approveUpTo && checks.load <= rules.manualUpTo}
                 title={t('loanApp.check.load')}
                 detail={t('loanApp.check.load.detail', {
                   monthly: formatSum(monthlyOfApp({ ...app, offered: undefined })),
                   income: formatSum(app.income),
                   load: String(checks.load),
-                  limit: String(LOAD_LIMIT),
+                  limit: String(rules.approveUpTo),
                 })}
               />
             </ul>

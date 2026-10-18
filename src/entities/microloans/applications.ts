@@ -1,4 +1,5 @@
 import { loanProductsStore, monthlyOf, rateOf, termsOf } from '@/entities/microloans/products'
+import { decisionRulesOf } from '@/entities/microloans/rules'
 import type { StatusTone } from '@/shared/ui/StatusBadge'
 import type { Brand } from '@/shared/config/workspaces'
 import { createStore } from '@/shared/lib/createStore'
@@ -147,6 +148,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
   const next = random(base)
   const pick = <T>(list: readonly T[]) => list[Math.floor(next() * list.length)]
   const products = loanProductsStore.getAll().filter((p) => p.brand === brand && p.enabled)
+  const rules = decisionRulesOf(brand)
   const list: LoanApplication[] = []
   for (let i = 0; i < 40; i++) {
     const product = pick(products)
@@ -181,13 +183,16 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
     else if (myid === 'mismatch') {
       status = 'declined'
       decline = { reason: 'myid' }
-    } else if (credit === 'late' && checks.lateCount! > 2) {
+    } else if (credit === 'late' && checks.lateCount! > rules.lateManualUpTo) {
       status = 'declined'
       decline = { reason: 'credit' }
-    } else if (credit === 'late' || (load > 45 && load <= 55)) status = 'manual'
-    else if (load > 55) {
+    } else if (credit === 'late' || (load > rules.approveUpTo && load <= rules.manualUpTo))
+      status = 'manual'
+    else if (load > rules.manualUpTo) {
       // The largest sum whose payment fits in half the income
-      const fits = Math.floor((((income * 0.5) / monthly) * amount) / 1_000_000) * 1_000_000
+      const fits =
+        Math.floor((((income * (rules.counterTarget / 100)) / monthly) * amount) / 1_000_000) *
+        1_000_000
       if (fits >= product.min) {
         status = 'counter'
         offered = fits
@@ -210,7 +215,11 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
         history.push({ at: later(signedAt, 3), status: 'paidOut', by: 'system' })
         status = 'paidOut'
       } else {
-        history.push({ at: later(decidedAt, 3 * 24 * 60), status: 'expired', by: 'system' })
+        history.push({
+          at: later(decidedAt, rules.offerDays * 24 * 60),
+          status: 'expired',
+          by: 'system',
+        })
         status = 'expired'
       }
     } else if (status === 'manual' && days > 7) {
@@ -257,7 +266,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
       status,
       offered,
       decline,
-      offerUntil: isOffer(status) ? later(decidedAt, 3 * 24 * 60) : undefined,
+      offerUntil: isOffer(status) ? later(decidedAt, rules.offerDays * 24 * 60) : undefined,
       loanNumber:
         status === 'paidOut'
           ? `${prefix}-${createdAt.getFullYear()}-${String(number * 3).padStart(6, '0')}`
