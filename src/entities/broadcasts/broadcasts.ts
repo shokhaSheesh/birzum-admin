@@ -10,19 +10,15 @@ import type { Brand, Workspace } from '@/shared/config/workspaces'
 import type { LocalizedText } from '@/shared/i18n/dictionaries'
 import { createStore } from '@/shared/lib/createStore'
 
-/**
- * Who gets it: everyone in that app, or the people picked. `loanClients` are a microloan brand's
- * app users; for them `segments` (when set) picks groups instead, worked out when it goes out.
- */
+/** Who gets it: everyone in that app, or the people picked. `loanClients`: a brand's app users. */
 export type Audience = {
   kind: 'clients' | 'merchants' | 'loanClients'
   all: boolean
   ids: string[]
-  segments?: ClientSegment[]
 }
 
-/** A brand's app users in the given groups. */
-export function inSegments(brand: Brand, segments: ClientSegment[]): LoanClient[] {
+/** A brand's app users in the given groups, for the sample audiences. */
+function inSegments(brand: Brand, segments: ClientSegment[]): LoanClient[] {
   const apps = loanApplicationsStore.getAll().filter((app) => app.brand === brand)
   const loans = loansStore.getAll().filter((loan) => loan.brand === brand)
   return loanClientsStore
@@ -68,6 +64,8 @@ export function statsFor(recipients: number, seed: number) {
 const at = (month: number, day: number, hour: number, minute = 0) =>
   new Date(2026, month, day, hour, minute)
 
+const idsIn = (brand: Brand, segments: ClientSegment[]) =>
+  inSegments(brand, segments).map((client) => client.id)
 const brandSize = (brand: Brand) =>
   loanClientsStore.getAll().filter((client) => client.brand === brand).length
 const product = { fortuna: 'Rivoj', vodiy: 'Zar' }
@@ -93,7 +91,7 @@ const loanBroadcasts = (brand: Brand): Broadcast[] => [
   {
     id: `${brand}-b2`,
     app: brand,
-    audience: { kind: 'loanClients', all: false, ids: [], segments: ['late'] },
+    audience: { kind: 'loanClients', all: false, ids: idsIn(brand, ['late']) },
     title: { uz: 'Toʻlov kechikmoqda', ru: 'Платёж просрочен' },
     body: {
       uz: 'Oylik toʻlovingiz muddati oʻtdi. Ilovada «Toʻlash»ni bosing yoki yaqin filialga keling. Qiyinchilik boʻlsa, chatga yozing.',
@@ -103,12 +101,12 @@ const loanBroadcasts = (brand: Brand): Broadcast[] => [
     sendAt: at(9, 15, 10),
     createdAt: at(9, 15, 9, 30),
     createdBy: 'Malika Rasulova',
-    stats: statsFor(inSegments(brand, ['late']).length, 2),
+    stats: statsFor(idsIn(brand, ['late']).length, 2),
   },
   {
     id: `${brand}-b3`,
     app: brand,
-    audience: { kind: 'loanClients', all: false, ids: [], segments: ['registered', 'repaid'] },
+    audience: { kind: 'loanClients', all: false, ids: idsIn(brand, ['registered', 'repaid']) },
     title: {
       uz: `${product[brand]}: ${upTo[brand]} mln gacha`,
       ru: `${product[brand]}: до ${upTo[brand]} млн`,
@@ -125,7 +123,7 @@ const loanBroadcasts = (brand: Brand): Broadcast[] => [
   {
     id: `${brand}-b4`,
     app: brand,
-    audience: { kind: 'loanClients', all: false, ids: [], segments: ['applied'] },
+    audience: { kind: 'loanClients', all: false, ids: idsIn(brand, ['applied']) },
     title: { uz: 'Arizangizni yakunlang', ru: 'Завершите заявку' },
     body: {
       uz: 'Arizangiz holatini ilovada koʻring. Taklif kelgan boʻlsa, u 3 kun amal qiladi: shartnomani SMS-kod bilan imzolang va pulni kartaga oling.',

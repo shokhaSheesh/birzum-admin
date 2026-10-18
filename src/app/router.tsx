@@ -19,6 +19,7 @@ import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
 import { DocumentsPage } from '@/features/documents/pages/DocumentsPage'
 import { FaqPage } from '@/features/faq/pages/FaqPage'
 import { BrandContactsPage } from '@/features/microloans/pages/BrandContactsPage'
+import { LoanDashboardPage } from '@/features/microloans/pages/LoanDashboardPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
 import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
@@ -80,6 +81,7 @@ const DESIGNED: string[] = [
 /** A microloan brand's pages: the designed ones, and a placeholder for every other menu item. */
 function brandRoutes(brand: Brand) {
   const designed = [
+    { path: brandPath(brand), element: <LoanDashboardPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'broadcasts'), element: <BroadcastsPage key={brand} app={brand} /> },
     {
       path: brandPath(brand, 'broadcasts/new'),

@@ -29,7 +29,7 @@ const slide = (id: string, app: AppId, title: LocalizedText, text: LocalizedText
   visible: true,
 })
 
-// The slides each app ships with. Replace with the API.
+// The slides each app ships with; the two microloan apps share theirs. Replace with the API.
 export const slidesStore = createStore<Slide>([
   slide(
     'b1',
@@ -88,6 +88,42 @@ export const slidesStore = createStore<Slide>([
   slide(
     'f4',
     'fortuna',
+    { uz: 'Toʻlovlar nazoratda', ru: 'Платежи под контролем' },
+    {
+      uz: 'Jadvalni kuzating, eslatma oling va xohlasangiz muddatidan oldin toʻlang.',
+      ru: 'Следите за графиком, получайте напоминания и гасите досрочно, когда удобно.',
+    },
+  ),
+  slide(
+    'v1',
+    'vodiy',
+    { uz: 'Summa va muddatni tanlang', ru: 'Выберите сумму и срок' },
+    {
+      uz: 'Kalkulyatorda oylik toʻlov va qarzning toʻliq narxini darhol koʻrasiz.',
+      ru: 'Калькулятор сразу покажет ежемесячный платёж и полную стоимость займа.',
+    },
+  ),
+  slide(
+    'v2',
+    'vodiy',
+    { uz: 'Qaror onlayn', ru: 'Решение онлайн' },
+    {
+      uz: 'Arizani ilovadan yuborasiz, natijasi shu yerga keladi. Filialga borish shart emas.',
+      ru: 'Заявка уходит из приложения, ответ приходит сюда же. В филиал идти не нужно.',
+    },
+  ),
+  slide(
+    'v3',
+    'vodiy',
+    { uz: 'Pul kartangizga', ru: 'Деньги на карту' },
+    {
+      uz: 'Shartnomani SMS-kod bilan imzolang, pul Uzcard yoki Humo kartangizga tushadi.',
+      ru: 'Подпишите договор SMS-кодом, и деньги придут на карту Uzcard или Humo.',
+    },
+  ),
+  slide(
+    'v4',
+    'vodiy',
     { uz: 'Toʻlovlar nazoratda', ru: 'Платежи под контролем' },
     {
       uz: 'Jadvalni kuzating, eslatma oling va xohlasangiz muddatidan oldin toʻlang.',

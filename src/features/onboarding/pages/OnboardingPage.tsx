@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { EyeOff, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { logAction } from '@/entities/audit/audit'
 import { slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -14,25 +14,50 @@ import { Switch } from '@/shared/ui/Switch'
 import { SlideModal } from '../components/SlideModal'
 import { SlideThumb } from '../components/SlideThumb'
 
+/** The list with `moved` placed before or after `target`. */
+function reorder(list: Slide[], moved: Slide, target: Slide, after: boolean) {
+  const rest = list.filter((item) => item !== moved)
+  const at = rest.indexOf(target) + (after ? 1 : 0)
+  return [...rest.slice(0, at), moved, ...rest.slice(at)]
+}
+
 /**
  * The intro slides an app shows once after the first sign-in: picture, title and line in both
- * languages, in order. Each business's own menu opens its app's slides.
+ * languages, in order, dragged by their handle to reorder. Each business's own menu opens its
+ * app's slides.
  */
 export function OnboardingPage({ app }: { app: AppId }) {
   const { t, tl } = useI18n()
   const all = slidesStore.useAll()
   const [editing, setEditing] = useState<Slide | null | undefined>(undefined)
   const [deleting, setDeleting] = useState<Slide | null>(null)
+  const [dragged, setDragged] = useState<Slide | null>(null)
+  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null)
 
   const slides = all.filter((slide) => slide.app === app)
 
-  // Moves a slide one place within its app, keeping the other apps' slides where they are
-  const move = (slide: Slide, by: -1 | 1) => {
-    const i = slides.indexOf(slide)
-    const other = slides[i + by]
-    if (!other) return
-    const next = all.map((item) => (item === slide ? other : item === other ? slide : item))
-    slidesStore.replaceAll(next)
+  // Puts this app's new order back into the store, the other apps' slides where they are
+  const place = (ordered: Slide[]) => {
+    const queue = [...ordered]
+    slidesStore.replaceAll(all.map((item) => (item.app === app ? queue.shift()! : item)))
+  }
+  const dragOver = (e: DragEvent, target: Slide) => {
+    if (!dragged || dragged === target) return
+    e.preventDefault()
+    const box = e.currentTarget.getBoundingClientRect()
+    setDrop({ id: target.id, after: e.clientY > box.top + box.height / 2 })
+  }
+  const dropOn = (target: Slide) => {
+    if (dragged && drop && dragged !== target) place(reorder(slides, dragged, target, drop.after))
+    setDragged(null)
+    setDrop(null)
+  }
+  // The handle also moves a slide with the arrow keys, for keyboards and screen readers
+  const keyMove = (e: KeyboardEvent, slide: Slide) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+    e.preventDefault()
+    const target = slides[slides.indexOf(slide) + (e.key === 'ArrowUp' ? -1 : 1)]
+    if (target) place(reorder(slides, slide, target, e.key === 'ArrowDown'))
   }
   const toggle = (slide: Slide) => {
     slidesStore.update(slide.id, { visible: !slide.visible })
@@ -65,12 +90,39 @@ export function OnboardingPage({ app }: { app: AppId }) {
             {slides.map((slide, i) => (
               <li
                 key={slide.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'move'
+                  setDragged(slide)
+                }}
+                onDragEnd={() => {
+                  setDragged(null)
+                  setDrop(null)
+                }}
+                onDragOver={(e) => dragOver(e, slide)}
+                onDrop={() => dropOn(slide)}
                 onClick={() => setEditing(slide)}
                 className={cn(
-                  'flex cursor-pointer items-center gap-4 border-b border-line p-4 last:border-b-0 hover:bg-surface/60',
+                  'flex cursor-pointer items-center gap-3 border-b border-line py-4 pr-4 pl-2 last:border-b-0 hover:bg-surface/60',
                   !slide.visible && 'bg-surface/40',
+                  dragged === slide && 'opacity-40',
+                  drop?.id === slide.id &&
+                    (drop.after
+                      ? 'shadow-[inset_0_-2px_0_var(--color-primary)]'
+                      : 'shadow-[inset_0_2px_0_var(--color-primary)]'),
                 )}
               >
+                <span onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onKeyDown={(e) => keyMove(e, slide)}
+                    aria-label={t('faq.drag', { question: tl(slide.title) })}
+                    title={t('faq.drag', { question: tl(slide.title) })}
+                    className="grid size-8 cursor-grab place-items-center rounded-md text-ink-subtle hover:bg-surface hover:text-ink active:cursor-grabbing"
+                  >
+                    <GripVertical size={18} />
+                  </button>
+                </span>
                 <span className="w-5 text-sm text-ink-subtle tabular-nums">{i + 1}</span>
                 <SlideThumb
                   slide={slide}
@@ -89,31 +141,11 @@ export function OnboardingPage({ app }: { app: AppId }) {
                   )}
                 </div>
                 <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  {(
-                    [
-                      [ArrowUp, -1, 'slides.up'],
-                      [ArrowDown, 1, 'slides.down'],
-                    ] as const
-                  ).map(([Icon, by, label]) => (
-                    <button
-                      key={label}
-                      type="button"
-                      disabled={!slides[i + by]}
-                      onClick={() => move(slide, by)}
-                      aria-label={t(label)}
-                      title={t(label)}
-                      className="grid size-8 place-items-center rounded-md text-ink-subtle hover:bg-surface hover:text-ink disabled:opacity-30"
-                    >
-                      <Icon size={16} />
-                    </button>
-                  ))}
-                  <span className="ml-2">
-                    <Switch
-                      checked={slide.visible}
-                      onChange={() => toggle(slide)}
-                      label={t('slides.visible')}
-                    />
-                  </span>
+                  <Switch
+                    checked={slide.visible}
+                    onChange={() => toggle(slide)}
+                    label={t('slides.visible')}
+                  />
                 </span>
                 <RowActions
                   actions={[

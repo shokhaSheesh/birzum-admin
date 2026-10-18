@@ -221,7 +221,6 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           {ml ? (
             <section className="flex flex-col gap-1 rounded-card border border-line bg-canvas p-2">
-              <p className="px-3 pt-2 pb-1 text-sm text-ink-muted">{t('faq.loan.below')}</p>
               {(
                 [
                   [MessageSquareText, 'nav.support', 'faq.loan.chat', 'support'],

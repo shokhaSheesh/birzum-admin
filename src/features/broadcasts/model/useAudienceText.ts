@@ -17,11 +17,6 @@ export function useAudienceText() {
     if (audience.kind === 'loanClients') {
       const app = t('nav.borrowers')
       if (audience.all) return [app, t('broadcast.audience.all')]
-      if (audience.segments)
-        return [
-          app,
-          audience.segments.map((segment) => t(`mlClients.segment.${segment}`)).join(', '),
-        ]
       const names = audience.ids.map((id) => loanClients.find((c) => c.id === id)?.name ?? id)
       return [
         app,

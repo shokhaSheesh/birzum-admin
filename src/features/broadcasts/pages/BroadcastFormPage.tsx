@@ -1,4 +1,4 @@
-import { CalendarClock, ListChecks, Send, Store, UserCheck, Users } from 'lucide-react'
+import { CalendarClock, Send, Store, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -10,9 +10,6 @@ import {
 import { fullName, initialsOf } from '@/entities/clients/clients'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { useAdmin } from '@/entities/session/session'
-import { CLIENT_SEGMENTS, segmentOf, type ClientSegment } from '@/entities/microloans/loanClients'
-import { loanApplicationsStore } from '@/entities/microloans/applications'
-import { loansStore } from '@/entities/microloans/loans'
 import { broadcastPath, broadcastsPath } from '@/shared/config/routes'
 import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
@@ -27,7 +24,6 @@ import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/Button'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { DateField } from '@/shared/ui/DateField'
@@ -49,12 +45,9 @@ const TIMES = Array.from({ length: 28 }, (_, i) => {
 const clockOf = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 
-/** Who a microloan brand's broadcast goes to: everyone, groups by where they are, or people. */
-type LoanWho = 'all' | 'segments' | 'people'
-
 /**
  * Write a broadcast: who gets it (in Birzum every shopper or merchant, or the ones picked; in a
- * microloan brand everyone, some groups, or some people), the text in both languages with an
+ * microloan brand all its app users or the ones picked), the text in both languages with an
  * optional picture, and when. A phone on the right shows it as it will arrive.
  */
 export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
@@ -66,20 +59,8 @@ export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
   const { clients, merchants, loanClients, countOf } = useAudience(app)
   const ml = app !== 'birzum'
   const back = broadcastsPath(app)
-  const loanApps = loanApplicationsStore.useAll().filter((item) => item.brand === app)
-  const loans = loansStore.useAll().filter((item) => item.brand === app)
-  const segmentCount = (segment: ClientSegment) =>
-    loanClients.filter((client) => segmentOf(client, loanApps, loans) === segment).length
-  const [who, setWho] = useState<LoanWho>(
-    !existing || existing.audience.all ? 'all' : existing.audience.segments ? 'segments' : 'people',
-  )
-  const [segments, setSegments] = useState<ClientSegment[]>(
-    existing?.audience.segments ?? ['active'],
-  )
   const [people, setPeople] = useState<MultiValue>(
-    existing?.audience.kind === 'loanClients' && !existing.audience.segments
-      ? existing.audience
-      : { all: false, ids: [] },
+    existing?.audience.kind === 'loanClients' ? existing.audience : { all: true, ids: [] },
   )
 
   const [kind, setKind] = useState<'clients' | 'merchants'>(
@@ -105,11 +86,7 @@ export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
   const pick = picks[kind]
   const audience: Audience = !ml
     ? { kind, all: pick.all, ids: pick.all ? [] : pick.ids }
-    : who === 'all' || (who === 'people' && people.all)
-      ? { kind: 'loanClients', all: true, ids: [] }
-      : who === 'segments'
-        ? { kind: 'loanClients', all: false, ids: [], segments }
-        : { kind: 'loanClients', all: false, ids: people.ids }
+    : { kind: 'loanClients', all: people.all, ids: people.all ? [] : people.ids }
   const reach = countOf(audience)
   const sendDate = (() => {
     const date = parseDate(day)
@@ -201,63 +178,19 @@ export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
         <div className="flex flex-col gap-6">
           <FormSection title={t('broadcast.audience')}>
             {ml ? (
-              <>
-                <ChoiceGrid
-                  label={t('broadcast.loan.who')}
-                  columns={3}
-                  options={[
-                    { value: 'all', label: t('broadcast.loan.all'), icon: Users },
-                    { value: 'segments', label: t('broadcast.loan.segments'), icon: ListChecks },
-                    { value: 'people', label: t('broadcast.loan.people'), icon: UserCheck },
-                  ]}
-                  value={who}
-                  onChange={setWho}
-                />
-                {who === 'segments' && (
-                  <div className="flex flex-col gap-1">
-                    <div className="grid gap-x-6 sm:grid-cols-2">
-                      {CLIENT_SEGMENTS.map((segment) => (
-                        <Checkbox
-                          key={segment}
-                          label={t(`mlClients.segment.${segment}`)}
-                          description={t('broadcast.loan.people.count', {
-                            count: groupDigits(segmentCount(segment)),
-                          })}
-                          checked={segments.includes(segment)}
-                          onChange={(on) =>
-                            setSegments(
-                              on
-                                ? CLIENT_SEGMENTS.filter(
-                                    (item) => item === segment || segments.includes(item),
-                                  )
-                                : segments.filter((item) => item !== segment),
-                            )
-                          }
-                        />
-                      ))}
-                    </div>
-                    {submitted && errors.reach && (
-                      <p className="text-sm text-danger">{errors.reach}</p>
-                    )}
-                    <p className="text-sm text-ink-muted">{t('broadcast.loan.segments.hint')}</p>
-                  </div>
-                )}
-                {who === 'people' && (
-                  <MultiSelectField
-                    label={t('nav.borrowers')}
-                    allLabel={t('broadcast.loan.all')}
-                    placeholder={t('broadcast.pickClients')}
-                    options={loanClients.map((client) => ({
-                      value: client.id,
-                      label: client.name,
-                      sub: formatPhone(client.phone),
-                    }))}
-                    value={people}
-                    onChange={setPeople}
-                    error={submitted ? errors.reach : undefined}
-                  />
-                )}
-              </>
+              <MultiSelectField
+                label={t('nav.borrowers')}
+                allLabel={t('broadcast.loan.all')}
+                placeholder={t('broadcast.pickClients')}
+                options={loanClients.map((client) => ({
+                  value: client.id,
+                  label: client.name,
+                  sub: formatPhone(client.phone),
+                }))}
+                value={people}
+                onChange={setPeople}
+                error={submitted ? errors.reach : undefined}
+              />
             ) : (
               <>
                 <ChoiceGrid
@@ -331,7 +264,7 @@ export function BroadcastFormPage({ app = 'birzum' }: { app?: Workspace }) {
             />
             <ImageField
               label={t('broadcast.image')}
-              hint={t('broadcast.image.hint')}
+              hint={t(ml ? 'broadcast.image.hint.loan' : 'broadcast.image.hint')}
               preview={
                 image ? (
                   <img src={image} alt="" className="h-20 w-40 rounded-control object-cover" />
