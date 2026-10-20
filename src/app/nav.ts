@@ -19,7 +19,6 @@ import {
   Package,
   ReceiptText,
   ShieldCheck,
-  ShieldQuestion,
   Star,
   Store,
   Tags,
@@ -64,7 +63,6 @@ export const NAV: NavGroup[] = [
         label: 'nav.applications',
         about: 'about.applications',
       },
-      { to: ROUTES.checks, icon: ShieldQuestion, label: 'nav.checks', about: 'about.checks' },
       { to: ROUTES.customers, icon: Users, label: 'nav.customers', about: 'about.customers' },
       {
         to: ROUTES.collections,

@@ -1,8 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ApplicationDetailPage } from '@/features/applications/pages/ApplicationDetailPage'
-import { CheckPage } from '@/features/checks/pages/CheckPage'
-import { CheckRulesPage } from '@/features/checks/pages/CheckRulesPage'
-import { ChecksPage } from '@/features/checks/pages/ChecksPage'
 import { ApplicationsPage } from '@/features/applications/pages/ApplicationsPage'
 import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
@@ -57,7 +54,6 @@ import { RequireAdmin } from './RequireAdmin'
 const DESIGNED: string[] = [
   ROUTES.dashboard,
   ROUTES.applications,
-  ROUTES.checks,
   ROUTES.customers,
   ROUTES.collections,
   ROUTES.merchants,
@@ -153,9 +149,6 @@ export const router = createBrowserRouter([
           { path: ROUTES.dashboard, element: <DashboardPage /> },
           { path: ROUTES.applications, element: <ApplicationsPage /> },
           { path: ROUTES.application, element: <ApplicationDetailPage /> },
-          { path: ROUTES.checks, element: <ChecksPage /> },
-          { path: ROUTES.checkRules, element: <CheckRulesPage /> },
-          { path: ROUTES.check, element: <CheckPage /> },
           { path: ROUTES.customers, element: <ClientsPage /> },
           { path: ROUTES.customer, element: <ClientDetailPage /> },
           { path: ROUTES.collections, element: <CollectionsPage /> },

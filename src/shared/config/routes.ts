@@ -5,9 +5,6 @@ export const ROUTES = {
   dashboard: '/',
   applications: '/applications',
   application: '/applications/:id',
-  checks: '/checks',
-  checkRules: '/checks/rules',
-  check: '/checks/:id',
   customers: '/customers',
   customer: '/customers/:id',
   collections: '/collections',
@@ -53,9 +50,6 @@ export const newPayoutPath = (merchantId?: string) =>
   merchantId ? `/payouts/new?merchant=${merchantId}` : '/payouts/new'
 /** A payout's detail page. */
 export const payoutPath = (id: string) => `/payouts/${id}`
-
-/** An ariza's Birzum check. */
-export const checkPath = (id: string) => `/checks/${id}`
 
 /** An ariza's read-only detail page. */
 export const applicationPath = (id: string) => `/applications/${id}`
