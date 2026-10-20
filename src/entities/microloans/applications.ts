@@ -6,8 +6,7 @@ import { createStore } from '@/shared/lib/createStore'
 
 /**
  * Where a microloan ariza is, in the order it moves:
- * - review: the app's checks are running (MyID, credit history, income)
- * - manual: the rules could not decide; an admin has to
+ * - review: the app's checks are running (MyID, credit history, income); the rules decide
  * - approved / counter: offered as asked, or a smaller sum; waiting for the borrower to sign
  * - signed: signed with the SMS code, money on its way to the card
  * - paidOut: the money reached the card; the loan is open
@@ -15,7 +14,6 @@ import { createStore } from '@/shared/lib/createStore'
  */
 export const LOAN_APP_STATUSES = [
   'review',
-  'manual',
   'approved',
   'counter',
   'signed',
@@ -27,7 +25,6 @@ export type LoanAppStatus = (typeof LOAN_APP_STATUSES)[number]
 
 export const loanAppStatusTone: Record<LoanAppStatus, StatusTone> = {
   review: 'info',
-  manual: 'warning',
   approved: 'info',
   counter: 'info',
   signed: 'info',
@@ -183,17 +180,15 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
     else if (myid === 'mismatch') {
       status = 'declined'
       decline = { reason: 'myid' }
-    } else if (credit === 'late' && checks.lateCount! > rules.lateManualUpTo) {
+    } else if (credit === 'late' && checks.lateCount! > rules.lateUpTo) {
       status = 'declined'
       decline = { reason: 'credit' }
-    } else if (credit === 'late' || (load > rules.approveUpTo && load <= rules.manualUpTo))
-      status = 'manual'
-    else if (load > rules.manualUpTo) {
-      // The largest sum whose payment fits in half the income
+    } else if (load > rules.approveUpTo) {
+      // The largest sum whose payment fits within the approval line
       const fits =
-        Math.floor((((income * (rules.counterTarget / 100)) / monthly) * amount) / 1_000_000) *
+        Math.floor((((income * (rules.approveUpTo / 100)) / monthly) * amount) / 1_000_000) *
         1_000_000
-      if (fits >= product.min) {
+      if (rules.counterOffer && fits >= product.min) {
         status = 'counter'
         offered = fits
       } else {
@@ -221,21 +216,6 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
           by: 'system',
         })
         status = 'expired'
-      }
-    } else if (status === 'manual' && days > 7) {
-      // An admin decided these already
-      const admin = { admin: pick(['Sardor Saidov', 'Malika Rasulova']) }
-      const at = later(createdAt, 90 + Math.floor(next() * 300))
-      if (next() < 0.6) {
-        history.push({ at, status: 'approved', by: admin })
-        const signedAt = later(at, 120)
-        history.push({ at: signedAt, status: 'signed', by: 'borrower' })
-        history.push({ at: later(signedAt, 3), status: 'paidOut', by: 'system' })
-        status = 'paidOut'
-      } else {
-        history.push({ at, status: 'declined', by: admin, note: 'Kredit tarixida kechikishlar' })
-        status = 'declined'
-        decline = { reason: 'credit', comment: 'Kredit tarixida kechikishlar' }
       }
     }
 

@@ -64,11 +64,11 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
   // Figures for the period; the ones waiting for a decision are counted as of now
   const inPeriod = all.filter((app) => inRange(app.createdAt, bounds))
   const paid = inPeriod.filter((app) => app.status === 'paidOut')
-  const decided = inPeriod.filter((app) => app.status !== 'review' && app.status !== 'manual')
+  const decided = inPeriod.filter((app) => app.status !== 'review')
   const approvedShare = decided.length
     ? Math.round((decided.filter((app) => app.status !== 'declined').length / decided.length) * 100)
     : 0
-  const manual = all.filter((app) => app.status === 'manual').length
+  const reviewing = all.filter((app) => app.status === 'review').length
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? '—'
 
   return (
@@ -87,9 +87,9 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
           })}
         />
         <StatCard
-          label={t('loanApp.status.manual')}
-          value={String(manual)}
-          hint={t('loanApps.stat.manualHint')}
+          label={t('loanApp.status.review')}
+          value={String(reviewing)}
+          hint={t('loanApps.stat.reviewHint')}
         />
         <StatCard
           label={t('loanApps.stat.paid')}

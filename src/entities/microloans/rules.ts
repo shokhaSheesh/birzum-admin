@@ -2,25 +2,22 @@ import type { Brand } from '@/shared/config/workspaces'
 import { createStore } from '@/shared/lib/createStore'
 
 /**
- * How a brand's app decides an ariza, in the order it checks:
+ * How a brand's app decides an ariza, all by itself (no admin step), in the order it checks:
  * 1. MyID: a face that does not match the passport is declined, always.
  * 2. Age: outside the range is declined.
- * 3. Credit history: up to `lateManualUpTo` late payments in 5 years go to an admin, more are
- *    declined; no history at all is decided by the rules or sent to an admin.
- * 4. Load (the monthly payment as a share of income): up to `approveUpTo` is approved, up to
- *    `manualUpTo` goes to an admin, above it the app offers the largest sum whose payment is
- *    `counterTarget` of the income (if counter-offers are on and that sum is at least the
- *    product's smallest), else declines.
+ * 3. Credit history: more than `lateUpTo` late payments in 5 years is declined; no history at
+ *    all is allowed (then judged by load) or declined.
+ * 4. Load (the monthly payment as a share of income): up to `approveUpTo` is approved; above it
+ *    the app offers the largest sum whose payment fits `approveUpTo` (if counter-offers are on
+ *    and that sum is at least the product's smallest), else declines.
  * An offer stands `offerDays` days; after a decline the client can apply again in `reapplyDays`.
  */
 export type DecisionRules = {
   id: Brand
   approveUpTo: number
-  manualUpTo: number
   counterOffer: boolean
-  counterTarget: number
-  lateManualUpTo: number
-  noHistory: 'auto' | 'manual'
+  lateUpTo: number
+  noHistory: 'allow' | 'decline'
   ageMin: number
   ageMax: number
   offerDays: number
@@ -54,11 +51,9 @@ export type ContractRules = {
 const decision = (id: Brand): DecisionRules => ({
   id,
   approveUpTo: 45,
-  manualUpTo: 55,
   counterOffer: true,
-  counterTarget: 50,
-  lateManualUpTo: 2,
-  noHistory: 'auto',
+  lateUpTo: 0,
+  noHistory: 'allow',
   ageMin: 18,
   ageMax: 65,
   offerDays: 3,
@@ -124,22 +119,17 @@ export const contractRulesOf = (brand: Brand) =>
   contractRulesStore.getAll().find((rules) => rules.id === brand)!
 
 /** What the rules make of an ariza's numbers, for the tester on the page. */
-export type Verdict = 'approve' | 'manual' | 'counter' | 'decline'
+export type Verdict = 'approve' | 'counter' | 'decline'
 export function verdictOf(
   rules: Omit<DecisionRules, 'id'>,
   input: { load: number; late: number; noHistory: boolean; age: number; counterFits: boolean },
-): {
-  verdict: Verdict
-  why: 'age' | 'credit' | 'creditManual' | 'noHistory' | 'load' | 'loadManual' | 'counter' | 'ok'
-} {
+): { verdict: Verdict; why: 'age' | 'credit' | 'noHistory' | 'load' | 'counter' | 'ok' } {
   if (input.age < rules.ageMin || input.age > rules.ageMax)
     return { verdict: 'decline', why: 'age' }
-  if (input.late > rules.lateManualUpTo) return { verdict: 'decline', why: 'credit' }
-  if (input.late > 0) return { verdict: 'manual', why: 'creditManual' }
-  if (input.noHistory && rules.noHistory === 'manual')
-    return { verdict: 'manual', why: 'noHistory' }
+  if (input.late > rules.lateUpTo) return { verdict: 'decline', why: 'credit' }
+  if (input.noHistory && rules.noHistory === 'decline')
+    return { verdict: 'decline', why: 'noHistory' }
   if (input.load <= rules.approveUpTo) return { verdict: 'approve', why: 'ok' }
-  if (input.load <= rules.manualUpTo) return { verdict: 'manual', why: 'loadManual' }
   if (rules.counterOffer && input.counterFits) return { verdict: 'counter', why: 'counter' }
   return { verdict: 'decline', why: 'load' }
 }

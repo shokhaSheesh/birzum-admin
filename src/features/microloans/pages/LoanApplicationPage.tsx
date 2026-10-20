@@ -7,7 +7,7 @@ import {
   Clock,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   isOffer,
@@ -23,10 +23,8 @@ import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
-import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
-import { LoanDecisionModal, type Decision } from '../components/LoanDecisionModal'
 
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
 
@@ -85,7 +83,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
   const { id } = useParams()
   const app = loanApplicationsStore.useAll().find((item) => item.id === id && item.brand === brand)
   const product = loanProductsStore.useAll().find((p) => p.id === app?.productId)
-  const [deciding, setDeciding] = useState<Decision | null>(null)
   // The limits come from Qaror qoidalari
   const rules = decisionRulesStore.useAll().find((item) => item.id === brand)!
 
@@ -133,22 +130,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
         </p>
       </div>
 
-      {app.status === 'manual' && (
-        <div className="flex gap-3 rounded-card bg-warning-soft p-4 text-warning">
-          <CircleAlert size={22} className="shrink-0" />
-          <div className="flex flex-col gap-0.5">
-            <p className="font-bold">{t('loanApp.manual.title')}</p>
-            <p className="text-sm">
-              {checks.credit === 'late'
-                ? t('loanApp.manual.credit', { count: String(checks.lateCount ?? 1) })
-                : t('loanApp.manual.load', {
-                    load: String(checks.load),
-                    limit: String(rules.approveUpTo),
-                  })}
-            </p>
-          </div>
-        </div>
-      )}
       {app.decline && (
         <div className="flex gap-3 rounded-card bg-danger-soft p-4 text-danger">
           <CircleX size={22} className="shrink-0" />
@@ -229,7 +210,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
               />
               <Check
                 ok={checks.load <= rules.approveUpTo}
-                warn={checks.load > rules.approveUpTo && checks.load <= rules.manualUpTo}
                 title={t('loanApp.check.load')}
                 detail={t('loanApp.check.load.detail', {
                   monthly: formatSum(monthlyOfApp({ ...app, offered: undefined })),
@@ -267,30 +247,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          {app.status === 'manual' && (
-            <section className={cn(card, 'border-warning/40')}>
-              <div className="flex flex-col gap-1">
-                <h2 className="font-bold">{t('loanApp.decide')}</h2>
-                <p className="text-sm text-ink-muted">{t('loanApp.decide.hint')}</p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button block onClick={() => setDeciding('approve')}>
-                  {t('loanDecision.confirm.approve')}
-                </Button>
-                <Button block variant="secondary" onClick={() => setDeciding('counter')}>
-                  {t('loanDecision.confirm.counter')}
-                </Button>
-                <Button
-                  block
-                  variant="ghost"
-                  className="text-danger!"
-                  onClick={() => setDeciding('decline')}
-                >
-                  {t('loanDecision.confirm.decline')}
-                </Button>
-              </div>
-            </section>
-          )}
           <section className={card}>
             <h2 className="font-bold">{t('loanApps.col.borrower')}</h2>
             <Rows
@@ -326,10 +282,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
           </section>
         </aside>
       </div>
-
-      {deciding && (
-        <LoanDecisionModal app={app} decision={deciding} onClose={() => setDeciding(null)} />
-      )}
     </div>
   )
 }

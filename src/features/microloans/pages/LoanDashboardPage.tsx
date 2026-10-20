@@ -41,17 +41,9 @@ const SAID_YES: LoanApplication['status'][] = [
   'paidOut',
   'expired',
 ]
-/** Who made the decision: the app's rules or an admin. Undecided arizalar have neither. */
-const decidedBy = (app: LoanApplication) => {
-  const decision = app.history.find((event) =>
-    ['approved', 'counter', 'declined'].includes(event.status),
-  )
-  return !decision ? null : decision.by === 'rules' ? 'rules' : 'admin'
-}
-
 /**
  * A microloan brand at a glance for one period: four figures with their change, money paid out
- * against money collected, how arizalar went and who decided them, products, decline reasons and
+ * against money collected, how arizalar went, products, decline reasons and
  * terms, and the loan book as it stands today.
  */
 export function LoanDashboardPage({ brand }: { brand: Brand }) {
@@ -115,14 +107,11 @@ export function LoanDashboardPage({ brand }: { brand: Brand }) {
   const sideCounts = [
     {
       key: 'waiting' as const,
-      value: created.filter((a) => a.status === 'review' || a.status === 'manual').length,
+      value: created.filter((a) => a.status === 'review').length,
     },
     { key: 'declined' as const, value: created.filter((a) => a.status === 'declined').length },
     { key: 'expired' as const, value: created.filter((a) => a.status === 'expired').length },
   ]
-  const byRules = created.filter((a) => decidedBy(a) === 'rules').length
-  const byAdmin = created.filter((a) => decidedBy(a) === 'admin').length
-  const autoShare = byRules + byAdmin ? Math.round((byRules / (byRules + byAdmin)) * 100) : null
 
   const byProduct = products
     .filter((product) => product.brand === brand)
@@ -243,24 +232,6 @@ export function LoanDashboardPage({ brand }: { brand: Brand }) {
               </div>
             ))}
           </dl>
-          <div className="flex flex-col gap-2 border-t border-line pt-4">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium">{t('mlDash.auto')}</span>
-              <span className="font-semibold tabular-nums">
-                {autoShare === null ? '—' : `${autoShare}%`}
-              </span>
-            </div>
-            <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-surface">
-              <span className="bg-brand" style={{ flexGrow: byRules }} />
-              <span className="bg-warning" style={{ flexGrow: byAdmin }} />
-            </div>
-            <p className="text-xs text-ink-muted">
-              {t('mlDash.auto.hint', {
-                rules: groupDigits(byRules),
-                admin: groupDigits(byAdmin),
-              })}
-            </p>
-          </div>
         </Card>
       </div>
 

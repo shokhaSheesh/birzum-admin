@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, CircleX, Scale } from 'lucide-react'
+import { CircleCheck, CircleX, Scale } from 'lucide-react'
 import { useState } from 'react'
 import { logAction } from '@/entities/audit/audit'
 import {
@@ -47,8 +47,8 @@ function Group({
 
 /**
  * Qaror qoidalari of a microloan brand: how its app decides an ariza by itself — age, credit
- * history, and the share of income the payment takes — when it hands one to an admin, when it
- * offers a smaller sum, and how long an offer stands. A tester on the right runs the rules on
+ * history, and the share of income the payment takes — when it offers a smaller sum, and how
+ * long an offer stands. The app decides every ariza; no admin step. A tester on the right runs the rules on
  * made-up numbers before saving.
  */
 export function DecisionRulesPage({ brand }: { brand: Brand }) {
@@ -63,14 +63,6 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
   const errors = {
     approveUpTo:
       draft.approveUpTo <= 0 || draft.approveUpTo > 100 ? t('mlRules.error.percent') : undefined,
-    manualUpTo:
-      draft.manualUpTo < draft.approveUpTo || draft.manualUpTo > 100
-        ? t('mlRules.error.manual')
-        : undefined,
-    counterTarget:
-      draft.counterOffer && (draft.counterTarget <= 0 || draft.counterTarget > draft.manualUpTo)
-        ? t('mlRules.error.target')
-        : undefined,
     age: draft.ageMin < 18 || draft.ageMax <= draft.ageMin ? t('mlRules.error.age') : undefined,
     offerDays: draft.offerDays < 1 ? t('mlRules.error.days') : undefined,
   }
@@ -89,10 +81,8 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
       changes.push({ label, from: show(saved[key]), to: show(draft[key]) })
   }
   track('approveUpTo', t('mlRules.approveUpTo'), pct)
-  track('manualUpTo', t('mlRules.manualUpTo'), pct)
   track('counterOffer', t('mlRules.counterOffer'), yesNo)
-  track('counterTarget', t('mlRules.counterTarget'), pct)
-  track('lateManualUpTo', t('mlRules.lateManualUpTo'), String)
+  track('lateUpTo', t('mlRules.lateUpTo'), String)
   track('noHistory', t('mlRules.noHistory'), (value) => t(`mlRules.noHistory.${value}`))
   track('ageMin', t('mlRules.ageMin'), String)
   track('ageMax', t('mlRules.ageMax'), String)
@@ -148,13 +138,10 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
   })
   const tone = {
     approve: 'bg-success-soft text-success',
-    manual: 'bg-warning-soft text-warning',
     counter: 'bg-navy-100 text-brand',
     decline: 'bg-danger-soft text-danger',
   }[result.verdict]
-  const Icon = { approve: CircleCheck, manual: CircleAlert, counter: Scale, decline: CircleX }[
-    result.verdict
-  ]
+  const Icon = { approve: CircleCheck, counter: Scale, decline: CircleX }[result.verdict]
 
   return (
     <>
@@ -181,31 +168,20 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
       <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="flex flex-col gap-6">
           <Group title={t('mlRules.load')} hint={t('mlRules.load.hint')}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <NumberField
-                label={t('mlRules.approveUpTo')}
-                value={draft.approveUpTo}
-                onChange={(v) => set({ approveUpTo: num(v) })}
-                suffix="%"
-                maxDigits={3}
-                hint={t('mlRules.approveUpTo.hint')}
-                error={submitted ? errors.approveUpTo : undefined}
-              />
-              <NumberField
-                label={t('mlRules.manualUpTo')}
-                value={draft.manualUpTo}
-                onChange={(v) => set({ manualUpTo: num(v) })}
-                suffix="%"
-                maxDigits={3}
-                hint={t('mlRules.manualUpTo.hint')}
-                error={submitted ? errors.manualUpTo : undefined}
-              />
-            </div>
+            <NumberField
+              label={t('mlRules.approveUpTo')}
+              value={draft.approveUpTo}
+              onChange={(v) => set({ approveUpTo: num(v) })}
+              suffix="%"
+              maxDigits={3}
+              hint={t('mlRules.approveUpTo.hint')}
+              error={submitted ? errors.approveUpTo : undefined}
+            />
             <div className="flex items-center justify-between gap-4 rounded-control bg-surface p-4">
               <div className="flex flex-col">
                 <p className="font-semibold">{t('mlRules.counterOffer')}</p>
                 <p className="text-sm text-ink-muted">
-                  {t('mlRules.counterOffer.hint', { limit: String(draft.manualUpTo) })}
+                  {t('mlRules.counterOffer.hint', { limit: String(draft.approveUpTo) })}
                 </p>
               </div>
               <Switch
@@ -214,32 +190,25 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
                 label={t('mlRules.counterOffer')}
               />
             </div>
-            {draft.counterOffer && (
-              <NumberField
-                label={t('mlRules.counterTarget')}
-                value={draft.counterTarget}
-                onChange={(v) => set({ counterTarget: num(v) })}
-                suffix="%"
-                maxDigits={3}
-                hint={t('mlRules.counterTarget.hint')}
-                error={submitted ? errors.counterTarget : undefined}
-              />
-            )}
           </Group>
 
           <Group title={t('mlRules.credit')} hint={t('mlRules.credit.hint')}>
             <NumberField
-              label={t('mlRules.lateManualUpTo')}
-              value={draft.lateManualUpTo}
-              onChange={(v) => set({ lateManualUpTo: num(v) })}
+              label={t('mlRules.lateUpTo')}
+              value={draft.lateUpTo}
+              onChange={(v) => set({ lateUpTo: num(v) })}
               suffix={t('mlRules.times')}
               maxDigits={2}
-              hint={t('mlRules.lateManualUpTo.hint', { n: String(draft.lateManualUpTo) })}
+              hint={
+                draft.lateUpTo
+                  ? t('mlRules.lateUpTo.hint', { n: String(draft.lateUpTo) })
+                  : t('mlRules.lateUpTo.none')
+              }
             />
             <ChoiceGrid
               label={t('mlRules.noHistory')}
               columns={2}
-              options={(['auto', 'manual'] as const).map((value) => ({
+              options={(['allow', 'decline'] as const).map((value) => ({
                 value,
                 label: t(`mlRules.noHistory.${value}`),
                 description: t(`mlRules.noHistory.${value}.hint`),
@@ -306,13 +275,17 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
                 [
                   t('mlRules.order.myid'),
                   t('mlRules.order.age', { min: String(draft.ageMin), max: String(draft.ageMax) }),
-                  t('mlRules.order.credit', { n: String(draft.lateManualUpTo) }),
-                  t('mlRules.order.load', {
-                    approve: String(draft.approveUpTo),
-                    manual: String(draft.manualUpTo),
-                  }),
+                  draft.lateUpTo
+                    ? t('mlRules.order.credit', { n: String(draft.lateUpTo) })
+                    : t('mlRules.order.credit.none'),
+                  t(
+                    draft.noHistory === 'allow'
+                      ? 'mlRules.order.noHistory.allow'
+                      : 'mlRules.order.noHistory.decline',
+                  ),
+                  t('mlRules.order.load', { approve: String(draft.approveUpTo) }),
                   draft.counterOffer
-                    ? t('mlRules.order.counter', { target: String(draft.counterTarget) })
+                    ? t('mlRules.order.counter', { target: String(draft.approveUpTo) })
                     : t('mlRules.order.noCounter'),
                 ] as string[]
               ).map((line, i) => (
@@ -370,8 +343,7 @@ export function DecisionRulesPage({ brand }: { brand: Brand }) {
                   {t(`mlRules.why.${result.why}`, {
                     load: String(load),
                     approve: String(draft.approveUpTo),
-                    manual: String(draft.manualUpTo),
-                    target: String(draft.counterTarget),
+                    target: String(draft.approveUpTo),
                     late: String(test.late),
                   })}
                 </p>
