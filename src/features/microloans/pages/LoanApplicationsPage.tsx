@@ -185,9 +185,6 @@ export function LoanApplicationsPage({ brand }: { brand: Brand }) {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="font-medium">{productName(app.productId)}</span>
-                        <span className="block text-ink-muted">
-                          {t(`loanApp.purpose.${app.purpose}`)}
-                        </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-col">

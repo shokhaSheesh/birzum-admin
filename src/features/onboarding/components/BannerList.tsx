@@ -1,7 +1,9 @@
 import { GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { logAction } from '@/entities/audit/audit'
+import { loanProductsStore } from '@/entities/microloans/products'
 import { bannersStore, bannerState, type Banner } from '@/entities/onboarding/banners'
+import type { AppId } from '@/entities/onboarding/slides'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { toast } from '@/shared/lib/toast'
@@ -22,19 +24,33 @@ function reorder(list: Banner[], moved: Banner, target: Banner, after: boolean) 
 }
 
 /**
- * Birzum's Bosh sahifa banners, in the order the carousel shows them, dragged by their handle.
+ * One app's home-screen banners, in the order the carousel shows them, dragged by their handle.
  * Each row: picture, name, what it opens, its dates and where it stands today.
  */
 export function BannerList({
+  app,
   editing,
   setEditing,
 }: {
+  app: AppId
   /** The banner open in the modal: null for a new one, undefined for none. */
   editing: Banner | null | undefined
   setEditing: (banner: Banner | null | undefined) => void
 }) {
   const { t, tl } = useI18n()
-  const banners = bannersStore.useAll()
+  const all = bannersStore.useAll()
+  const products = loanProductsStore.useAll()
+  const banners = all.filter((banner) => banner.app === app)
+  const section = app === 'birzum' ? 'onboarding' : 'mlOnboarding'
+  // Puts this app's new order back into the store, the other apps' banners where they are
+  const place = (ordered: Banner[]) => {
+    const queue = [...ordered]
+    bannersStore.replaceAll(all.map((item) => (item.app === app ? queue.shift()! : item)))
+  }
+  const summary = (banner: Banner) =>
+    banner.target === 'loanProducts'
+      ? banner.ids.map((id) => products.find((p) => p.id === id)?.name ?? id).join(', ')
+      : targetSummary(banner, t)
   const [deleting, setDeleting] = useState<Banner | null>(null)
   const [dragged, setDragged] = useState<Banner | null>(null)
   const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null)
@@ -46,8 +62,7 @@ export function BannerList({
     setDrop({ id: target.id, after: e.clientY > box.top + box.height / 2 })
   }
   const dropOn = (target: Banner) => {
-    if (dragged && drop && dragged !== target)
-      bannersStore.replaceAll(reorder(banners, dragged, target, drop.after))
+    if (dragged && drop && dragged !== target) place(reorder(banners, dragged, target, drop.after))
     setDragged(null)
     setDrop(null)
   }
@@ -56,12 +71,12 @@ export function BannerList({
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const target = banners[banners.indexOf(banner) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target) bannersStore.replaceAll(reorder(banners, banner, target, e.key === 'ArrowDown'))
+    if (target) place(reorder(banners, banner, target, e.key === 'ArrowDown'))
   }
   const toggle = (banner: Banner) => {
     bannersStore.update(banner.id, { visible: !banner.visible })
     logAction({
-      section: 'onboarding',
+      section,
       kind: 'update',
       action: banner.visible ? 'audit.a.bannerHidden' : 'audit.a.bannerShown',
       target: tl(banner.title),
@@ -123,7 +138,7 @@ export function BannerList({
                     <p className={cn('font-semibold', state !== 'live' && 'text-ink-muted')}>
                       {tl(banner.title)}
                     </p>
-                    <p className="text-sm text-ink-muted">{targetSummary(banner, t)}</p>
+                    <p className="text-sm text-ink-muted">{summary(banner)}</p>
                     <p className="text-sm text-ink-muted tabular-nums">{datesSummary(banner, t)}</p>
                   </div>
                   <StatusBadge tone={stateTone[state]}>{t(`banners.state.${state}`)}</StatusBadge>
@@ -154,6 +169,7 @@ export function BannerList({
 
       {editing !== undefined && (
         <BannerModal
+          app={app}
           banner={editing}
           onClose={() => setEditing(undefined)}
           onDelete={(banner) => {
@@ -171,7 +187,7 @@ export function BannerList({
           if (deleting) {
             bannersStore.remove(deleting.id)
             logAction({
-              section: 'onboarding',
+              section,
               kind: 'delete',
               action: 'audit.a.bannerDeleted',
               target: tl(deleting.title),

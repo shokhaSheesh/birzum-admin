@@ -28,7 +28,7 @@ function reorder(list: Slide[], moved: Slide, target: Slide, after: boolean) {
 /**
  * The intro slides an app shows once after the first sign-in: picture, title and line in both
  * languages, in order, dragged by their handle to reorder. Each business's own menu opens its
- * app's slides. Birzum has a second kind, its Bosh sahifa banners (`?kind=banners`).
+ * app's slides. The second kind is that app's home-screen banners (`?kind=banners`).
  */
 export function OnboardingPage({ app }: { app: AppId }) {
   const { t, tl } = useI18n()
@@ -38,8 +38,8 @@ export function OnboardingPage({ app }: { app: AppId }) {
   const [dragged, setDragged] = useState<Slide | null>(null)
   const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null)
   const [params, setParams] = useSearchParams()
-  const kind = app === 'birzum' && params.get('kind') === 'banners' ? 'banners' : 'slides'
-  const bannerCount = bannersStore.useAll().length
+  const kind = params.get('kind') === 'banners' ? 'banners' : 'slides'
+  const bannerCount = bannersStore.useAll().filter((banner) => banner.app === app).length
   const [editingBanner, setEditingBanner] = useState<Banner | null | undefined>(undefined)
 
   const slides = all.filter((slide) => slide.app === app)
@@ -97,20 +97,24 @@ export function OnboardingPage({ app }: { app: AppId }) {
         }
       />
 
-      {app === 'birzum' && (
+      {
         <UnderlineTabs
           label={t('onboarding.kind.label')}
           options={[
             { value: 'slides', label: t('onboarding.kind.slides'), count: slides.length },
-            { value: 'banners', label: t('onboarding.kind.banners'), count: bannerCount },
+            {
+              value: 'banners',
+              label: t(app === 'birzum' ? 'onboarding.kind.banners' : 'onboarding.kind.bannersMl'),
+              count: bannerCount,
+            },
           ]}
           value={kind}
           onChange={(next) => setParams(next === 'banners' ? { kind: 'banners' } : {})}
         />
-      )}
+      }
 
       {kind === 'banners' ? (
-        <BannerList editing={editingBanner} setEditing={setEditingBanner} />
+        <BannerList app={app} editing={editingBanner} setEditing={setEditingBanner} />
       ) : (
         <>
           <section className="flex flex-col rounded-card border border-line bg-canvas">

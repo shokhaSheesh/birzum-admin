@@ -30,6 +30,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { PersonContacts } from '../components/PersonContacts'
 import { CallResultModal, ReminderDialog } from '@/features/collections/components/ContactDialogs'
 import { ContactLog } from '@/features/collections/components/ContactLog'
 import { ChargeModal, ManualPaymentModal } from '@/features/collections/components/PaymentDialogs'
@@ -450,6 +451,10 @@ export function ClientDetailPage() {
             </div>
           </section>
           <section className={card}>
+            <h2 className="font-bold">{t('people.title')}</h2>
+            <PersonContacts contacts={client.contacts} />
+          </section>
+          <section className={card}>
             <h2 className="font-bold">{t('client.myid')}</h2>
             <Rows
               rows={[
@@ -460,7 +465,7 @@ export function ClientDetailPage() {
                 [t('application.pinfl'), client.pinfl],
                 [t('client.passport'), client.passport],
                 [t('client.passportUntil'), formatDate(client.passportExpiresOn)],
-                [t('client.address'), client.address],
+                [t('client.propiska'), client.address],
               ]}
             />
           </section>

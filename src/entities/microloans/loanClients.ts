@@ -1,3 +1,4 @@
+import { sampleContacts, type PersonContact } from '@/entities/people/contacts'
 import { BLOCK_REASONS, type BlockReason } from '@/entities/clients/clients'
 import { loanApplicationsStore, type LoanApplication } from '@/entities/microloans/applications'
 import { loansStore, type Loan } from '@/entities/microloans/loans'
@@ -19,6 +20,8 @@ export type LoanClient = {
   passport: string
   birthDate: string
   address: string
+  /** Kontaktlarim: the people the borrower keeps for the brand to call. */
+  contacts: PersonContact[]
   registeredAt: Date
   lastSeenAt: Date
   device: { os: 'ios' | 'android'; app: string }
@@ -119,6 +122,7 @@ function seed(brand: Brand, base: number): LoanClient[] {
       passport: who.passport,
       birthDate: birth,
       address: ADDRESSES[Math.floor(next() * ADDRESSES.length)],
+      contacts: sampleContacts(who.passport),
       registeredAt,
       lastSeenAt: new Date(
         NOW.getTime() - Math.floor(next() * 9) * DAY - Math.floor(next() * 20) * 3_600_000,
@@ -139,6 +143,7 @@ function seed(brand: Brand, base: number): LoanClient[] {
       passport,
       birthDate,
       address: ADDRESSES[i % ADDRESSES.length],
+      contacts: sampleContacts(passport),
       registeredAt,
       lastSeenAt: new Date(
         Math.max(registeredAt.getTime(), NOW.getTime() - Math.floor(next() * 30) * DAY),

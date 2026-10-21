@@ -141,6 +141,17 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
           </div>
         </div>
       )}
+      {app.refusal && (
+        <div className="flex gap-3 rounded-card bg-navy-100 p-4">
+          <CircleX size={22} className="shrink-0 text-ink-muted" />
+          <div className="flex flex-col gap-0.5">
+            <p className="font-bold">
+              {t('loanApp.refusedBecause', { reason: t(`loanRefusal.${app.refusal.reason}`) })}
+            </p>
+            {app.refusal.note && <p className="text-sm text-ink-muted">{app.refusal.note}</p>}
+          </div>
+        </div>
+      )}
       {isOffer(app.status) && app.offerUntil && (
         <div className="flex gap-3 rounded-card bg-navy-100 p-4">
           <Clock size={22} className="shrink-0 text-brand" />
@@ -274,11 +285,31 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
             <h2 className="font-bold">{t('loanApp.told')}</h2>
             <Rows
               rows={[
-                [t('loanApp.purpose'), t(`loanApp.purpose.${app.purpose}`)],
                 [t('loanApp.income'), formatSum(app.income)],
                 [t('loanApp.workplace'), app.workplace],
               ]}
             />
+          </section>
+          <section className={card}>
+            <h2 className="font-bold">{t('loanApp.contacts')}</h2>
+            <ul className="flex flex-col">
+              {app.contacts.map((contact) => (
+                <li
+                  key={contact.phone}
+                  className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0"
+                >
+                  <span className="flex min-w-0 flex-col">
+                    <span className="font-medium">{contact.name}</span>
+                    <span className="text-sm text-ink-muted">
+                      {t(`relation.${contact.relation}`)}
+                    </span>
+                  </span>
+                  <span className="text-sm whitespace-nowrap tabular-nums">
+                    {formatPhone(contact.phone)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         </aside>
       </div>

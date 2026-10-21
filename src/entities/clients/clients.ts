@@ -1,3 +1,4 @@
+import { RELATIONS, sampleContacts, type PersonContact } from '@/entities/people/contacts'
 import humoLogo from '@/shared/assets/cards/humo.png'
 import uzcardLogo from '@/shared/assets/cards/uzcard.png'
 import user1 from '@/shared/assets/people/user-1.jpg'
@@ -31,7 +32,10 @@ export type Client = {
   passport: string
   passportExpiresOn: Date
   birthDate: Date
+  /** The propiska (permanent registration) address, from MyID and the sign-up. */
   address: string
+  /** People to call when the shopper cannot be reached; the shopper and the shop add them. */
+  contacts: PersonContact[]
   registeredAt: Date
   /** Null until the shopper has had a limit worked out. */
   limit: { amount: number; validUntil: Date } | null
@@ -137,6 +141,8 @@ export const clientsStore = createStore<Client>(
     passportExpiresOn: new Date(2029 + (i % 5), i % 12, 10),
     birthDate: new Date(born[0], born[1] - 1, born[2]),
     address: ADDRESSES[i % ADDRESSES.length],
+    // Birzum's contacts have no name: phone, relation and a note, as the apps take them
+    contacts: sampleContacts(id, RELATIONS.slice(0, 6), false),
     // Spread from June to mid-October, earliest first
     registeredAt: new Date(2026, 5, 1 + Math.floor((i * 137) / seeds.length), 10 + (i % 9)),
     // A few limits ran out and wait for the shopper to recalculate

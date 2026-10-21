@@ -1,3 +1,4 @@
+import { RELATIONS, type Relation } from '@/entities/people/contacts'
 import { loanProductsStore, monthlyOf, rateOf, termsOf } from '@/entities/microloans/products'
 import { decisionRulesOf } from '@/entities/microloans/rules'
 import type { StatusTone } from '@/shared/ui/StatusBadge'
@@ -10,7 +11,8 @@ import { createStore } from '@/shared/lib/createStore'
  * - approved / counter: offered as asked, or a smaller sum; waiting for the borrower to sign
  * - signed: signed with the SMS code, money on its way to the card
  * - paidOut: the money reached the card; the loan is open
- * - declined, expired (the offer was not signed in time)
+ * - declined, expired (the offer was not signed in time), refused (the borrower turned the
+ *   offer down in the app, picking a reason)
  */
 export const LOAN_APP_STATUSES = [
   'review',
@@ -20,6 +22,7 @@ export const LOAN_APP_STATUSES = [
   'paidOut',
   'declined',
   'expired',
+  'refused',
 ] as const
 export type LoanAppStatus = (typeof LOAN_APP_STATUSES)[number]
 
@@ -31,13 +34,27 @@ export const loanAppStatusTone: Record<LoanAppStatus, StatusTone> = {
   paidOut: 'success',
   declined: 'danger',
   expired: 'neutral',
+  refused: 'neutral',
 }
 
 /** Waiting for the borrower: the offer they have not signed yet. */
 export const isOffer = (status: LoanAppStatus) => status === 'approved' || status === 'counter'
 
-export const PURPOSES = ['business', 'repair', 'education', 'health', 'family', 'other'] as const
-export type Purpose = (typeof PURPOSES)[number]
+/** The templates the borrower picks from when turning an offer down in the app. */
+export const REFUSAL_REASONS = [
+  'amountLow',
+  'rateHigh',
+  'paymentHigh',
+  'changedMind',
+  'elsewhere',
+  'other',
+] as const
+export type RefusalReason = (typeof REFUSAL_REASONS)[number]
+
+export { RELATIONS, type Relation } from '@/entities/people/contacts'
+
+/** Someone the brand may call when it cannot reach the borrower; at least two per ariza. */
+export type LoanContact = { name: string; phone: string; relation: Relation; comment?: string }
 
 export const DECLINE_REASONS = ['income', 'credit', 'myid', 'debt', 'other'] as const
 export type DeclineReason = (typeof DECLINE_REASONS)[number]
@@ -73,7 +90,7 @@ export type LoanApplication = {
   amount: number
   term: number
   rate: number
-  purpose: Purpose
+  contacts: LoanContact[]
   income: number
   workplace: string
   card: { brand: 'uzcard' | 'humo'; last4: string }
@@ -82,6 +99,8 @@ export type LoanApplication = {
   /** The sum offered when it is smaller than asked (counter-offer). */
   offered?: number
   decline?: { reason: DeclineReason; comment?: string }
+  /** The borrower turned the offer down: the template picked, and their words for "other". */
+  refusal?: { reason: RefusalReason; note?: string }
   /** The offer stands until then. */
   offerUntil?: Date
   /** The loan this ariza opened, once paid out. */
@@ -112,6 +131,17 @@ const PEOPLE = [
   ['Ismoilov Akmal Nodir oʻgʻli', '11.11.1989'],
   ['Sobirova Feruza Komil qizi', '06.06.1996'],
 ] as const
+const CONTACT_NAMES = [
+  'Dilnoza',
+  'Akmal',
+  'Shahnoza',
+  'Bekzod',
+  'Madina',
+  'Sardor',
+  'Nilufar',
+  'Jamshid',
+]
+
 const WORK = [
   'Oʻz biznesim — oziq-ovqat doʻkoni',
   'Toshkent shahar 45-maktab, oʻqituvchi',
@@ -144,6 +174,8 @@ const later = (from: Date, minutes: number) => new Date(from.getTime() + minutes
 function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
   const next = random(base)
   const pick = <T>(list: readonly T[]) => list[Math.floor(next() * list.length)]
+  const samplePhone = () =>
+    `9${1 + Math.floor(next() * 8)}${String(1000000 + Math.floor(next() * 8999999)).slice(0, 7)}`
   const products = loanProductsStore.getAll().filter((p) => p.brand === brand && p.enabled)
   const rules = decisionRulesOf(brand)
   const list: LoanApplication[] = []
@@ -174,6 +206,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
     let status: LoanAppStatus
     let offered: number | undefined
     let decline: LoanApplication['decline']
+    let refusal: LoanApplication['refusal']
     const history: LoanAppEvent[] = [{ at: createdAt, status: 'review', by: 'borrower' }]
     const decidedAt = later(createdAt, 2)
     if (fresh && i % 4 === 0) status = 'review'
@@ -209,6 +242,11 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
         history.push({ at: signedAt, status: 'signed', by: 'borrower' })
         history.push({ at: later(signedAt, 3), status: 'paidOut', by: 'system' })
         status = 'paidOut'
+      } else if (next() < 0.5) {
+        // Turned down in the app, with one of the templates
+        refusal = { reason: pick(REFUSAL_REASONS.slice(0, 5)) }
+        history.push({ at: later(decidedAt, 90), status: 'refused', by: 'borrower' })
+        status = 'refused'
       } else {
         history.push({
           at: later(decidedAt, rules.offerDays * 24 * 60),
@@ -235,7 +273,10 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
       amount,
       term,
       rate,
-      purpose: pick(PURPOSES),
+      contacts: [
+        { name: pick(CONTACT_NAMES), phone: samplePhone(), relation: pick(RELATIONS.slice(0, 6)) },
+        { name: pick(CONTACT_NAMES), phone: samplePhone(), relation: pick(RELATIONS.slice(6)) },
+      ],
       income,
       workplace: pick(WORK),
       card: {
@@ -246,6 +287,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
       status,
       offered,
       decline,
+      refusal,
       offerUntil: isOffer(status) ? later(decidedAt, rules.offerDays * 24 * 60) : undefined,
       loanNumber:
         status === 'paidOut'

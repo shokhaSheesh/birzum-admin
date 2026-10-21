@@ -7,7 +7,7 @@ type T = (key: TranslationKey, params?: Record<string, string>) => string
 /** "Mahsulotlar · 4 ta mahsulot", or just "Yaqin doʻkonlar". */
 export function targetSummary(banner: Banner, t: T) {
   const kind = t(`banners.target.${banner.target}`)
-  if (banner.target === 'nearest') return kind
+  if (banner.target === 'nearest' || banner.target === 'loanProducts') return kind
   return `${kind} · ${t(`banners.summary.${banner.target}`, { count: String(banner.ids.length) })}`
 }
 

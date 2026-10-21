@@ -3,13 +3,15 @@ import { useState } from 'react'
 import { logAction } from '@/entities/audit/audit'
 import { categoriesStore } from '@/entities/catalog/categories'
 import { productsStore } from '@/entities/catalog/products'
+import { loanProductsStore } from '@/entities/microloans/products'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import {
-  BANNER_TARGETS,
   bannersStore,
+  targetsFor,
   type Banner,
   type BannerTargetKind,
 } from '@/entities/onboarding/banners'
+import type { AppId } from '@/entities/onboarding/slides'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { newId } from '@/shared/lib/createStore'
@@ -27,13 +29,20 @@ import { Switch } from '@/shared/ui/Switch'
 import { BannerThumb } from './BannerThumb'
 
 type Props = {
+  app: AppId
   /** The banner to edit, or null to add one at the end. */
   banner: Banner | null
   onClose: () => void
   onDelete: (banner: Banner) => void
 }
 
-const ICONS = { products: ShoppingBag, categories: LayoutGrid, merchants: Store, nearest: MapPin }
+const ICONS = {
+  products: ShoppingBag,
+  categories: LayoutGrid,
+  merchants: Store,
+  nearest: MapPin,
+  loanProducts: ShoppingBag,
+}
 
 const filled = (text: { uz: string; ru: string }) => !!text.uz.trim() && !!text.ru.trim()
 
@@ -41,21 +50,24 @@ const filled = (text: { uz: string; ru: string }) => !!text.uz.trim() && !!text.
  * Add or edit one Bosh sahifa banner: its picture per language, its name, what it opens (one
  * kind: products, categories, shops, or the nearest shops), its dates and whether it shows.
  */
-export function BannerModal({ banner, onClose, onDelete }: Props) {
+export function BannerModal({ app, banner, onClose, onDelete }: Props) {
   const { t, tl, lang: panelLang } = useI18n()
   const products = productsStore.useAll()
   const categories = categoriesStore.useAll()
   const merchants = merchantsStore.useAll()
+  const loanProducts = loanProductsStore.useAll()
+  const targets = targetsFor(app)
   const [image, setImage] = useState<Partial<Record<Lang, string>>>(banner?.image ?? {})
   const [imageLang, setImageLang] = useState<Lang>(panelLang)
   const [title, setTitle] = useState(banner?.title ?? { uz: '', ru: '' })
-  const [target, setTarget] = useState<BannerTargetKind>(banner?.target ?? 'products')
+  const [target, setTarget] = useState<BannerTargetKind>(banner?.target ?? targets[0])
   // Picks are kept per kind, so switching the kind back and forth loses nothing
   const [picks, setPicks] = useState<Record<BannerTargetKind, string[]>>({
     products: [],
     categories: [],
     merchants: [],
     nearest: [],
+    loanProducts: [],
     ...(banner ? { [banner.target]: banner.ids } : {}),
   })
   const [startsOn, setStartsOn] = useState(banner?.startsOn ?? '')
@@ -88,6 +100,9 @@ export function BannerModal({ banner, onClose, onDelete }: Props) {
         ? tl(categories.find((c) => c.id === category.parentId)?.name ?? { uz: '', ru: '' })
         : undefined,
     })),
+    loanProducts: loanProducts
+      .filter((product) => product.brand === app)
+      .map((product) => ({ value: product.id, label: product.name, sub: tl(product.for) })),
     merchants: merchants.map((merchant) => ({
       value: merchant.id,
       label: merchant.name,
@@ -110,9 +125,9 @@ export function BannerModal({ banner, onClose, onDelete }: Props) {
       visible,
     }
     if (banner) bannersStore.update(banner.id, record)
-    else bannersStore.replaceAll([...bannersStore.getAll(), { id: newId(), ...record }])
+    else bannersStore.replaceAll([...bannersStore.getAll(), { id: newId(), app, ...record }])
     logAction({
-      section: 'onboarding',
+      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
       kind: banner ? 'update' : 'create',
       action: banner ? 'audit.a.bannerSaved' : 'audit.a.bannerCreated',
       target: tl(record.title),
@@ -125,7 +140,7 @@ export function BannerModal({ banner, onClose, onDelete }: Props) {
     <Modal
       open
       onClose={onClose}
-      eyebrow={t('onboarding.kind.banners')}
+      eyebrow={t(app === 'birzum' ? 'onboarding.kind.banners' : 'onboarding.kind.bannersMl')}
       title={banner ? tl(banner.title) : t('banners.new')}
       footer={
         <>
@@ -180,17 +195,19 @@ export function BannerModal({ banner, onClose, onDelete }: Props) {
         onChange={setTitle}
         requireBoth={submitted}
       />
-      <ChoiceGrid
-        label={t('banners.target')}
-        columns={4}
-        options={BANNER_TARGETS.map((value) => ({
-          value,
-          label: t(`banners.target.${value}`),
-          icon: ICONS[value],
-        }))}
-        value={target}
-        onChange={setTarget}
-      />
+      {targets.length > 1 && (
+        <ChoiceGrid
+          label={t('banners.target')}
+          columns={4}
+          options={targets.map((value) => ({
+            value,
+            label: t(`banners.target.${value}`),
+            icon: ICONS[value],
+          }))}
+          value={target}
+          onChange={setTarget}
+        />
+      )}
       {target === 'nearest' ? (
         <p className="flex items-start gap-2 rounded-control bg-surface p-3 text-sm text-ink-muted">
           <Info size={18} className="mt-0.5 shrink-0" />
@@ -204,6 +221,7 @@ export function BannerModal({ banner, onClose, onDelete }: Props) {
           options={options[target]}
           value={{ all: false, ids }}
           onChange={(next) => setPicks({ ...picks, [target]: next.ids })}
+          hint={target === 'loanProducts' ? t('banners.pick.loanProducts.hint') : undefined}
           error={submitted && errors.ids ? t('banners.pick.required') : undefined}
         />
       )}

@@ -13,6 +13,7 @@ import {
 } from '@/entities/microloans/loans'
 import { loanProductsStore } from '@/entities/microloans/products'
 import { brandLoanPath, brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
+import { PersonContacts } from '@/features/clients/components/PersonContacts'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate, formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
@@ -253,9 +254,13 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
                   `${client.passport.slice(0, 2)} ${client.passport.slice(2)}`,
                 ],
                 [t('loanApp.birthDate'), client.birthDate],
-                [t('mlClients.address'), client.address],
+                [t('client.propiska'), client.address],
               ]}
             />
+          </section>
+          <section className={card}>
+            <h2 className="font-bold">{t('people.title')}</h2>
+            <PersonContacts contacts={client.contacts} />
           </section>
           <section className={card}>
             <h2 className="flex items-center gap-2 font-bold">
