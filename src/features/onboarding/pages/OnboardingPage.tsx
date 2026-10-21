@@ -1,6 +1,8 @@
 import { EyeOff, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { logAction } from '@/entities/audit/audit'
+import { bannersStore, type Banner } from '@/entities/onboarding/banners'
 import { slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -11,6 +13,8 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { Switch } from '@/shared/ui/Switch'
+import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
+import { BannerList } from '../components/BannerList'
 import { SlideModal } from '../components/SlideModal'
 import { SlideThumb } from '../components/SlideThumb'
 
@@ -24,7 +28,7 @@ function reorder(list: Slide[], moved: Slide, target: Slide, after: boolean) {
 /**
  * The intro slides an app shows once after the first sign-in: picture, title and line in both
  * languages, in order, dragged by their handle to reorder. Each business's own menu opens its
- * app's slides.
+ * app's slides. Birzum has a second kind, its Bosh sahifa banners (`?kind=banners`).
  */
 export function OnboardingPage({ app }: { app: AppId }) {
   const { t, tl } = useI18n()
@@ -33,6 +37,10 @@ export function OnboardingPage({ app }: { app: AppId }) {
   const [deleting, setDeleting] = useState<Slide | null>(null)
   const [dragged, setDragged] = useState<Slide | null>(null)
   const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null)
+  const [params, setParams] = useSearchParams()
+  const kind = app === 'birzum' && params.get('kind') === 'banners' ? 'banners' : 'slides'
+  const bannerCount = bannersStore.useAll().length
+  const [editingBanner, setEditingBanner] = useState<Banner | null | undefined>(undefined)
 
   const slides = all.filter((slide) => slide.app === app)
 
@@ -75,127 +83,152 @@ export function OnboardingPage({ app }: { app: AppId }) {
       <PageHeader
         title={t('nav.onboarding')}
         actions={
-          <Button onClick={() => setEditing(null)}>
-            <Plus size={20} />
-            {t('slides.add')}
-          </Button>
+          kind === 'banners' ? (
+            <Button onClick={() => setEditingBanner(null)}>
+              <Plus size={20} />
+              {t('banners.add')}
+            </Button>
+          ) : (
+            <Button onClick={() => setEditing(null)}>
+              <Plus size={20} />
+              {t('slides.add')}
+            </Button>
+          )
         }
       />
 
-      <section className="flex flex-col rounded-card border border-line bg-canvas">
-        {slides.length === 0 ? (
-          <EmptyState title={t('slides.empty')} hint={t('slides.empty.hint')} />
-        ) : (
-          <ol className="flex flex-col">
-            {slides.map((slide, i) => (
-              <li
-                key={slide.id}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = 'move'
-                  setDragged(slide)
-                }}
-                onDragEnd={() => {
-                  setDragged(null)
-                  setDrop(null)
-                }}
-                onDragOver={(e) => dragOver(e, slide)}
-                onDrop={() => dropOn(slide)}
-                onClick={() => setEditing(slide)}
-                className={cn(
-                  'flex cursor-pointer items-center gap-3 border-b border-line py-4 pr-4 pl-2 last:border-b-0 hover:bg-surface/60',
-                  !slide.visible && 'bg-surface/40',
-                  dragged === slide && 'opacity-40',
-                  drop?.id === slide.id &&
-                    (drop.after
-                      ? 'shadow-[inset_0_-2px_0_var(--color-primary)]'
-                      : 'shadow-[inset_0_2px_0_var(--color-primary)]'),
-                )}
-              >
-                <span onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onKeyDown={(e) => keyMove(e, slide)}
-                    aria-label={t('faq.drag', { question: tl(slide.title) })}
-                    title={t('faq.drag', { question: tl(slide.title) })}
-                    className="grid size-8 cursor-grab place-items-center rounded-md text-ink-subtle hover:bg-surface hover:text-ink active:cursor-grabbing"
-                  >
-                    <GripVertical size={18} />
-                  </button>
-                </span>
-                <span className="w-5 text-sm text-ink-subtle tabular-nums">{i + 1}</span>
-                <SlideThumb
-                  slide={slide}
-                  className={cn('w-32! shrink-0', !slide.visible && 'opacity-50')}
-                />
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className={cn('font-semibold', !slide.visible && 'text-ink-muted')}>
-                    {tl(slide.title)}
-                  </p>
-                  <p className="line-clamp-2 text-sm text-ink-muted">{tl(slide.text)}</p>
-                  {!slide.visible && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-ink-subtle">
-                      <EyeOff size={14} />
-                      {t('slides.hiddenNote')}
-                    </span>
-                  )}
-                </div>
-                <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <Switch
-                    checked={slide.visible}
-                    onChange={() => toggle(slide)}
-                    label={t('slides.visible')}
-                  />
-                </span>
-                <RowActions
-                  actions={[
-                    { icon: Pencil, label: t('common.edit'), onClick: () => setEditing(slide) },
-                    {
-                      icon: Trash2,
-                      label: t('common.delete'),
-                      onClick: () => setDeleting(slide),
-                      danger: true,
-                    },
-                  ]}
-                />
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      {editing !== undefined && (
-        <SlideModal
-          app={app}
-          slide={editing}
-          onClose={() => setEditing(undefined)}
-          onDelete={(slide) => {
-            setEditing(undefined)
-            setDeleting(slide)
-          }}
+      {app === 'birzum' && (
+        <UnderlineTabs
+          label={t('onboarding.kind.label')}
+          options={[
+            { value: 'slides', label: t('onboarding.kind.slides'), count: slides.length },
+            { value: 'banners', label: t('onboarding.kind.banners'), count: bannerCount },
+          ]}
+          value={kind}
+          onChange={(next) => setParams(next === 'banners' ? { kind: 'banners' } : {})}
         />
       )}
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title={t('slides.delete.title')}
-        confirmLabel={t('common.delete')}
-        onConfirm={() => {
-          if (deleting) {
-            slidesStore.remove(deleting.id)
-            logAction({
-              section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
-              kind: 'delete',
-              action: 'audit.a.slideDeleted',
-              target: tl(deleting.title),
-            })
-          }
-          setDeleting(null)
-          toast(t('slides.deleted'))
-        }}
-      >
-        <p>{t('slides.delete.message')}</p>
-      </ConfirmDialog>
+
+      {kind === 'banners' ? (
+        <BannerList editing={editingBanner} setEditing={setEditingBanner} />
+      ) : (
+        <>
+          <section className="flex flex-col rounded-card border border-line bg-canvas">
+            {slides.length === 0 ? (
+              <EmptyState title={t('slides.empty')} hint={t('slides.empty.hint')} />
+            ) : (
+              <ol className="flex flex-col">
+                {slides.map((slide, i) => (
+                  <li
+                    key={slide.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move'
+                      setDragged(slide)
+                    }}
+                    onDragEnd={() => {
+                      setDragged(null)
+                      setDrop(null)
+                    }}
+                    onDragOver={(e) => dragOver(e, slide)}
+                    onDrop={() => dropOn(slide)}
+                    onClick={() => setEditing(slide)}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 border-b border-line py-4 pr-4 pl-2 last:border-b-0 hover:bg-surface/60',
+                      !slide.visible && 'bg-surface/40',
+                      dragged === slide && 'opacity-40',
+                      drop?.id === slide.id &&
+                        (drop.after
+                          ? 'shadow-[inset_0_-2px_0_var(--color-primary)]'
+                          : 'shadow-[inset_0_2px_0_var(--color-primary)]'),
+                    )}
+                  >
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onKeyDown={(e) => keyMove(e, slide)}
+                        aria-label={t('faq.drag', { question: tl(slide.title) })}
+                        title={t('faq.drag', { question: tl(slide.title) })}
+                        className="grid size-8 cursor-grab place-items-center rounded-md text-ink-subtle hover:bg-surface hover:text-ink active:cursor-grabbing"
+                      >
+                        <GripVertical size={18} />
+                      </button>
+                    </span>
+                    <span className="w-5 text-sm text-ink-subtle tabular-nums">{i + 1}</span>
+                    <SlideThumb
+                      slide={slide}
+                      className={cn('w-32! shrink-0', !slide.visible && 'opacity-50')}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <p className={cn('font-semibold', !slide.visible && 'text-ink-muted')}>
+                        {tl(slide.title)}
+                      </p>
+                      <p className="line-clamp-2 text-sm text-ink-muted">{tl(slide.text)}</p>
+                      {!slide.visible && (
+                        <span className="flex items-center gap-1 text-xs font-medium text-ink-subtle">
+                          <EyeOff size={14} />
+                          {t('slides.hiddenNote')}
+                        </span>
+                      )}
+                    </div>
+                    <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Switch
+                        checked={slide.visible}
+                        onChange={() => toggle(slide)}
+                        label={t('slides.visible')}
+                      />
+                    </span>
+                    <RowActions
+                      actions={[
+                        { icon: Pencil, label: t('common.edit'), onClick: () => setEditing(slide) },
+                        {
+                          icon: Trash2,
+                          label: t('common.delete'),
+                          onClick: () => setDeleting(slide),
+                          danger: true,
+                        },
+                      ]}
+                    />
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
+          {editing !== undefined && (
+            <SlideModal
+              app={app}
+              slide={editing}
+              onClose={() => setEditing(undefined)}
+              onDelete={(slide) => {
+                setEditing(undefined)
+                setDeleting(slide)
+              }}
+            />
+          )}
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            title={t('slides.delete.title')}
+            confirmLabel={t('common.delete')}
+            onConfirm={() => {
+              if (deleting) {
+                slidesStore.remove(deleting.id)
+                logAction({
+                  section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
+                  kind: 'delete',
+                  action: 'audit.a.slideDeleted',
+                  target: tl(deleting.title),
+                })
+              }
+              setDeleting(null)
+              toast(t('slides.deleted'))
+            }}
+          >
+            <p>{t('slides.delete.message')}</p>
+          </ConfirmDialog>
+        </>
+      )}
     </div>
   )
 }

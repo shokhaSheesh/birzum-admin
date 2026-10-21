@@ -25,8 +25,8 @@ type Props = {
   options: MultiOption[]
   value: MultiValue
   onChange: (value: MultiValue) => void
-  /** e.g. "Barcha klientlar". */
-  allLabel: string
+  /** e.g. "Barcha klientlar". Left out, there is no "Hammasi" row: only ticked ones count. */
+  allLabel?: string
   placeholder: string
   hint?: string
   error?: string
@@ -62,7 +62,7 @@ export function MultiSelectField({
   const isOn = (v: string) => value.all || value.ids.includes(v)
   const toggle = (v: string) => {
     const next = isOn(v) ? picked.filter((x) => x !== v) : [...picked, v]
-    onChange({ all: next.length === options.length, ids: next })
+    onChange({ all: !!allLabel && next.length === options.length, ids: next })
   }
   const allState = value.all ? true : value.ids.length ? 'mixed' : false
   const chosen = options.filter((o) => value.ids.includes(o.value))
@@ -139,7 +139,7 @@ export function MultiSelectField({
                 className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-subtle"
               />
             </label>
-            {needle === '' && (
+            {needle === '' && allLabel && (
               <div
                 onClick={() => onChange({ all: !value.all, ids: [] })}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border-b border-line px-3 py-2 text-sm font-semibold hover:bg-surface"
