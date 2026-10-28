@@ -24,6 +24,7 @@ import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductsPage } from '@/features/products/pages/ProductsPage'
 import { ReviewsPage } from '@/features/reviews/pages/ReviewsPage'
+import { MerchantRolesPage } from '@/features/merchants/pages/MerchantRolesPage'
 import { QuickRepliesPage } from '@/features/support/pages/QuickRepliesPage'
 import { SupportPage } from '@/features/support/pages/SupportPage'
 import { PayoutDetailPage } from '@/features/payouts/pages/PayoutDetailPage'
@@ -59,6 +60,7 @@ const DESIGNED: string[] = [
   ROUTES.merchants,
   ROUTES.payouts,
   ROUTES.reviews,
+  ROUTES.merchantRoles,
   ROUTES.support,
   ROUTES.quickReplies,
   ROUTES.broadcasts,
@@ -160,6 +162,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.payoutNew, element: <PayoutFormPage /> },
           { path: ROUTES.payout, element: <PayoutDetailPage /> },
           { path: ROUTES.reviews, element: <ReviewsPage /> },
+          { path: ROUTES.merchantRoles, element: <MerchantRolesPage /> },
           { path: ROUTES.support, element: <SupportPage /> },
           { path: ROUTES.quickReplies, element: <QuickRepliesPage /> },
           { path: ROUTES.broadcasts, element: <BroadcastsPage /> },

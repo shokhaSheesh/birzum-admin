@@ -15,6 +15,7 @@ export const ROUTES = {
   products: '/products',
   product: '/products/:id',
   reviews: '/reviews',
+  merchantRoles: '/merchant-roles',
   merchantNew: '/merchants/new',
   merchant: '/merchants/:id',
   merchantEdit: '/merchants/:id/edit',

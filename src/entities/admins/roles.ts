@@ -49,6 +49,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
       { key: 'merchants', label: 'nav.merchants', ops: ALL },
       { key: 'payouts', label: 'nav.payouts', ops: ALL },
       { key: 'reviews', label: 'nav.reviews', ops: ['read', 'update', 'delete'] },
+      { key: 'merchantRoles', label: 'nav.merchantRoles', ops: ['read', 'update'] },
     ],
   },
   {

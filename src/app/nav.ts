@@ -22,6 +22,7 @@ import {
   Star,
   Store,
   Tags,
+  UserCog,
   Users,
   Wallet,
   type LucideIcon,
@@ -78,6 +79,12 @@ export const NAV: NavGroup[] = [
       { to: ROUTES.merchants, icon: Store, label: 'nav.merchants', about: 'about.merchants' },
       { to: ROUTES.payouts, icon: HandCoins, label: 'nav.payouts', about: 'about.payouts' },
       { to: ROUTES.reviews, icon: Star, label: 'nav.reviews', about: 'about.reviews' },
+      {
+        to: ROUTES.merchantRoles,
+        icon: UserCog,
+        label: 'nav.merchantRoles',
+        about: 'about.merchantRoles',
+      },
     ],
   },
   {
