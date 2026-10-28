@@ -97,10 +97,11 @@ export function MerchantsPage() {
           <EmptyState title={t('merchants.empty')} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] border-t border-line">
+            <table className="w-full min-w-[760px] border-t border-line">
               <thead>
                 <tr className="border-b border-line">
                   <th className={th}>{t('merchants.col.merchant')}</th>
+                  <th className={th}>{t('merchant.tariff')}</th>
                   <th className={th}>{t('merchants.col.filials')}</th>
                   <th className={th}>{t('merchants.col.products')}</th>
                   <th className={`${th} text-right`}>{t('merchants.col.sales')}</th>
@@ -125,6 +126,9 @@ export function MerchantsPage() {
                           </span>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {t('merchant.tariff.value', { tariff: merchant.tariff })}
                     </td>
                     <td className="px-4 py-3 tabular-nums">
                       {filials.filter((filial) => filial.merchantId === merchant.id).length}

@@ -1,8 +1,8 @@
-import { ArrowLeft, Ban, ChevronRight, CircleX } from 'lucide-react'
+import { ArrowLeft, Ban, Camera, ChevronRight, CircleX, Undo2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
-import { applicationsStore, financedOf } from '@/entities/applications/applications'
+import { applicationsStore, financedOf, handedAtOf } from '@/entities/applications/applications'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { filialsStore } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
@@ -76,6 +76,9 @@ export function ApplicationDetailPage() {
       ? progressOf(application, payments, today)
       : null
   const months = (count: number) => t('term.months', { count: String(count) })
+  const cancelEntry = application.history.findLast((entry) => entry.status === 'cancelled')
+  const handedAt = handedAtOf(application)
+  const handedBy = application.history.find((entry) => entry.status === 'handed')?.by
   const actorOf = (kind: 'staff' | 'customer' | 'system', name: string) =>
     kind === 'system' ? name : `${t(`application.actor.${kind}`)}: ${name}`
 
@@ -110,12 +113,33 @@ export function ApplicationDetailPage() {
           </div>
         </div>
       )}
-      {application.cancelComment && (
+      {application.status === 'cancelled' && cancelEntry && (
         <div className="flex gap-3 rounded-card bg-navy-100 p-4">
-          <Ban size={22} className="shrink-0 text-ink-muted" />
+          {application.returnReason ? (
+            <Undo2 size={22} className="shrink-0 text-ink-muted" />
+          ) : (
+            <Ban size={22} className="shrink-0 text-ink-muted" />
+          )}
           <div className="flex flex-col gap-0.5">
-            <p className="font-bold">{t('application.cancelled')}</p>
-            <p className="text-sm text-ink-muted">{application.cancelComment}</p>
+            <p className="font-bold">
+              {application.returnReason
+                ? t('application.returned', {
+                    reason: t(`return.reason.${application.returnReason}`),
+                  })
+                : t('application.cancelled')}
+            </p>
+            {application.cancelComment && <p className="text-sm">{application.cancelComment}</p>}
+            <p className="text-sm text-ink-muted">
+              {formatDateTime(cancelEntry.at)} · {actorOf(cancelEntry.by.kind, cancelEntry.by.name)}
+              {application.returnReason && ` · ${t('application.returned.code')}`}
+            </p>
+            {application.returnReason && application.downPayment > 0 && (
+              <p className="text-sm text-ink-muted">
+                {t('application.returned.downPayment', {
+                  amount: formatSum(application.downPayment),
+                })}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -258,6 +282,34 @@ export function ApplicationDetailPage() {
               ]}
             />
           </section>
+
+          {handedAt && (
+            <section className={card}>
+              <h2 className="flex items-center gap-2 font-bold">
+                <Camera size={18} className="text-brand" />
+                {t('application.handover')}
+              </h2>
+              <p className="-mt-2 text-sm text-ink-muted">
+                {formatDateTime(handedAt)}
+                {handedBy && ` · ${handedBy.name}`}
+              </p>
+              {application.handoverPhotos?.length ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {application.handoverPhotos.map((src) => (
+                    <a key={src} href={src} target="_blank" rel="noreferrer">
+                      <img
+                        src={src}
+                        alt={t('application.handover.photo')}
+                        className="aspect-square w-full rounded-control object-cover hover:opacity-90"
+                      />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-ink-muted">{t('application.handover.none')}</p>
+              )}
+            </section>
+          )}
 
           {sale && (
             <section className={card}>

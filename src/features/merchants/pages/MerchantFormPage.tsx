@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   MERCHANT_STATUSES,
   merchantsStore,
+  TARIFFS,
   type Merchant,
   type MerchantStatus,
   type PayoutSchedule,
+  type Tariff,
 } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { merchantPath, ROUTES } from '@/shared/config/routes'
@@ -24,6 +26,7 @@ import { FormSection } from '@/shared/ui/FormSection'
 import { ImageField } from '@/shared/ui/ImageField'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { PhoneField } from '@/shared/ui/PhoneField'
+import { SelectField } from '@/shared/ui/SelectField'
 import { TextField } from '@/shared/ui/TextField'
 import { logAction } from '@/entities/audit/audit'
 
@@ -61,6 +64,7 @@ export function MerchantFormPage() {
   const [bank, setBank] = useState(existing?.bank ?? { name: '', mfo: '', account: '' })
   const [contract, setContract] = useState(existing?.contract ?? { number: '', date: '' })
   const [schedule, setSchedule] = useState<PayoutSchedule>(existing?.payoutSchedule ?? 'weekly')
+  const [tariff, setTariff] = useState<Tariff>(existing?.tariff ?? 'A')
   const [owner, setOwner] = useState(existing?.owner ?? { name: '', phone: '', login: '' })
   const [status, setStatus] = useState<MerchantStatus>(existing?.status ?? 'onboarding')
   const [submitted, setSubmitted] = useState(false)
@@ -101,6 +105,7 @@ export function MerchantFormPage() {
       bank,
       contract,
       payoutSchedule: schedule,
+      tariff,
       owner,
       status,
     }
@@ -245,6 +250,15 @@ export function MerchantFormPage() {
                   value={contract.date}
                   onChange={(date) => setContract({ ...contract, date })}
                   error={show('date', t('merchant.error.date'))}
+                />
+                <SelectField
+                  label={t('merchant.tariff')}
+                  options={TARIFFS.map((value) => ({
+                    value,
+                    label: t('merchant.tariff.value', { tariff: value }),
+                  }))}
+                  value={tariff}
+                  onChange={setTariff}
                 />
                 <ChoiceGrid
                   label={t('merchant.schedule')}

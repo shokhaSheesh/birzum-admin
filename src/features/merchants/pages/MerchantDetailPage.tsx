@@ -214,6 +214,7 @@ export function MerchantDetailPage() {
             rows={[
               [t('merchant.contract'), merchant.contract.number],
               [t('merchant.contractDate'), merchant.contract.date],
+              [t('merchant.tariff'), t('merchant.tariff.value', { tariff: merchant.tariff })],
               [t('merchant.schedule'), t(`merchant.schedule.${merchant.payoutSchedule}`)],
             ]}
           />

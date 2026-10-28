@@ -1,3 +1,10 @@
+import user1Photo from '@/shared/assets/people/user-1.jpg'
+import user2Photo from '@/shared/assets/people/user-2.jpg'
+import user3Photo from '@/shared/assets/people/user-3.jpg'
+import user4Photo from '@/shared/assets/people/user-4.jpg'
+import product1Photo from '@/shared/assets/products/product-1.jpg'
+import product2Photo from '@/shared/assets/products/product-2.jpg'
+import product3Photo from '@/shared/assets/products/product-3.jpg'
 import { createStore } from '@/shared/lib/createStore'
 import { productsStore } from '../catalog/products'
 import { clientsStore, fullName } from '../clients/clients'
@@ -55,9 +62,20 @@ export type Application = {
   contractNumber?: string
   rejection?: { reason: RejectReason; comment: string }
   cancelComment?: string
+  /**
+   * Set when it was cancelled after hand-over: the client brought the goods back to the shop,
+   * the seller picked the reason and the client confirmed with the SMS code.
+   */
+  returnReason?: ReturnReason
+  /** Photos the seller took of the client receiving the goods, at hand-over. */
+  handoverPhotos?: string[]
   /** Every status change, oldest first. */
   history: HistoryEntry[]
 }
+
+/** Why goods came back after hand-over; the merchant app's reasons. */
+export const RETURN_REASONS = ['changedMind', 'faulty', 'other'] as const
+export type ReturnReason = (typeof RETURN_REASONS)[number]
 
 /** The part Birzum finances, and owes the merchant once the goods are handed over. */
 export const financedOf = (application: Application) =>
@@ -88,6 +106,30 @@ const ADDRESSES = [
   'Samarqand, Rudakiy koʻchasi, 44',
   'Toshkent, Mirzo Ulugʻbek, Buyuk Ipak Yoʻli 150',
 ]
+const HANDOVER_PHOTOS = [
+  [user1Photo, product1Photo],
+  [user2Photo],
+  [user3Photo, product2Photo],
+  [user4Photo, product3Photo],
+]
+const CANCEL_NOTES = {
+  customer: [
+    'Boshqa doʻkondan arzonroq topdim.',
+    'Hozircha kerak emas, keyinroq olaman.',
+    'Muddatni oʻzgartirib, qayta ariza beraman.',
+  ],
+  staff: [
+    'Klient kelib olmadi, telefonni koʻtarmayapti.',
+    'Tovar omborda qolmadi, klient bilan kelishildi.',
+    'Klient keyinroq olishini aytdi.',
+  ],
+}
+const RETURN_NOTES: Record<ReturnReason, string> = {
+  changedMind: 'Klient boshqa rang tanlamoqchi, tovar qadoqda qaytarildi.',
+  faulty: 'Ekranda chiziq bor, tovar servis markaziga yuborildi.',
+  other: 'Oʻlchami toʻgʻri kelmadi.',
+}
+
 const NOTES: Record<(typeof REJECT_REASONS)[number], string> = {
   noStock: 'Bu rang tugab qoldi, yangi partiya 2 haftada.',
   unverified: 'Pasport rasmi MyID bilan mos kelmadi.',
@@ -165,6 +207,15 @@ function seed(): Application[] {
               ? 'rejected'
               : 'cancelled'
 
+      // A few handed-over contracts came back to the shop and were cancelled with the client's code
+      const returned = status === 'handed' && age > 6 && rand() < 0.08
+      const returnReason = returned ? pick([...RETURN_REASONS]) : undefined
+      const cancelBy: Actor = rand() > 0.5 ? customer : staff
+      const cancelNote =
+        status === 'cancelled'
+          ? pick(CANCEL_NOTES[cancelBy.kind === 'customer' ? 'customer' : 'staff'])
+          : returnReason && RETURN_NOTES[returnReason]
+
       const history: HistoryEntry[] = [
         source === 'client'
           ? { status: 'pending', at: createdAt, by: customer }
@@ -176,14 +227,12 @@ function seed(): Application[] {
       if (status === 'rejected')
         history.push({ status: 'rejected', at: at(1), by: staff, comment: NOTES[reason] })
       if (status === 'cancelled')
-        history.push({
-          status: 'cancelled',
-          at: at(2),
-          by: rand() > 0.5 ? customer : staff,
-          comment: 'Klient keyinroq olishini aytdi.',
-        })
+        history.push({ status: 'cancelled', at: at(2), by: cancelBy, comment: cancelNote })
       if (status === 'handed' || status === 'closed')
         history.push({ status: 'handed', at: at(1.5), by: staff })
+      if (returned)
+        history.push({ status: 'cancelled', at: at(24 * 3 + 4), by: staff, comment: cancelNote })
+      const handed = status === 'handed' || status === 'closed'
       if (status === 'closed')
         history.push({ status: 'closed', at: at(24 * 28), by: { kind: 'system', name: 'Birzum' } })
 
@@ -197,7 +246,7 @@ function seed(): Application[] {
         clientId: person.id,
         client: { name, phone: person.phone, pinfl: person.pinfl },
         createdAt,
-        status,
+        status: returned ? 'cancelled' : status,
         lines,
         goodsTotal,
         downPayment,
@@ -207,9 +256,11 @@ function seed(): Application[] {
         monthlyPayment: Math.floor(installmentTotal / rate.term),
         paymentDay: 1 + Math.floor(rand() * 10),
         fulfilment: method === 'delivery' ? { method, address: pick(ADDRESSES) } : { method },
-        contractNumber: status === 'handed' || status === 'closed' ? `NS-${number}` : undefined,
+        contractNumber: handed ? `NS-${number}` : undefined,
         rejection: status === 'rejected' ? { reason, comment: NOTES[reason] } : undefined,
-        cancelComment: status === 'cancelled' ? 'Klient keyinroq olishini aytdi.' : undefined,
+        cancelComment: cancelNote,
+        returnReason,
+        handoverPhotos: handed ? HANDOVER_PHOTOS[number % HANDOVER_PHOTOS.length] : undefined,
         history,
       })
       number++

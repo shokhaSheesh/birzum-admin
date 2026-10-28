@@ -244,9 +244,16 @@ export function ApplicationsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge tone={applicationStatusTone[application.status]}>
-                            {t(`application.status.${application.status}`)}
-                          </StatusBadge>
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusBadge tone={applicationStatusTone[application.status]}>
+                              {t(`application.status.${application.status}`)}
+                            </StatusBadge>
+                            {application.returnReason && (
+                              <span className="text-xs text-ink-muted">
+                                {t('application.returned.short')}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="pr-3">
                           <RowActions
