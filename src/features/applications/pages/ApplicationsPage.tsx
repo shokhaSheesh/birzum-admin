@@ -5,6 +5,8 @@ import { applicationStatusTone } from '@/entities/applications/applicationStatus
 import {
   APPLICATION_STATUSES,
   applicationsStore,
+  confirmDeadlineOf,
+  isOpen,
   type ApplicationStatus,
 } from '@/entities/applications/applications'
 import { filialsStore } from '@/entities/merchants/filials'
@@ -70,9 +72,7 @@ export function ApplicationsPage() {
   const handedThisMonth = thisMonth.filter(
     (application) => application.status === 'handed' || application.status === 'closed',
   )
-  const decided = thisMonth.filter(
-    (application) => application.status !== 'pending' && application.status !== 'processing',
-  )
+  const decided = thisMonth.filter((application) => !isOpen(application.status))
   const rejectedShare = decided.length
     ? Math.round(
         (decided.filter((application) => application.status === 'rejected').length /
@@ -96,8 +96,8 @@ export function ApplicationsPage() {
         <StatCard
           label={t('application.status.pending')}
           value={String(all.filter((application) => application.status === 'pending').length)}
-          hint={t('applications.stat.processing', {
-            count: String(all.filter((a) => a.status === 'processing').length),
+          hint={t('applications.stat.creating', {
+            count: String(all.filter((a) => a.status === 'creating').length),
           })}
         />
         <StatCard
@@ -248,6 +248,18 @@ export function ApplicationsPage() {
                             <StatusBadge tone={applicationStatusTone[application.status]}>
                               {t(`application.status.${application.status}`)}
                             </StatusBadge>
+                            {application.status === 'pending' && (
+                              <span className="text-xs whitespace-nowrap text-ink-muted tabular-nums">
+                                {t('application.confirmBy.short', {
+                                  date: formatDateTime(confirmDeadlineOf(application)),
+                                })}
+                              </span>
+                            )}
+                            {application.rejection?.reason === 'timeout' && (
+                              <span className="text-xs text-ink-muted">
+                                {t('application.timeout.short')}
+                              </span>
+                            )}
                             {application.returnReason && (
                               <span className="text-xs text-ink-muted">
                                 {t('application.returned.short')}

@@ -1,8 +1,13 @@
-import { ArrowLeft, Ban, Camera, ChevronRight, CircleX, Undo2 } from 'lucide-react'
+import { ArrowLeft, Ban, Camera, ChevronRight, CircleX, Clock, Loader, Undo2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
-import { applicationsStore, financedOf, handedAtOf } from '@/entities/applications/applications'
+import {
+  applicationsStore,
+  confirmDeadlineOf,
+  financedOf,
+  handedAtOf,
+} from '@/entities/applications/applications'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { filialsStore } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
@@ -109,8 +114,26 @@ export function ApplicationDetailPage() {
                 reason: t(`reject.reason.${application.rejection.reason}`),
               })}
             </p>
-            <p className="text-sm">{application.rejection.comment}</p>
+            {application.rejection.comment && (
+              <p className="text-sm">{application.rejection.comment}</p>
+            )}
           </div>
+        </div>
+      )}
+      {application.status === 'pending' && (
+        <div className="flex gap-3 rounded-card bg-warning-soft p-4">
+          <Clock size={22} className="shrink-0 text-warning" />
+          <p className="self-center text-sm font-semibold">
+            {t('application.confirmBy', {
+              date: formatDateTime(confirmDeadlineOf(application)),
+            })}
+          </p>
+        </div>
+      )}
+      {application.status === 'creating' && (
+        <div className="flex gap-3 rounded-card bg-surface p-4">
+          <Loader size={22} className="shrink-0 text-ink-muted" />
+          <p className="self-center text-sm font-semibold">{t('application.creatingNote')}</p>
         </div>
       )}
       {application.status === 'cancelled' && cancelEntry && (

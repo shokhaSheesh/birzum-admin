@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { applicationsStore, handedAtOf } from '@/entities/applications/applications'
+import { applicationsStore, handedAtOf, isOpen } from '@/entities/applications/applications'
 import { categoriesStore } from '@/entities/catalog/categories'
 import { productsStore } from '@/entities/catalog/products'
 import { clientsStore } from '@/entities/clients/clients'
@@ -98,7 +98,7 @@ export function DashboardPage() {
   const noCompare = t(period.unit === 'all' ? 'dashboard.noCompare.all' : 'dashboard.noCompare')
 
   // How the period's arizalar went
-  const decided = created.filter((a) => a.status !== 'pending' && a.status !== 'processing')
+  const decided = created.filter((a) => !isOpen(a.status))
   const funnel = [
     { key: 'sent' as const, value: created.length },
     { key: 'decided' as const, value: decided.length },

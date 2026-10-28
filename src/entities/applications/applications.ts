@@ -13,6 +13,7 @@ import { ratesStore } from '../pricing/pricing'
 /** The same statuses as the merchant and client apps. */
 export const APPLICATION_STATUSES = [
   'pending',
+  'creating',
   'processing',
   'handed',
   'closed',
@@ -20,16 +21,18 @@ export const APPLICATION_STATUSES = [
   'cancelled',
 ] as const
 /**
- * `pending`: a shopper's order from the client app; the merchant accepts or rejects it.
- * `processing`: the merchant is drawing up the contract. `handed`: goods given, nasiya running.
- * `closed`: fully paid. `rejected` and `cancelled` are final.
+ * `pending`: a shopper's order from the client app; the merchant has 24 hours to accept or
+ * reject it, or it is rejected by itself. `creating`: accepted, FlexSoft is making the contract.
+ * `processing`: the contract is made, the goods wait to be handed over. `handed`: goods given,
+ * nasiya running. `closed`: fully paid. `rejected` and `cancelled` are final.
  */
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number]
 
 export const REJECT_REASONS = ['noStock', 'unverified', 'limit', 'clientDeclined', 'other'] as const
-export type RejectReason = (typeof REJECT_REASONS)[number]
+/** `timeout`: nobody at the shop answered a shopper's order within 24 hours. */
+export type RejectReason = (typeof REJECT_REASONS)[number] | 'timeout'
 
-/** Who made a change: merchant staff, the shopper, or the system (Birzum). */
+/** Who made a change: merchant staff, the shopper, or a system (Birzum, FlexSoft). */
 export type Actor = { kind: 'staff' | 'customer' | 'system'; name: string }
 export type HistoryEntry = { status: ApplicationStatus; at: Date; by: Actor; comment?: string }
 
@@ -81,6 +84,19 @@ export type ReturnReason = (typeof RETURN_REASONS)[number]
 export const financedOf = (application: Application) =>
   application.goodsTotal - application.downPayment
 
+/** Still moving: waiting for the shop, for the contract, or for the hand-over. */
+export const isOpen = (status: ApplicationStatus) =>
+  status === 'pending' || status === 'creating' || status === 'processing'
+
+/** How long the shop has to answer a shopper's order. */
+export const CONFIRM_HOURS = 24
+
+/** When a `pending` order is rejected by itself if the shop has not answered. */
+export const confirmDeadlineOf = (application: Application) => {
+  const sent = application.history.find((entry) => entry.status === 'pending')?.at
+  return new Date((sent ?? application.createdAt).getTime() + CONFIRM_HOURS * 3600 * 1000)
+}
+
 /** When the goods were handed over, if they were. */
 export const handedAtOf = (application: Application) =>
   application.history.find((entry) => entry.status === 'handed')?.at
@@ -88,6 +104,8 @@ export const handedAtOf = (application: Application) =>
 // Invented sample arizalar from 1 September to today, worked out from a few rules so
 // statuses, history and payouts agree. Replace with the API.
 const DAY = 24 * 60 * 60 * 1000
+const BIRZUM: Actor = { kind: 'system', name: 'Birzum' }
+const FLEXSOFT: Actor = { kind: 'system', name: 'FlexSoft' }
 const STAFF: Record<string, string[]> = {
   m1: ['Aziz Karimov', 'Laylo Sobirova', 'Rustam Olimov'],
   m2: ['Nodira Yusupova', 'Timur Ahmedov'],
@@ -195,7 +213,7 @@ function seed(): Application[] {
       const roll = rand()
       let status: ApplicationStatus
       if (age < 0.25 || (day === lastDay && roll < 0.6))
-        status = source === 'client' ? 'pending' : 'processing'
+        status = source === 'client' ? 'pending' : roll < 0.15 ? 'creating' : 'processing'
       else if (age < 1.5) status = roll < 0.5 ? 'processing' : roll < 0.9 ? 'handed' : 'rejected'
       else
         status =
@@ -216,15 +234,28 @@ function seed(): Application[] {
           ? pick(CANCEL_NOTES[cancelBy.kind === 'customer' ? 'customer' : 'staff'])
           : returnReason && RETURN_NOTES[returnReason]
 
+      // Some shopper orders nobody at the shop answered: rejected by the system after 24 hours
+      const timedOut = status === 'rejected' && source === 'client' && rand() < 0.35
+      const reason = pick([...REJECT_REASONS])
+
+      // The shop accepts (or the seller files it) and FlexSoft makes the contract a minute later
       const history: HistoryEntry[] = [
         source === 'client'
           ? { status: 'pending', at: createdAt, by: customer }
-          : { status: 'processing', at: createdAt, by: staff },
+          : { status: 'creating', at: createdAt, by: staff },
       ]
+      const accepted = source === 'client' ? at(0.5) : createdAt
       if (source === 'client' && status !== 'pending' && status !== 'rejected')
-        history.push({ status: 'processing', at: at(0.5), by: staff })
-      const reason = pick([...REJECT_REASONS])
-      if (status === 'rejected')
+        history.push({ status: 'creating', at: accepted, by: staff })
+      const contracted = status !== 'pending' && status !== 'creating' && status !== 'rejected'
+      if (contracted)
+        history.push({
+          status: 'processing',
+          at: new Date(accepted.getTime() + 2 * 60 * 1000),
+          by: FLEXSOFT,
+        })
+      if (timedOut) history.push({ status: 'rejected', at: at(CONFIRM_HOURS), by: BIRZUM })
+      else if (status === 'rejected')
         history.push({ status: 'rejected', at: at(1), by: staff, comment: NOTES[reason] })
       if (status === 'cancelled')
         history.push({ status: 'cancelled', at: at(2), by: cancelBy, comment: cancelNote })
@@ -256,8 +287,12 @@ function seed(): Application[] {
         monthlyPayment: Math.floor(installmentTotal / rate.term),
         paymentDay: 1 + Math.floor(rand() * 10),
         fulfilment: method === 'delivery' ? { method, address: pick(ADDRESSES) } : { method },
-        contractNumber: handed ? `NS-${number}` : undefined,
-        rejection: status === 'rejected' ? { reason, comment: NOTES[reason] } : undefined,
+        contractNumber: contracted ? `NS-${number}` : undefined,
+        rejection: timedOut
+          ? { reason: 'timeout', comment: '' }
+          : status === 'rejected'
+            ? { reason, comment: NOTES[reason] }
+            : undefined,
         cancelComment: cancelNote,
         returnReason,
         handoverPhotos: handed ? HANDOVER_PHOTOS[number % HANDOVER_PHOTOS.length] : undefined,
