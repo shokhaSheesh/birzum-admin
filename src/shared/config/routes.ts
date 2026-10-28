@@ -13,9 +13,7 @@ export const ROUTES = {
   product: '/products/:id',
   reviews: '/reviews',
   merchantRoles: '/merchant-roles',
-  merchantNew: '/merchants/new',
   merchant: '/merchants/:id',
-  merchantEdit: '/merchants/:id/edit',
   categories: '/categories',
   brands: '/brands',
   pricing: '/pricing',
@@ -38,7 +36,6 @@ export const ROUTES = {
 /** A merchant's detail page. */
 export const merchantPath = (id: string) => `/merchants/${id}`
 /** A merchant's edit form. */
-export const merchantEditPath = (id: string) => `/merchants/${id}/edit`
 
 /** A product's read-only detail page. */
 export const productPath = (id: string) => `/products/${id}`

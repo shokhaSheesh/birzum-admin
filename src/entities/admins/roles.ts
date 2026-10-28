@@ -46,7 +46,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
     scope: 'birzum',
     title: 'navGroup.partners',
     sections: [
-      { key: 'merchants', label: 'nav.merchants', ops: ALL },
+      { key: 'merchants', label: 'nav.merchants', ops: ['read', 'update'] },
       { key: 'reviews', label: 'nav.reviews', ops: ['read', 'update', 'delete'] },
       { key: 'merchantRoles', label: 'nav.merchantRoles', ops: ['read', 'update'] },
     ],

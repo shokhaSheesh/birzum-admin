@@ -2,10 +2,10 @@ import { createStore } from '@/shared/lib/createStore'
 import { merchantsStore } from './merchants'
 
 /**
- * The people who sign in to a merchant's app. The roles are the merchant app's three:
- * Egasi (everything), Menejer (its filials and staff) and Sotuvchi (clients and arizalar).
+ * The people who sign in to a merchant's app. FlexSoft makes the accounts and gives each one of
+ * its two roles, Administrator or Sotuvchi; what a role may do is set in «Merchant rollari».
  */
-export const STAFF_ROLES = ['owner', 'manager', 'seller'] as const
+export const STAFF_ROLES = ['admin', 'seller'] as const
 export type StaffRole = (typeof STAFF_ROLES)[number]
 export type StaffStatus = 'active' | 'blocked'
 
@@ -34,14 +34,14 @@ type Seed = [
   blocked?: boolean,
 ]
 
-// Invented sample staff; each owner comes from the merchant's form. Replace with the API.
+// Invented sample staff; each shop's owner is its administrator. Replace with FlexSoft's API.
 const SEEDS: Seed[] = [
-  ['m1', 'Laylo Sobirova', '935004411', 'laylo.s', 'manager', ['f1']],
+  ['m1', 'Laylo Sobirova', '935004411', 'laylo.s', 'admin', ['f1']],
   ['m1', 'Rustam Olimov', '977203090', 'rustam.o', 'seller', ['f1']],
   ['m1', 'Madina Sobirova', '901458899', 'madina.s', 'seller', ['f2']],
   ['m1', 'Sherzod Umarov', '939117722', 'sherzod.u', 'seller', ['f2', 'f3']],
   ['m1', 'Dilfuza Rahimova', '998804411', 'dilfuza.r', 'seller', ['f3'], true],
-  ['m2', 'Timur Ahmedov', '946617788', 'timur.a', 'manager', ['f4', 'f5']],
+  ['m2', 'Timur Ahmedov', '946617788', 'timur.a', 'admin', ['f4', 'f5']],
   ['m2', 'Kamola Ergasheva', '903325566', 'kamola.e', 'seller', ['f5']],
   ['m3', 'Javohir Tursunov', '915550909', 'javohir.t', 'seller', ['f6']],
   ['m4', 'Oybek Nazarov', '977441100', 'oybek.n', 'seller', ['f7', 'f8'], true],
@@ -54,7 +54,7 @@ function seed(): MerchantUser[] {
     id: `${merchant.id}-owner`,
     merchantId: merchant.id,
     ...merchant.owner,
-    role: 'owner',
+    role: 'admin',
     filialIds: [],
     status: 'active',
     createdAt: merchant.createdAt,

@@ -19,7 +19,6 @@ import { BrandContactsPage } from '@/features/microloans/pages/BrandContactsPage
 import { LoanDashboardPage } from '@/features/microloans/pages/LoanDashboardPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
-import { MerchantFormPage } from '@/features/merchants/pages/MerchantFormPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductsPage } from '@/features/products/pages/ProductsPage'
@@ -151,9 +150,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.customer, element: <ClientDetailPage /> },
           { path: ROUTES.collections, element: <CollectionsPage /> },
           { path: ROUTES.merchants, element: <MerchantsPage /> },
-          { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
-          { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
           { path: ROUTES.reviews, element: <ReviewsPage /> },
           { path: ROUTES.merchantRoles, element: <MerchantRolesPage /> },
           { path: ROUTES.support, element: <SupportPage /> },

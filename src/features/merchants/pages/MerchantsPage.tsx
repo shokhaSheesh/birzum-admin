@@ -1,30 +1,30 @@
-import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Eye, Info, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { filialsStore } from '@/entities/merchants/filials'
 import {
   MERCHANT_STATUSES,
   merchantsStore,
-  type Merchant,
   type MerchantStatus,
 } from '@/entities/merchants/merchants'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { merchantEditPath, merchantPath, ROUTES } from '@/shared/config/routes'
+import { merchantPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
-import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { RowActions } from '@/shared/ui/RowActions'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
-/** Every merchant on the platform: figures on top, then a table filtered by status and search. */
+/**
+ * Every merchant on the platform, read-only from FlexSoft: figures on top, then a table filtered
+ * by status and search. FlexSoft signs merchants and sets their tariff and filials.
+ */
 export function MerchantsPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
@@ -32,7 +32,6 @@ export function MerchantsPage() {
   const filials = filialsStore.useAll()
   const [status, setStatus] = useState<'all' | MerchantStatus>('all')
   const [query, setQuery] = useState('')
-  const [deleting, setDeleting] = useState<Merchant | null>(null)
 
   const needle = query.trim().toLowerCase()
   const rows = all.filter(
@@ -49,15 +48,11 @@ export function MerchantsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader
-        title={t('nav.merchants')}
-        actions={
-          <Button onClick={() => navigate(ROUTES.merchantNew)}>
-            <Plus size={20} />
-            {t('merchants.add')}
-          </Button>
-        }
-      />
+      <PageHeader title={t('nav.merchants')} />
+      <p className="-mt-2 flex items-center gap-3 rounded-card bg-navy-100 px-4 py-3 text-sm">
+        <Info size={18} className="shrink-0 text-brand" />
+        {t('merchants.fromFlexsoft')}
+      </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t('merchants.stat.total')} value={String(all.length)} />
@@ -150,17 +145,6 @@ export function MerchantsPage() {
                             label: t('common.view'),
                             onClick: () => navigate(merchantPath(merchant.id)),
                           },
-                          {
-                            icon: Pencil,
-                            label: t('common.edit'),
-                            onClick: () => navigate(merchantEditPath(merchant.id)),
-                          },
-                          {
-                            icon: Trash2,
-                            label: t('common.delete'),
-                            onClick: () => setDeleting(merchant),
-                            danger: true,
-                          },
                         ]}
                       />
                     </td>
@@ -171,8 +155,6 @@ export function MerchantsPage() {
           </div>
         )}
       </div>
-
-      {deleting && <MerchantDeleteDialog merchant={deleting} onClose={() => setDeleting(null)} />}
     </div>
   )
 }

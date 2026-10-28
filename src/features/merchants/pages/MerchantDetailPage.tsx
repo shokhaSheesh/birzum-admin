@@ -1,4 +1,4 @@
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Palette } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useFilialsOf } from '@/entities/merchants/filials'
@@ -6,7 +6,7 @@ import { merchantsStore } from '@/entities/merchants/merchants'
 import { staffOfFilial, staffStore } from '@/entities/merchants/staff'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { merchantEditPath, ROUTES } from '@/shared/config/routes'
+import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
@@ -15,7 +15,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
+import { MerchantLookModal } from '../components/MerchantLookModal'
 import { MerchantStaff } from '../components/MerchantStaff'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -47,7 +47,7 @@ export function MerchantDetailPage() {
   const { id } = useParams()
   const merchant = merchantsStore.useAll().find((item) => item.id === id)
   const filials = useFilialsOf(id)
-  const [deleting, setDeleting] = useState(false)
+  const [editingLook, setEditingLook] = useState(false)
   const [tab, setTab] = useState<'filials' | 'staff'>('filials')
   const staff = staffStore.useAll().filter((user) => user.merchantId === id)
 
@@ -89,25 +89,10 @@ export function MerchantDetailPage() {
             {t('merchant.since', { date: formatDate(merchant.createdAt) })}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-danger!"
-            onClick={() => setDeleting(true)}
-          >
-            <Trash2 size={18} />
-            {t('common.delete')}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => navigate(merchantEditPath(merchant.id))}
-          >
-            <Pencil size={18} />
-            {t('common.edit')}
-          </Button>
-        </div>
+        <Button size="sm" variant="secondary" onClick={() => setEditingLook(true)}>
+          <Palette size={18} />
+          {t('merchant.look.edit')}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -222,12 +207,8 @@ export function MerchantDetailPage() {
         </div>
       </div>
 
-      {deleting && (
-        <MerchantDeleteDialog
-          merchant={merchant}
-          onClose={() => setDeleting(false)}
-          onDeleted={() => navigate(ROUTES.merchants, { replace: true })}
-        />
+      {editingLook && (
+        <MerchantLookModal merchant={merchant} onClose={() => setEditingLook(false)} />
       )}
     </div>
   )
