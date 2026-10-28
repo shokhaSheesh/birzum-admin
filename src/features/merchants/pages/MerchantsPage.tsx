@@ -1,4 +1,4 @@
-import { Eye, Info, Search } from 'lucide-react'
+import { Eye, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { filialsStore } from '@/entities/merchants/filials'
@@ -49,10 +49,6 @@ export function MerchantsPage() {
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.merchants')} />
-      <p className="-mt-2 flex items-center gap-3 rounded-card bg-navy-100 px-4 py-3 text-sm">
-        <Info size={18} className="shrink-0 text-brand" />
-        {t('merchants.fromFlexsoft')}
-      </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t('merchants.stat.total')} value={String(all.length)} />

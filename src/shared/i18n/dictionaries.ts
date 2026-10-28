@@ -1089,8 +1089,6 @@ const uz = {
   'staff.empty': 'Hali xodim yoʻq',
   'staff.role': 'Rol',
   'staff.role.admin': 'Administrator',
-  'merchants.fromFlexsoft':
-    'Merchantlar, ularning filiallari, tarifi va holati FlexSoftʼdan keladi. Bu yerda faqat doʻkonning klient ilovasidagi koʻrinishi oʻzgartiriladi.',
   'merchant.look.edit': 'Koʻrinishni tahrirlash',
   'merchant.look.title': 'Klient ilovasidagi koʻrinishi',
   'staff.role.seller': 'Sotuvchi',
@@ -2892,8 +2890,6 @@ const ru: Record<TranslationKey, string> = {
   'staff.empty': 'Сотрудников пока нет',
   'staff.role': 'Роль',
   'staff.role.admin': 'Администратор',
-  'merchants.fromFlexsoft':
-    'Мерчанты, их филиалы, тариф и статус приходят из FlexSoft. Здесь меняется только то, как магазин выглядит в приложении клиента.',
   'merchant.look.edit': 'Изменить оформление',
   'merchant.look.title': 'Оформление в приложении клиента',
   'staff.role.seller': 'Продавец',
