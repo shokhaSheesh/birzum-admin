@@ -29,8 +29,8 @@ import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
 /**
- * Every merchant's products, read-only: figures on top, then a table filtered by status,
- * search, merchant, category and brand. Merchants create and change products in their app.
+ * Every merchant's products: figures on top, then a table filtered by status, search, merchant,
+ * category and brand. New ones wait in "Tekshiruvda" until the admin approves them on their page.
  */
 export function ProductsPage() {
   const { t, tl } = useI18n()
@@ -39,7 +39,9 @@ export function ProductsPage() {
   const merchants = merchantsStore.useAll()
   const categories = categoriesStore.useAll()
   const brands = brandsStore.useAll()
-  const [status, setStatus] = useState<'all' | ProductStatus>('all')
+  const waiting = all.filter((product) => statusOf(product) === 'review').length
+  // Products waiting for a check are the admin's work, so the list opens on them
+  const [status, setStatus] = useState<'all' | ProductStatus>(() => (waiting ? 'review' : 'all'))
   const [query, setQuery] = useState('')
   const [merchant, setMerchant] = useState('')
   const [category, setCategory] = useState('')
@@ -67,7 +69,7 @@ export function ProductsPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.products')} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label={t('products.stat.total')} value={String(all.length)} />
         {PRODUCT_STATUSES.map((value) => (
           <StatCard

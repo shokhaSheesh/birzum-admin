@@ -55,7 +55,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
     scope: 'birzum',
     title: 'navGroup.catalog',
     sections: [
-      { key: 'products', label: 'nav.products', ops: ['read'] },
+      { key: 'products', label: 'nav.products', ops: ['read', 'update'] },
       { key: 'categories', label: 'nav.categories', ops: ALL },
       { key: 'brands', label: 'nav.brands', ops: ALL },
     ],

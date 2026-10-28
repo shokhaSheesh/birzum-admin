@@ -22,14 +22,15 @@ import { cn } from '@/shared/lib/cn'
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { ModerationCard } from '../components/ModerationCard'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
 
 /**
- * One product, read-only: its photos, description in both languages, every variant with its
- * price and stock per filial, characteristics, and who sells it. Merchants change products in
- * their app; the admin only looks.
+ * One product: its photos, description in both languages, every variant with its price and
+ * stock per filial, characteristics, and who sells it. Merchants change products in their app;
+ * the admin checks each new one (approve or reject with a reason) and otherwise only looks.
  */
 export function ProductDetailPage() {
   const { t, tl } = useI18n()
@@ -219,6 +220,7 @@ export function ProductDetailPage() {
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
+          <ModerationCard product={product} />
           {merchant && (
             <Link
               to={merchantPath(merchant.id)}

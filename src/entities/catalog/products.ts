@@ -24,9 +24,36 @@ export type ProductVariant = {
   stock: Record<string, number>
 }
 
+/** Why the admin turned a product down. The merchant sees it and fixes the product. */
+export const MODERATION_REASONS = [
+  'photo',
+  'text',
+  'category',
+  'price',
+  'forbidden',
+  'other',
+] as const
+export type ModerationReason = (typeof MODERATION_REASONS)[number]
+
+/**
+ * A new or changed product waits for the admin before shoppers see it. Stock is filled in by
+ * the merchant only after it is approved, and changing stock does not send it back.
+ */
+export type Moderation =
+  | { state: 'pending'; submittedAt: Date }
+  | { state: 'approved'; submittedAt: Date; decidedAt: Date; by: string }
+  | {
+      state: 'rejected'
+      submittedAt: Date
+      decidedAt: Date
+      by: string
+      reason: ModerationReason
+      comment: string
+    }
+
 /**
  * A merchant's product as the admin sees it. Merchants create and edit products in their app;
- * the admin only looks.
+ * the admin checks each one before shoppers see it, and otherwise only looks.
  */
 export type Product = {
   id: string
@@ -42,6 +69,7 @@ export type Product = {
   specs: { label: LocalizedText; value: LocalizedText }[]
   /** The merchant's own switch: off hides it from shoppers. */
   visible: boolean
+  moderation: Moderation
   createdAt: Date
   /** Nasiya sales of this product so far. The backend counts them. Sample value. */
   sold: number
@@ -53,11 +81,20 @@ export const stockOfVariant = (variant: ProductVariant) =>
 export const stockOf = (product: Product) =>
   product.variants.reduce((sum, variant) => sum + stockOfVariant(variant), 0)
 
-export type ProductStatus = 'selling' | 'soldOut' | 'hidden'
-export const PRODUCT_STATUSES: ProductStatus[] = ['selling', 'soldOut', 'hidden']
-/** Hidden by the merchant, else out of stock everywhere, else on sale. */
-export const statusOf = (product: Product): ProductStatus =>
-  !product.visible ? 'hidden' : stockOf(product) === 0 ? 'soldOut' : 'selling'
+export type ProductStatus = 'review' | 'selling' | 'soldOut' | 'hidden' | 'rejected'
+export const PRODUCT_STATUSES: ProductStatus[] = [
+  'review',
+  'selling',
+  'soldOut',
+  'hidden',
+  'rejected',
+]
+/** Waiting for the admin or turned down, else hidden by the merchant, else out of stock, else on sale. */
+export const statusOf = (product: Product): ProductStatus => {
+  if (product.moderation.state === 'pending') return 'review'
+  if (product.moderation.state === 'rejected') return 'rejected'
+  return !product.visible ? 'hidden' : stockOf(product) === 0 ? 'soldOut' : 'selling'
+}
 
 // The samples are written short and expanded below: options with a price difference, and a
 // stock count spread over the merchant's filials.
@@ -144,6 +181,8 @@ type Seed = {
   specs: [string, string][]
   photos: string[]
   visible?: boolean
+  /** Approved when the seed was made, unless set. */
+  moderation?: Moderation
   createdAt: Date
   sold: number
 }
@@ -162,6 +201,12 @@ const product = (seed: Seed): Product => ({
     value: same(value),
   })),
   visible: seed.visible ?? true,
+  moderation: seed.moderation ?? {
+    state: 'approved',
+    submittedAt: seed.createdAt,
+    decidedAt: seed.createdAt,
+    by: 'Sardor Saidov',
+  },
   createdAt: seed.createdAt,
   sold: seed.sold,
 })
@@ -444,4 +489,96 @@ const seeds: Seed[] = [
   },
 ]
 
-export const productsStore = createStore<Product>(seeds.map(product))
+const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000)
+
+// New products the merchants sent in, waiting for the admin: no stock until approved
+const submitted: Seed[] = [
+  {
+    id: 'p13',
+    merchantId: 'm4',
+    name: text('Artel televizor 50 Smart', 'Телевизор Artel 50 Smart'),
+    description: text(
+      '50 dyuymli 4K Smart televizor: Wi-Fi, YouTube va ovozli boshqaruv.',
+      '50-дюймовый 4K Smart-телевизор: Wi-Fi, YouTube и голосовое управление.',
+    ),
+    categoryId: 'tvs',
+    brandId: 'artel',
+    price: 5_900_000,
+    groups: [],
+    stock: 0,
+    specs: [
+      ['Ekran', '50"'],
+      ['Kafolat', '24 oy'],
+    ],
+    photos: [photo10],
+    moderation: { state: 'pending', submittedAt: hoursAgo(1) },
+    createdAt: hoursAgo(1),
+    sold: 0,
+  },
+  {
+    id: 'p14',
+    merchantId: 'm2',
+    name: text('Lenovo ThinkPad E16', 'Lenovo ThinkPad E16'),
+    description: text(
+      'Ish uchun noutbuk: 16 dyuymli ekran, Intel Core i5, 16 GB xotira.',
+      'Ноутбук для работы: экран 16", Intel Core i5, 16 ГБ памяти.',
+    ),
+    categoryId: 'laptops',
+    brandId: 'lenovo',
+    price: 11_200_000,
+    groups: [sizes(['512 GB'], ['1 TB', 1_300_000])],
+    stock: 0,
+    specs: [
+      ['Ekran', '16"'],
+      ['Kafolat', '12 oy'],
+    ],
+    photos: [photo13, photo11],
+    moderation: { state: 'pending', submittedAt: hoursAgo(5) },
+    createdAt: hoursAgo(5),
+    sold: 0,
+  },
+  {
+    id: 'p15',
+    merchantId: 'm3',
+    name: text('Artel kir yuvish mashinasi 8 kg', 'Стиральная машина Artel 8 кг'),
+    description: text(
+      '8 kg, 1200 aylanish, bugʻ bilan yuvish rejimi.',
+      '8 кг, 1200 оборотов, режим стирки паром.',
+    ),
+    categoryId: 'washers',
+    brandId: 'artel',
+    price: 4_300_000,
+    groups: [colors('Oq')],
+    stock: 0,
+    specs: [['Kafolat', '24 oy']],
+    photos: [photo5],
+    moderation: { state: 'pending', submittedAt: hoursAgo(26) },
+    createdAt: hoursAgo(26),
+    sold: 0,
+  },
+  {
+    id: 'p16',
+    merchantId: 'm4',
+    name: text('Samsung televizor 32', 'Телевизор Samsung 32'),
+    description: text('32 dyuymli HD televizor.', 'HD-телевизор 32 дюйма.'),
+    categoryId: 'tvs',
+    brandId: 'samsung',
+    price: 2_400_000,
+    groups: [],
+    stock: 0,
+    specs: [['Ekran', '32"']],
+    photos: [photo9],
+    moderation: {
+      state: 'rejected',
+      submittedAt: hoursAgo(50),
+      decidedAt: hoursAgo(46),
+      by: 'Sardor Saidov',
+      reason: 'photo',
+      comment: 'Rasmda boshqa brend televizori koʻrsatilgan.',
+    },
+    createdAt: hoursAgo(50),
+    sold: 0,
+  },
+]
+
+export const productsStore = createStore<Product>([...submitted, ...seeds].map(product))

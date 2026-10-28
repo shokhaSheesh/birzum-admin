@@ -1,6 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
+import { productsStore, statusOf } from '@/entities/catalog/products'
 import { chatsStore } from '@/entities/support/chats'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import logoOnDark from '@/shared/assets/logo-on-dark.svg'
@@ -32,6 +33,8 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
     .useAll()
     .filter((application) => application.status === 'pending').length
   // Yordam chati counts open chats with messages nobody has read
+  // New products waiting for the admin's check
+  const toReview = productsStore.useAll().filter((product) => statusOf(product) === 'review').length
   const unread = chatsStore
     .useAll()
     .filter((chat) => chat.app === workspace && chat.status === 'open' && chat.unread > 0).length
@@ -82,10 +85,12 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
               const badge =
                 to === ROUTES.applications
                   ? pending
-                  : to ===
-                      (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
-                    ? unread
-                    : fixed
+                  : to === ROUTES.products
+                    ? toReview
+                    : to ===
+                        (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
+                      ? unread
+                      : fixed
               return (
                 <NavLink
                   key={to}
