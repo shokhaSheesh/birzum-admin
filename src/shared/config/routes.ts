@@ -9,9 +9,6 @@ export const ROUTES = {
   customer: '/customers/:id',
   collections: '/collections',
   merchants: '/merchants',
-  payouts: '/payouts',
-  payoutNew: '/payouts/new',
-  payout: '/payouts/:id',
   products: '/products',
   product: '/products/:id',
   reviews: '/reviews',
@@ -45,12 +42,6 @@ export const merchantEditPath = (id: string) => `/merchants/${id}/edit`
 
 /** A product's read-only detail page. */
 export const productPath = (id: string) => `/products/${id}`
-
-/** A new payout, optionally for one merchant with its owed sales picked. */
-export const newPayoutPath = (merchantId?: string) =>
-  merchantId ? `/payouts/new?merchant=${merchantId}` : '/payouts/new'
-/** A payout's detail page. */
-export const payoutPath = (id: string) => `/payouts/${id}`
 
 /** An ariza's read-only detail page. */
 export const applicationPath = (id: string) => `/applications/${id}`

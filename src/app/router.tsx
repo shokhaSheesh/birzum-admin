@@ -27,9 +27,6 @@ import { ReviewsPage } from '@/features/reviews/pages/ReviewsPage'
 import { MerchantRolesPage } from '@/features/merchants/pages/MerchantRolesPage'
 import { QuickRepliesPage } from '@/features/support/pages/QuickRepliesPage'
 import { SupportPage } from '@/features/support/pages/SupportPage'
-import { PayoutDetailPage } from '@/features/payouts/pages/PayoutDetailPage'
-import { PayoutFormPage } from '@/features/payouts/pages/PayoutFormPage'
-import { PayoutsPage } from '@/features/payouts/pages/PayoutsPage'
 import { AuditLogPage } from '@/features/audit/pages/AuditLogPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { LoanApplicationPage } from '@/features/microloans/pages/LoanApplicationPage'
@@ -58,7 +55,6 @@ const DESIGNED: string[] = [
   ROUTES.customers,
   ROUTES.collections,
   ROUTES.merchants,
-  ROUTES.payouts,
   ROUTES.reviews,
   ROUTES.merchantRoles,
   ROUTES.support,
@@ -158,9 +154,6 @@ export const router = createBrowserRouter([
           { path: ROUTES.merchantNew, element: <MerchantFormPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
           { path: ROUTES.merchantEdit, element: <MerchantFormPage /> },
-          { path: ROUTES.payouts, element: <PayoutsPage /> },
-          { path: ROUTES.payoutNew, element: <PayoutFormPage /> },
-          { path: ROUTES.payout, element: <PayoutDetailPage /> },
           { path: ROUTES.reviews, element: <ReviewsPage /> },
           { path: ROUTES.merchantRoles, element: <MerchantRolesPage /> },
           { path: ROUTES.support, element: <SupportPage /> },

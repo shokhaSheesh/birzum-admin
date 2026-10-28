@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import {
   BLOCK_REASONS,
@@ -21,7 +22,8 @@ const now = () => new Date()
 
 /**
  * Blocks a shopper: a reason and a comment, both required. A blocked shopper can still sign in
- * and keep paying, but cannot start a new nasiya.
+ * and keep paying, but cannot start a new nasiya. The block reaches FlexSoft too, so no shop can
+ * open one for them either.
  */
 export function BlockModal({ client, onClose }: { client: Client; onClose: () => void }) {
   const { t } = useI18n()
@@ -65,6 +67,10 @@ export function BlockModal({ client, onClose }: { client: Client; onClose: () =>
       }
     >
       <p className="text-sm text-ink-muted">{t('client.block.hint')}</p>
+      <p className="flex gap-3 rounded-card border border-warning/30 bg-warning-soft p-4 text-sm font-semibold">
+        <TriangleAlert size={20} className="shrink-0 text-warning" />
+        {t('client.block.flexsoft')}
+      </p>
       <SelectField
         label={t('client.block.reason')}
         options={BLOCK_REASONS.map((value) => ({
@@ -109,6 +115,7 @@ export function UnblockDialog({ client, onClose }: { client: Client; onClose: ()
       }}
     >
       <p>{t('client.unblock.message', { name: fullName(client) })}</p>
+      <p>{t('client.unblock.flexsoft')}</p>
     </ConfirmDialog>
   )
 }

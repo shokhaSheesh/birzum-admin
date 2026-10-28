@@ -12,9 +12,7 @@ import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { filialsStore } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { payoutStateTone } from '@/entities/payouts/payoutState'
-import { payoutsStore, salesStore } from '@/entities/payouts/payouts'
-import { merchantPath, payoutPath, ROUTES } from '@/shared/config/routes'
+import { merchantPath, ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatDateTime, formatSum, groupDigits } from '@/shared/lib/format'
@@ -42,7 +40,7 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
 
 /**
  * One ariza, read-only: what was bought and on what terms, its full history, the shopper, the
- * merchant and filial, and whether Birzum has paid the merchant for it yet.
+ * merchant and filial.
  */
 export function ApplicationDetailPage() {
   const { t, tl } = useI18n()
@@ -51,8 +49,6 @@ export function ApplicationDetailPage() {
   const application = applicationsStore.useAll().find((item) => item.id === id)
   const merchant = merchantsStore.useAll().find((item) => item.id === application?.merchantId)
   const filial = filialsStore.useAll().find((item) => item.id === application?.filialId)
-  const sale = salesStore.useAll().find((item) => item.id === id)
-  const payout = payoutsStore.useAll().find((item) => item.id === sale?.payoutId)
   const payments = paymentsStore.useAll()
   const [today] = useState(() => new Date())
 
@@ -334,30 +330,6 @@ export function ApplicationDetailPage() {
             </section>
           )}
 
-          {sale && (
-            <section className={card}>
-              <h2 className="font-bold">{t('application.payout')}</h2>
-              {payout ? (
-                <Link
-                  to={payoutPath(payout.id)}
-                  className="flex items-center justify-between gap-3 rounded-control bg-surface p-3 hover:bg-navy-100"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold tabular-nums">{payout.reference}</span>
-                    <span className="text-sm text-ink-muted">{formatSum(sale.amount)}</span>
-                  </div>
-                  <StatusBadge tone={payoutStateTone[payout.state]}>
-                    {t(`payout.state.${payout.state}`)}
-                  </StatusBadge>
-                </Link>
-              ) : (
-                <div className="flex items-center justify-between gap-3 rounded-control bg-warning-soft p-3">
-                  <span className="text-sm font-semibold">{t('payouts.stat.owed')}</span>
-                  <span className="font-bold tabular-nums">{formatSum(sale.amount)}</span>
-                </div>
-              )}
-            </section>
-          )}
           <p className="px-1 text-sm text-ink-subtle">{t('application.readOnly')}</p>
         </aside>
       </div>

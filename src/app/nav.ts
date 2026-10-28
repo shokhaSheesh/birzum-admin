@@ -8,7 +8,6 @@ import {
   FileText,
   FolderTree,
   GalleryHorizontal,
-  HandCoins,
   History,
   KeyRound,
   Headset,
@@ -77,7 +76,6 @@ export const NAV: NavGroup[] = [
     title: 'navGroup.partners',
     items: [
       { to: ROUTES.merchants, icon: Store, label: 'nav.merchants', about: 'about.merchants' },
-      { to: ROUTES.payouts, icon: HandCoins, label: 'nav.payouts', about: 'about.payouts' },
       { to: ROUTES.reviews, icon: Star, label: 'nav.reviews', about: 'about.reviews' },
       {
         to: ROUTES.merchantRoles,

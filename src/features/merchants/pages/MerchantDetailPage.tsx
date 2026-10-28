@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useFilialsOf } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { staffOfFilial, staffStore } from '@/entities/merchants/staff'
-import { payoutsStore } from '@/entities/payouts/payouts'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { merchantEditPath, ROUTES } from '@/shared/config/routes'
@@ -17,7 +16,6 @@ import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { MerchantDeleteDialog } from '../components/MerchantDeleteDialog'
-import { MerchantPayouts } from '../components/MerchantPayouts'
 import { MerchantStaff } from '../components/MerchantStaff'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -50,9 +48,8 @@ export function MerchantDetailPage() {
   const merchant = merchantsStore.useAll().find((item) => item.id === id)
   const filials = useFilialsOf(id)
   const [deleting, setDeleting] = useState(false)
-  const [tab, setTab] = useState<'filials' | 'staff' | 'payouts'>('filials')
+  const [tab, setTab] = useState<'filials' | 'staff'>('filials')
   const staff = staffStore.useAll().filter((user) => user.merchantId === id)
-  const payoutCount = payoutsStore.useAll().filter((payout) => payout.merchantId === id).length
 
   const back = (
     <button
@@ -128,15 +125,12 @@ export function MerchantDetailPage() {
               options={[
                 { value: 'filials', label: t('merchant.filials'), count: filials.length },
                 { value: 'staff', label: t('staff.title'), count: staff.length },
-                { value: 'payouts', label: t('merchant.payouts'), count: payoutCount },
               ]}
               value={tab}
               onChange={setTab}
             />
           </div>
-          {tab === 'payouts' ? (
-            <MerchantPayouts merchant={merchant} />
-          ) : tab === 'staff' ? (
+          {tab === 'staff' ? (
             <MerchantStaff merchant={merchant} />
           ) : filials.length === 0 ? (
             <EmptyState
@@ -215,7 +209,6 @@ export function MerchantDetailPage() {
               [t('merchant.contract'), merchant.contract.number],
               [t('merchant.contractDate'), merchant.contract.date],
               [t('merchant.tariff'), t('merchant.tariff.value', { tariff: merchant.tariff })],
-              [t('merchant.schedule'), t(`merchant.schedule.${merchant.payoutSchedule}`)],
             ]}
           />
           <Details

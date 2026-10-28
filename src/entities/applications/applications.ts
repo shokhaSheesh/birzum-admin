@@ -8,7 +8,8 @@ import product3Photo from '@/shared/assets/products/product-3.jpg'
 import { createStore } from '@/shared/lib/createStore'
 import { productsStore } from '../catalog/products'
 import { clientsStore, fullName } from '../clients/clients'
-import { ratesStore } from '../pricing/pricing'
+import { merchantsStore } from '../merchants/merchants'
+import { MARKUPS, TERMS } from '../pricing/pricing'
 
 /** The same statuses as the merchant and client apps. */
 export const APPLICATION_STATUSES = [
@@ -102,7 +103,7 @@ export const handedAtOf = (application: Application) =>
   application.history.find((entry) => entry.status === 'handed')?.at
 
 // Invented sample arizalar from 1 September to today, worked out from a few rules so
-// statuses, history and payouts agree. Replace with the API.
+// statuses and history agree. Replace with the API.
 const DAY = 24 * 60 * 60 * 1000
 const BIRZUM: Actor = { kind: 'system', name: 'Birzum' }
 const FLEXSOFT: Actor = { kind: 'system', name: 'FlexSoft' }
@@ -161,7 +162,7 @@ function seed(): Application[] {
   let state = 11
   const rand = () => (state = (state * 48271) % 2147483647) / 2147483647
   const pick = <T>(items: T[]) => items[Math.floor(rand() * items.length)]
-  const rates = ratesStore.getAll().filter((rate) => rate.enabled)
+  const merchants = merchantsStore.getAll()
   const products = productsStore.getAll()
   const people = clientsStore.getAll().filter((client) => client.limit)
   const out: Application[] = []
@@ -197,7 +198,10 @@ function seed(): Application[] {
       const goodsTotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0)
       const downPayment =
         rand() > 0.6 ? Math.round((goodsTotal * (0.1 + rand() * 0.2)) / 100_000) * 100_000 : 0
-      const rate = pick(rates)
+      // The markup comes from the shop's tariff
+      const tariff = merchants.find((merchant) => merchant.id === merchantId)?.tariff ?? 'A'
+      const term = pick([...TERMS])
+      const rate = { term, markup: MARKUPS[tariff][term] }
       const installmentTotal = Math.round((goodsTotal - downPayment) * (1 + rate.markup / 100))
       // Only someone already signed up can file one
       const person = pick(people.filter((p) => p.registeredAt < createdAt))

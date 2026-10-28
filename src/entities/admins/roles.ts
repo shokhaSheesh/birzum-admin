@@ -47,7 +47,6 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
     title: 'navGroup.partners',
     sections: [
       { key: 'merchants', label: 'nav.merchants', ops: ALL },
-      { key: 'payouts', label: 'nav.payouts', ops: ALL },
       { key: 'reviews', label: 'nav.reviews', ops: ['read', 'update', 'delete'] },
       { key: 'merchantRoles', label: 'nav.merchantRoles', ops: ['read', 'update'] },
     ],
@@ -64,7 +63,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
   {
     scope: 'birzum',
     title: 'navGroup.rules',
-    sections: [{ key: 'pricing', label: 'nav.pricing', ops: ALL }],
+    sections: [{ key: 'pricing', label: 'nav.pricing', ops: ['read'] }],
   },
   {
     scope: 'birzum',
@@ -171,7 +170,6 @@ export const keysFor = (brands: Workspace[]) => {
 export const SPECIAL_ACTIONS = [
   { key: 'chargeCard', section: 'collections', op: 'create' },
   { key: 'manualPayment', section: 'collections', op: 'create' },
-  { key: 'markPaid', section: 'payouts', op: 'update' },
   { key: 'blockClient', section: 'customers', op: 'update' },
   { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
   { key: 'mlManualPayment', section: 'mlPayments', op: 'create' },
@@ -225,12 +223,12 @@ export const rolesStore = createStore<Role>([
     id: 'finance',
     brands: ['birzum'],
     name: 'Moliya',
-    description: 'Klientlardan tushum, merchantlarga oʻtkazmalar, ustama.',
+    description: 'Klientlardan tushum va toʻlovlar.',
     access: grant(
-      ['collections', 'payouts', 'pricing'],
-      ['dashboard', 'applications', 'customers', 'merchants'],
+      ['collections'],
+      ['dashboard', 'applications', 'customers', 'merchants', 'pricing'],
     ),
-    actions: ['chargeCard', 'manualPayment', 'markPaid'],
+    actions: ['chargeCard', 'manualPayment'],
   },
   {
     id: 'collections',

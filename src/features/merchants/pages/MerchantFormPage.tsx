@@ -6,7 +6,6 @@ import {
   TARIFFS,
   type Merchant,
   type MerchantStatus,
-  type PayoutSchedule,
   type Tariff,
 } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
@@ -20,7 +19,6 @@ import { PHONE_DIGITS } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
-import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { DateField } from '@/shared/ui/DateField'
 import { FormSection } from '@/shared/ui/FormSection'
 import { ImageField } from '@/shared/ui/ImageField'
@@ -63,7 +61,6 @@ export function MerchantFormPage() {
   )
   const [bank, setBank] = useState(existing?.bank ?? { name: '', mfo: '', account: '' })
   const [contract, setContract] = useState(existing?.contract ?? { number: '', date: '' })
-  const [schedule, setSchedule] = useState<PayoutSchedule>(existing?.payoutSchedule ?? 'weekly')
   const [tariff, setTariff] = useState<Tariff>(existing?.tariff ?? 'A')
   const [owner, setOwner] = useState(existing?.owner ?? { name: '', phone: '', login: '' })
   const [status, setStatus] = useState<MerchantStatus>(existing?.status ?? 'onboarding')
@@ -104,7 +101,6 @@ export function MerchantFormPage() {
       legal,
       bank,
       contract,
-      payoutSchedule: schedule,
       tariff,
       owner,
       status,
@@ -259,16 +255,6 @@ export function MerchantFormPage() {
                   }))}
                   value={tariff}
                   onChange={setTariff}
-                />
-                <ChoiceGrid
-                  label={t('merchant.schedule')}
-                  columns={2}
-                  options={[
-                    { value: 'weekly', label: t('merchant.schedule.weekly') },
-                    { value: 'monthly', label: t('merchant.schedule.monthly') },
-                  ]}
-                  value={schedule}
-                  onChange={setSchedule}
                 />
               </div>
             </FormSection>

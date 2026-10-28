@@ -106,20 +106,6 @@ function seed(): AuditEntry[] {
       changes: [{ field: 'audit.f.status', from: 'Bloklangan', to: 'Faol' }],
     }),
     () => ({
-      section: 'payouts',
-      kind: 'money',
-      action: 'audit.a.payoutCreated',
-      params: { sum: sum(8_000_000, 90_000_000) },
-      ...merchant(),
-    }),
-    () => ({
-      section: 'payouts',
-      kind: 'money',
-      action: 'audit.a.payoutSent',
-      params: { sum: sum(8_000_000, 90_000_000) },
-      ...merchant(),
-    }),
-    () => ({
       section: 'merchants',
       kind: 'update',
       action: 'audit.a.merchantUpdated',
@@ -138,12 +124,6 @@ function seed(): AuditEntry[] {
       kind: 'create',
       action: 'audit.a.brandCreated',
       target: pick(['Xiaomi', 'Artel', 'Samsung', 'Lenovo']),
-    }),
-    () => ({
-      section: 'pricing',
-      kind: 'update',
-      action: 'audit.a.pricingSaved',
-      changes: [{ field: 'audit.f.markup12', from: '38%', to: '36%' }],
     }),
     () => ({
       section: 'broadcasts',

@@ -6,8 +6,7 @@ import { clientsStore } from '@/entities/clients/clients'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { sumOf } from '@/entities/payouts/payouts'
-import { ratesStore } from '@/entities/pricing/pricing'
+import { TERMS } from '@/entities/pricing/pricing'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { changeOf, compactSum, previousOf } from '@/shared/lib/chartAxis'
 import { inRange, type DateRange } from '@/shared/lib/dates'
@@ -23,6 +22,7 @@ import { PeriodFilter } from '@/shared/ui/PeriodFilter'
 
 /** The first day with sample data. */
 const FIRST_DAY = new Date(2026, 8, 1)
+const sumOf = (items: { amount: number }[]) => items.reduce((sum, item) => sum + item.amount, 0)
 const card = 'flex min-w-0 flex-col gap-5 rounded-card border border-line bg-canvas p-5'
 
 function Card({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
@@ -49,7 +49,6 @@ export function DashboardPage() {
   const merchants = merchantsStore.useAll()
   const products = productsStore.useAll()
   const categories = categoriesStore.useAll()
-  const rates = ratesStore.useAll()
   const [now] = useState(() => new Date())
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
   const bounds = boundsOf(period)
@@ -132,12 +131,9 @@ export function DashboardPage() {
       const root = category?.parentId ?? category?.id
       if (root) byCategory.set(root, (byCategory.get(root) ?? 0) + line.price * line.quantity)
     }
-  const terms = [
-    ...new Set([
-      ...rates.filter((r) => r.enabled).map((r) => r.term),
-      ...sold.map((s) => s.application.term),
-    ]),
-  ].sort((a, b) => a - b)
+  const terms = [...new Set([...TERMS, ...sold.map((s) => s.application.term)])].sort(
+    (a, b) => a - b,
+  )
 
   // The portfolio today, whatever the period
   const running = applications
