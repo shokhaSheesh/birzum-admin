@@ -1,4 +1,4 @@
-import { BellRing, CreditCard, Eye, PhoneCall, Plus, Search } from 'lucide-react'
+import { BellRing, CreditCard, Eye, PhoneCall, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
@@ -24,7 +24,6 @@ import { boundsOf, bucketsOf, thisMonth, type Period } from '@/shared/lib/period
 import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { Avatar } from '@/shared/ui/Avatar'
-import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { ExportMenu } from '@/shared/ui/ExportMenu'
@@ -37,7 +36,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { CallResultModal, ReminderDialog } from '../components/ContactDialogs'
 import { IncomeChart, type Expected } from '../components/IncomeChart'
-import { ChargeModal, ManualPaymentModal } from '../components/PaymentDialogs'
+import { ChargeModal } from '../components/PaymentDialogs'
 import { PaymentsTable } from '../components/PaymentsTable'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -68,7 +67,6 @@ export function CollectionsPage() {
   const [calling, setCalling] = useState<Client | null>(null)
   const [reminding, setReminding] = useState<Client | null>(null)
   const [charging, setCharging] = useState<Client | null>(null)
-  const [entering, setEntering] = useState(false)
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
 
   // Debtors' filters
@@ -224,15 +222,7 @@ export function CollectionsPage() {
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader
         title={t('nav.collections')}
-        actions={
-          <>
-            <ExportMenu section="collections" period={period} />
-            <Button size="sm" onClick={() => setEntering(true)}>
-              <Plus size={18} />
-              {t('manual.title')}
-            </Button>
-          </>
-        }
+        actions={<ExportMenu section="collections" period={period} />}
       />
 
       <PeriodFilter value={period} onChange={setPeriod} />
@@ -563,7 +553,6 @@ export function CollectionsPage() {
       </div>
 
       {charging && <ChargeModal client={charging} onClose={() => setCharging(null)} />}
-      {entering && <ManualPaymentModal onClose={() => setEntering(false)} />}
       {calling && <CallResultModal client={calling} onClose={() => setCalling(null)} />}
       {reminding && (
         <ReminderDialog

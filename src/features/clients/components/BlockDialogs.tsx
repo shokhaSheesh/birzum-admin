@@ -1,4 +1,3 @@
-import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import {
   BLOCK_REASONS,
@@ -67,10 +66,6 @@ export function BlockModal({ client, onClose }: { client: Client; onClose: () =>
       }
     >
       <p className="text-sm text-ink-muted">{t('client.block.hint')}</p>
-      <p className="flex gap-3 rounded-card border border-warning/30 bg-warning-soft p-4 text-sm font-semibold">
-        <TriangleAlert size={20} className="shrink-0 text-warning" />
-        {t('client.block.flexsoft')}
-      </p>
       <SelectField
         label={t('client.block.reason')}
         options={BLOCK_REASONS.map((value) => ({
@@ -115,7 +110,6 @@ export function UnblockDialog({ client, onClose }: { client: Client; onClose: ()
       }}
     >
       <p>{t('client.unblock.message', { name: fullName(client) })}</p>
-      <p>{t('client.unblock.flexsoft')}</p>
     </ConfirmDialog>
   )
 }

@@ -31,7 +31,10 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
   {
     scope: 'birzum',
     title: 'nav.dashboard',
-    sections: [{ key: 'dashboard', label: 'nav.dashboard', ops: ['read'] }],
+    sections: [
+      { key: 'dashboard', label: 'nav.dashboard', ops: ['read'] },
+      { key: 'analytics', label: 'nav.analytics', ops: ['read'] },
+    ],
   },
   {
     scope: 'birzum',
@@ -169,7 +172,6 @@ export const keysFor = (brands: Workspace[]) => {
  */
 export const SPECIAL_ACTIONS = [
   { key: 'chargeCard', section: 'collections', op: 'create' },
-  { key: 'manualPayment', section: 'collections', op: 'create' },
   { key: 'blockClient', section: 'customers', op: 'update' },
   { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
   { key: 'mlManualPayment', section: 'mlPayments', op: 'create' },
@@ -228,7 +230,7 @@ export const rolesStore = createStore<Role>([
       ['collections'],
       ['dashboard', 'applications', 'customers', 'merchants', 'pricing'],
     ),
-    actions: ['chargeCard', 'manualPayment'],
+    actions: ['chargeCard'],
   },
   {
     id: 'collections',

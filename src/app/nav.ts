@@ -1,6 +1,7 @@
 import {
   BadgePercent,
   Banknote,
+  ChartColumn,
   CircleAlert,
   FileSignature,
   MapPin,
@@ -51,6 +52,12 @@ export const NAV: NavGroup[] = [
         icon: LayoutDashboard,
         label: 'nav.dashboard',
         about: 'about.dashboard',
+      },
+      {
+        to: ROUTES.analytics,
+        icon: ChartColumn,
+        label: 'nav.analytics',
+        about: 'about.analytics',
       },
     ],
   },

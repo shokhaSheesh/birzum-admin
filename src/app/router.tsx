@@ -17,6 +17,8 @@ import { DocumentsPage } from '@/features/documents/pages/DocumentsPage'
 import { FaqPage } from '@/features/faq/pages/FaqPage'
 import { BrandContactsPage } from '@/features/microloans/pages/BrandContactsPage'
 import { LoanDashboardPage } from '@/features/microloans/pages/LoanDashboardPage'
+import { AnalyticsPage } from '@/features/analytics/pages/AnalyticsPage'
+import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { MerchantDetailPage } from '@/features/merchants/pages/MerchantDetailPage'
 import { MerchantsPage } from '@/features/merchants/pages/MerchantsPage'
@@ -50,6 +52,7 @@ import { RequireAdmin } from './RequireAdmin'
 /** Sidebar pages that have their own design; the rest show a placeholder. */
 const DESIGNED: string[] = [
   ROUTES.dashboard,
+  ROUTES.analytics,
   ROUTES.applications,
   ROUTES.customers,
   ROUTES.collections,
@@ -136,6 +139,7 @@ function brandRoutes(brand: Brand) {
 
 export const router = createBrowserRouter([
   { path: ROUTES.login, element: <LoginPage /> },
+  { path: ROUTES.forgotPassword, element: <ForgotPasswordPage /> },
   {
     element: <RequireAdmin />,
     children: [
@@ -144,6 +148,7 @@ export const router = createBrowserRouter([
         // Every sidebar page is empty for now; each one is filled in as it gets designed
         children: [
           { path: ROUTES.dashboard, element: <DashboardPage /> },
+          { path: ROUTES.analytics, element: <AnalyticsPage /> },
           { path: ROUTES.applications, element: <ApplicationsPage /> },
           { path: ROUTES.application, element: <ApplicationDetailPage /> },
           { path: ROUTES.customers, element: <ClientsPage /> },

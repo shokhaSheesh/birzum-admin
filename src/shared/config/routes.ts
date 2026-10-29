@@ -2,7 +2,9 @@ import type { Workspace } from './workspaces'
 
 export const ROUTES = {
   login: '/login',
+  forgotPassword: '/forgot-password',
   dashboard: '/',
+  analytics: '/analytics',
   applications: '/applications',
   application: '/applications/:id',
   customers: '/customers',

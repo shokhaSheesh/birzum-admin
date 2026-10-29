@@ -7,7 +7,14 @@ export type Column = { key: string; label: string; value: number; tip: string }
  * A few labelled columns, e.g. arizalar per term: thin columns (24px at most) from one
  * baseline, the count on each cap, the full figure on hover or focus.
  */
-export function ColumnChart({ columns }: { columns: Column[] }) {
+export function ColumnChart({
+  columns,
+  hideValues,
+}: {
+  columns: Column[]
+  /** Leaves the caps bare when there are too many columns to label; hover still shows each. */
+  hideValues?: boolean
+}) {
   const [active, setActive] = useState<string | null>(null)
   const max = Math.max(1, ...columns.map((column) => column.value))
   return (
@@ -26,7 +33,9 @@ export function ColumnChart({ columns }: { columns: Column[] }) {
             onBlur={() => setActive(null)}
             className="relative flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1 focus-visible:outline-none"
           >
-            <span className="text-xs font-semibold tabular-nums">{column.value || ''}</span>
+            <span className="text-xs font-semibold tabular-nums">
+              {hideValues && active !== column.key ? '' : column.value || ''}
+            </span>
             <span
               className={cn(
                 'w-full max-w-6 rounded-t-[4px] transition-colors',

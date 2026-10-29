@@ -32,8 +32,10 @@ export type Client = {
   passport: string
   passportExpiresOn: Date
   birthDate: Date
-  /** The propiska (permanent registration) address, from MyID and the sign-up. */
+  /** The propiska (permanent registration) address, from MyID. */
   address: string
+  /** Where the client lives now, as they typed it at sign-up (yashash manzili). Birzum only. */
+  homeAddress: string
   /** People to call when the shopper cannot be reached; the shopper and the shop add them. */
   contacts: PersonContact[]
   registeredAt: Date
@@ -68,6 +70,15 @@ const ADDRESSES = [
   'Samarqand sh., Rudakiy koʻchasi, 44-uy',
   'Toshkent sh., Mirzo Ulugʻbek tumani, Buyuk Ipak Yoʻli, 150',
   'Buxoro sh., Mustaqillik koʻchasi, 12-uy',
+]
+
+// Where the samples live now: some at the propiska, most elsewhere, as in real life
+const HOME_ADDRESSES = [
+  'Toshkent shahri, Chilonzor tumani, Qatortol MFY, 19-kvartal, 7-uy',
+  'Toshkent viloyati, Chirchiq, Qibray tumani, Bogʻiston MFY, Navroʻz koʻchasi, 5-uy',
+  'Samarqand viloyati, Samarqand, Bogʻishamol MFY, Rudakiy koʻchasi, 44-uy',
+  'Toshkent shahri, Yashnobod tumani, Mahtumquli MFY, 3-uy, 18-xonadon',
+  'Toshkent shahri, Sergeli tumani, Yangi Sergeli MFY, 7-mavze, 31-uy',
 ]
 
 // Invented sample shoppers. Replace with the API.
@@ -141,6 +152,7 @@ export const clientsStore = createStore<Client>(
     passportExpiresOn: new Date(2029 + (i % 5), i % 12, 10),
     birthDate: new Date(born[0], born[1] - 1, born[2]),
     address: ADDRESSES[i % ADDRESSES.length],
+    homeAddress: HOME_ADDRESSES[i % HOME_ADDRESSES.length],
     // Birzum's contacts have no name: phone, relation and a note, as the apps take them
     contacts: sampleContacts(id, RELATIONS.slice(0, 6), false),
     // Spread from June to mid-October, earliest first

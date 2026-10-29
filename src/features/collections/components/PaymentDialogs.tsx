@@ -1,33 +1,23 @@
 import { CircleCheck } from 'lucide-react'
 import { useState } from 'react'
 import { applicationsStore, type Application } from '@/entities/applications/applications'
-import { CARD_LOGOS, clientsStore, fullName, type Client } from '@/entities/clients/clients'
+import { CARD_LOGOS, fullName, type Client } from '@/entities/clients/clients'
 import {
-  MANUAL_METHODS,
   paymentsStore,
   progressOf,
   recordFailedCharge,
   recordPayment,
   type FailReason,
-  type ManualMethod,
 } from '@/entities/collections/payments'
-import { merchantsStore } from '@/entities/merchants/merchants'
 import { useAdmin } from '@/entities/session/session'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
-import { parseDate, startOfDay } from '@/shared/lib/dates'
-import { formatPhone } from '@/shared/lib/phone'
+import { formatSum } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
-import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
-import { DateField } from '@/shared/ui/DateField'
 import { Modal } from '@/shared/ui/Modal'
 import { NumberField } from '@/shared/ui/NumberField'
-import { SelectField } from '@/shared/ui/SelectField'
-import { TextAreaField } from '@/shared/ui/TextAreaField'
-import { TextField } from '@/shared/ui/TextField'
 import { logAction, sumParam } from '@/entities/audit/audit'
 import { clientPath } from '@/shared/config/routes'
 
@@ -191,202 +181,6 @@ export function ChargeModal({ client, onClose }: { client: Client; onClose: () =
             hint={t('charge.amount.hint', { overdue: formatSum(overdue), max: formatSum(max) })}
           />
         </>
-      )}
-    </Modal>
-  )
-}
-
-/**
- * Enters money paid outside the apps: cash at a shop or a bank transfer to Birzum. It needs the
- * nasiya, the sum, the day and the receipt or payment order number.
- */
-export function ManualPaymentModal({
-  client: fixed,
-  onClose,
-}: {
-  client?: Client
-  onClose: () => void
-}) {
-  const { t } = useI18n()
-  const admin = useAdmin()
-  const clients = clientsStore.useAll()
-  const applications = applicationsStore.useAll()
-  const payments = paymentsStore.useAll()
-  const merchants = merchantsStore.useAll()
-  const [today] = useState(now)
-  const running = applications.filter((application) => application.status === 'handed')
-  const payers = clients.filter((client) => running.some((a) => a.clientId === client.id))
-
-  const [clientId, setClientId] = useState(fixed?.id ?? '')
-  const own = running.filter((application) => application.clientId === clientId)
-  const [applicationId, setApplicationId] = useState(own.length === 1 ? own[0].id : '')
-  const [method, setMethod] = useState<ManualMethod>('cash')
-  const [amount, setAmount] = useState<number | null>(null)
-  const [date, setDate] = useState(formatDate(today))
-  const [reference, setReference] = useState('')
-  const [note, setNote] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-
-  const application = own.find((item) => item.id === applicationId)
-  const progress = application ? progressOf(application, payments, today) : null
-  const day = parseDate(date)
-  const errors = {
-    client: !clientId ? t('error.required') : undefined,
-    application: !application ? t('error.required') : undefined,
-    amount: !amount
-      ? t('error.required')
-      : progress && amount > progress.remaining
-        ? t('charge.error.max', { sum: formatSum(progress.remaining) })
-        : undefined,
-    date: !day ? t('error.required') : day > today ? t('manual.error.future') : undefined,
-    reference: !reference.trim() ? t('error.required') : undefined,
-  }
-
-  const save = () => {
-    setSubmitted(true)
-    if (Object.values(errors).some(Boolean) || !application || !amount || !day) return
-    // A payment entered for today keeps the time; an earlier day gets midday
-    const at =
-      startOfDay(day).getTime() === startOfDay(today).getTime()
-        ? now()
-        : new Date(day.getTime() + 12 * 3_600_000)
-    recordPayment(
-      application,
-      {
-        at,
-        amount,
-        method,
-        reference: reference.trim(),
-        note: note.trim() || undefined,
-        by: admin?.name ?? '—',
-      },
-      today,
-    )
-    toast(amount >= progress!.remaining ? t('manual.closed') : t('manual.saved'))
-    const payer = clients.find((item) => item.id === clientId)
-    logAction({
-      section: 'collections',
-      kind: 'money',
-      action: 'audit.a.paymentEntered',
-      params: { sum: sumParam(amount) },
-      target: payer && fullName(payer),
-      href: payer && clientPath(payer.id),
-    })
-    onClose()
-  }
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      eyebrow={fixed ? fullName(fixed) : undefined}
-      title={t('manual.title')}
-      footer={
-        <>
-          <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button size="sm" className="px-4!" onClick={save}>
-            {t('common.save')}
-          </Button>
-        </>
-      }
-    >
-      {!fixed && (
-        <SelectField
-          label={t('applications.col.client')}
-          options={[
-            { value: '', label: t('manual.pickClient'), disabled: true },
-            ...payers.map((client) => ({
-              value: client.id,
-              label: `${fullName(client)} · ${formatPhone(client.phone)}`,
-            })),
-          ]}
-          value={clientId}
-          onChange={(value) => {
-            setClientId(value)
-            const next = running.filter((a) => a.clientId === value)
-            setApplicationId(next.length === 1 ? next[0].id : '')
-          }}
-          error={submitted ? errors.client : undefined}
-        />
-      )}
-      <SelectField
-        label={t('payout.col.ariza')}
-        options={[
-          { value: '', label: t('manual.pickApplication'), disabled: true },
-          ...own.map((item) => ({
-            value: item.id,
-            label: `№ ${groupDigits(item.number)} · ${merchants.find((m) => m.id === item.merchantId)?.name ?? ''} · ${item.lines[0].name}`,
-          })),
-        ]}
-        value={applicationId}
-        onChange={setApplicationId}
-        disabled={!clientId}
-        error={submitted ? errors.application : undefined}
-      />
-      {progress && (
-        <div className="grid grid-cols-3 gap-2 rounded-control bg-surface p-3 text-sm">
-          {(
-            [
-              [t('client.overdue'), progress.overdue, progress.overdue > 0],
-              [t('application.monthly'), application!.monthlyPayment, false],
-              [t('clients.col.debt'), progress.remaining, false],
-            ] as const
-          ).map(([label, sum, red]) => (
-            <button
-              key={label}
-              type="button"
-              disabled={!sum}
-              onClick={() => setAmount(sum)}
-              className="flex flex-col items-start rounded-[10px] p-1.5 text-left hover:bg-canvas disabled:hover:bg-transparent"
-            >
-              <span className="text-xs text-ink-muted">{label}</span>
-              <span className={cn('font-semibold tabular-nums', red && 'text-danger')}>
-                {formatSum(sum)}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-      <ChoiceGrid
-        label={t('manual.method')}
-        columns={2}
-        options={MANUAL_METHODS.map((value) => ({ value, label: t(`payment.method.${value}`) }))}
-        value={method}
-        onChange={setMethod}
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <NumberField
-          label={t('payouts.col.amount')}
-          suffix="UZS"
-          value={amount}
-          onChange={setAmount}
-          error={submitted ? errors.amount : undefined}
-        />
-        <DateField
-          label={t('manual.date')}
-          placeholder="dd.mm.yyyy"
-          value={date}
-          onChange={setDate}
-          error={submitted ? errors.date : undefined}
-        />
-      </div>
-      <TextField
-        label={t(method === 'cash' ? 'manual.reference.cash' : 'manual.reference.transfer')}
-        placeholder={method === 'cash' ? 'KV-004512' : 'PT-2026-10-0187'}
-        value={reference}
-        onChange={(e) => setReference(e.target.value)}
-        error={submitted ? errors.reference : undefined}
-      />
-      <TextAreaField
-        label={t('contact.comment')}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={2}
-      />
-      {progress && amount !== null && amount >= progress.remaining && (
-        <p className="rounded-control bg-green-200 p-3 text-sm">{t('manual.willClose')}</p>
       )}
     </Modal>
   )

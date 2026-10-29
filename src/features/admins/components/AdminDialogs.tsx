@@ -4,6 +4,7 @@ import {
   adminsStore,
   sortGrants,
   strongEnough,
+  isEmail,
   suggestPassword,
   type AdminStatus,
   type AdminUser,
@@ -47,6 +48,7 @@ export function AdminModal({
   const [name, setName] = useState(admin?.name ?? '')
   const [login, setLogin] = useState(admin?.login ?? '')
   const [phone, setPhone] = useState(admin?.phone ?? '')
+  const [email, setEmail] = useState(admin?.email ?? '')
   const [brands, setBrands] = useState<Workspace[]>(
     admin ? sortGrants(admin.grants).map((grant) => grant.workspace) : [],
   )
@@ -81,6 +83,7 @@ export function AdminModal({
         ? t('admin.error.loginTaken')
         : undefined,
     phone: phone.length !== PHONE_DIGITS ? t('error.required') : undefined,
+    email: !isEmail(email) ? t('admin.error.email') : undefined,
     brands: brands.length === 0 ? t('admin.error.brands') : undefined,
     roles: grants.some((grant) => !grant.roleId) ? t('error.required') : undefined,
     password:
@@ -95,7 +98,14 @@ export function AdminModal({
   const save = () => {
     setSubmitted(true)
     if (Object.values(errors).some(Boolean)) return
-    const data = { name: name.trim(), login: login.trim().toLowerCase(), phone, grants, status }
+    const data = {
+      name: name.trim(),
+      login: login.trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
+      phone,
+      grants,
+      status,
+    }
     if (admin) {
       adminsStore.update(admin.id, data)
       toast(t(password ? 'admin.savedWithPassword' : 'toast.saved'))
@@ -180,6 +190,15 @@ export function AdminModal({
           error={submitted ? errors.phone : undefined}
         />
       </div>
+      <TextField
+        label={t('admin.email')}
+        type="email"
+        placeholder="malika.r@birzum.uz"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        hint={t('admin.email.hint')}
+        error={submitted ? errors.email : undefined}
+      />
       <BrandChecks
         label={t('admin.brands')}
         value={brands}

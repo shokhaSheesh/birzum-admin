@@ -15,6 +15,8 @@ export type AdminUser = {
   id: string
   name: string
   login: string
+  /** Where the code for a forgotten password goes. */
+  email: string
   /** Nine digits after +998. */
   phone: string
   grants: Grant[]
@@ -47,6 +49,8 @@ export function suggestPassword() {
 }
 
 /** At least 8 characters with both letters and digits. */
+export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
 export const strongEnough = (password: string) =>
   password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password)
 
@@ -59,6 +63,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a1',
     name: 'Sardor Saidov',
     login: 'admin',
+    email: 'sardor.saidov@birzum.uz',
     phone: '901112233',
     grants: [
       { workspace: 'birzum', roleId: 'owner' },
@@ -73,6 +78,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a2',
     name: 'Malika Rasulova',
     login: 'malika.r',
+    email: 'malika.r@birzum.uz',
     phone: '935554411',
     grants: [{ workspace: 'birzum', roleId: 'finance' }],
     status: 'active',
@@ -83,6 +89,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a3',
     name: 'Sardor Nematov',
     login: 'sardor.n',
+    email: 'sardor.n@birzum.uz',
     phone: '977003322',
     grants: [
       { workspace: 'birzum', roleId: 'support' },
@@ -97,6 +104,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a4',
     name: 'Dilshod Karimov',
     login: 'dilshod.k',
+    email: 'dilshod.k@birzum.uz',
     phone: '909990011',
     grants: [{ workspace: 'birzum', roleId: 'collections' }],
     status: 'active',
@@ -107,6 +115,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a5',
     name: 'Nodira Aliyeva',
     login: 'nodira.a',
+    email: 'nodira.a@birzum.uz',
     phone: '933217788',
     grants: [{ workspace: 'birzum', roleId: 'content' }],
     status: 'active',
@@ -117,6 +126,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a6',
     name: 'Bobur Tursunov',
     login: 'bobur.t',
+    email: 'bobur.t@birzum.uz',
     phone: '946541230',
     grants: [{ workspace: 'fortuna', roleId: 'support' }],
     status: 'active',
@@ -126,6 +136,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a7',
     name: 'Jamshid Olimov',
     login: 'jamshid.o',
+    email: 'jamshid.o@birzum.uz',
     phone: '901237654',
     grants: [{ workspace: 'birzum', roleId: 'collections' }],
     status: 'blocked',
@@ -136,6 +147,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a8',
     name: 'Gulnoza Ergasheva',
     login: 'gulnoza.e',
+    email: 'gulnoza.e@birzum.uz',
     phone: '915553040',
     grants: [
       { workspace: 'fortuna', roleId: 'credit' },
@@ -149,6 +161,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a9',
     name: 'Azizbek Qodirov',
     login: 'azizbek.q',
+    email: 'azizbek.q@birzum.uz',
     phone: '998887766',
     grants: [{ workspace: 'vodiy', roleId: 'loanManager' }],
     status: 'active',
@@ -159,6 +172,7 @@ export const adminsStore = createStore<AdminUser>([
     id: 'a10',
     name: 'Shahzod Yoqubov',
     login: 'shahzod.y',
+    email: 'shahzod.y@birzum.uz',
     phone: '935001020',
     grants: [
       { workspace: 'fortuna', roleId: 'loanCollector' },
