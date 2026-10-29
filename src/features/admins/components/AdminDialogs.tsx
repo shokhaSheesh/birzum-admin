@@ -55,6 +55,7 @@ export function AdminModal({
     Object.fromEntries((admin?.grants ?? []).map((grant) => [grant.workspace, grant.roleId])),
   )
   const [password, setPassword] = useState('')
+  const [passwordRepeat, setPasswordRepeat] = useState('')
   const [status, setStatus] = useState<AdminStatus>(admin?.status ?? 'active')
   const [submitted, setSubmitted] = useState(false)
   const rolesFor = (workspace: Workspace) => roles.filter((role) => role.brands.includes(workspace))
@@ -88,6 +89,7 @@ export function AdminModal({
         : password && !strongEnough(password)
           ? t('admin.error.password')
           : undefined,
+    passwordRepeat: password !== passwordRepeat ? t('admin.error.passwordMismatch') : undefined,
   }
 
   const save = () => {
@@ -211,13 +213,25 @@ export function AdminModal({
         labelEnd={
           <button
             type="button"
-            onClick={() => setPassword(suggestPassword())}
+            onClick={() => {
+              // A suggested password fills both fields, so it doesn't have to be typed twice
+              const suggested = suggestPassword()
+              setPassword(suggested)
+              setPasswordRepeat(suggested)
+            }}
             className="flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
           >
             <Sparkles size={14} />
             {t('admin.password.suggest')}
           </button>
         }
+      />
+      <PasswordField
+        label={t('admin.passwordRepeat')}
+        value={passwordRepeat}
+        onChange={(e) => setPasswordRepeat(e.target.value)}
+        error={submitted ? errors.passwordRepeat : undefined}
+        autoComplete="new-password"
       />
       {admin && (
         <div className="flex flex-col gap-1.5">
