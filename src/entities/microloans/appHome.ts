@@ -60,7 +60,7 @@ const slots = (brand: Brand): MenuSlot[] => {
     slot('tab', 'home', 'Asosiy', 'Главная', true, true),
     slot('tab', 'loans', 'Qarzlarim', 'Мои займы'),
     slot('tab', 'apply', 'Qarz olish', 'Взять заём', true, true),
-    slot('tab', 'payments', 'Toʻlovlar', 'Платежи'),
+    slot('tab', 'payments', 'Monitoring', 'Мониторинг'),
     slot('tab', 'profile', 'Profil', 'Профиль', true, true),
   ]
 }
