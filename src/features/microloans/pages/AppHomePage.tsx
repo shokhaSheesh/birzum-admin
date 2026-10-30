@@ -14,7 +14,6 @@ import {
 import { useState, type ReactNode } from 'react'
 import { logAction } from '@/entities/audit/audit'
 import {
-  appThemeStore,
   infoTilesStore,
   menuSlotsStore,
   type InfoTile,
@@ -23,9 +22,7 @@ import {
 import type { Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
-import { ImageField } from '@/shared/ui/ImageField'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { InfoTileModal, MenuSlotModal } from '../components/AppHomeModals'
@@ -72,13 +69,12 @@ function Block({
 }
 
 /**
- * Asosiy oyna of one microloan brand's app: the background picture, the small tiles at the top
- * (like stories), the quick actions and the tab bar. Tiles, actions and tabs are dragged into
+ * Asosiy oyna of one microloan brand's app: the small tiles at the top (like stories), the quick
+ * actions and the tab bar. The background is the app's own theme, not set here. Tiles, actions and tabs are dragged into
  * the app's order; a click opens one to change its label or hide it.
  */
 export function AppHomePage({ brand }: { brand: Brand }) {
   const { t, tl } = useI18n()
-  const theme = appThemeStore.useAll().find((item) => item.id === brand)!
   const allTiles = infoTilesStore.useAll()
   const allSlots = menuSlotsStore.useAll()
   const tiles = allTiles.filter((tile) => tile.brand === brand)
@@ -99,11 +95,6 @@ export function AppHomePage({ brand }: { brand: Brand }) {
     infoTilesStore.replaceAll(
       allTiles.map((item) => (item.brand === brand ? queue.shift()! : item)),
     )
-  }
-  const setWallpaper = (wallpaper: string | undefined) => {
-    appThemeStore.update(brand, { wallpaper })
-    logAction({ section: 'mlOnboarding', kind: 'update', action: 'audit.a.wallpaperSaved' })
-    toast(t('toast.saved'))
   }
 
   const slotRow = (item: MenuSlot) => {
@@ -130,30 +121,6 @@ export function AppHomePage({ brand }: { brand: Brand }) {
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.appHome')} />
-
-      <Block title={t('appHome.theme')} hint={t('appHome.theme.hint')}>
-        <div className="p-4">
-          <ImageField
-            label={t('appHome.wallpaper')}
-            hint={t('appHome.wallpaper.hint')}
-            preview={
-              <span className="relative grid h-36 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-surface text-xs text-ink-subtle">
-                {theme.wallpaper ? (
-                  <img
-                    src={theme.wallpaper}
-                    alt=""
-                    className="absolute inset-0 size-full object-cover"
-                  />
-                ) : (
-                  t('appHome.wallpaper.none')
-                )}
-              </span>
-            }
-            value={theme.wallpaper}
-            onChange={setWallpaper}
-          />
-        </div>
-      </Block>
 
       <Block
         title={t('appHome.tiles')}

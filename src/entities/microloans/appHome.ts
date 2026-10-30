@@ -29,9 +29,6 @@ export type InfoTile = {
   visible: boolean
 }
 
-/** The brand's Asosiy background picture; none is the plain theme. */
-export type AppTheme = { id: Brand; wallpaper?: string }
-
 const slots = (brand: Brand): MenuSlot[] => {
   const slot = (
     place: MenuSlot['place'],
@@ -97,5 +94,3 @@ export const infoTilesStore = createStore<InfoTile>([
     visible: true,
   },
 ])
-
-export const appThemeStore = createStore<AppTheme>([{ id: 'fortuna' }, { id: 'vodiy' }])
