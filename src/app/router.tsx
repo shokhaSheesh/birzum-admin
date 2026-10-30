@@ -34,10 +34,11 @@ import { LoanApplicationPage } from '@/features/microloans/pages/LoanApplication
 import { LoanApplicationsPage } from '@/features/microloans/pages/LoanApplicationsPage'
 import { LoanPage } from '@/features/microloans/pages/LoanPage'
 import { ContractRulesPage } from '@/features/microloans/pages/ContractRulesPage'
-import { DecisionRulesPage } from '@/features/microloans/pages/DecisionRulesPage'
 import { LoanClientPage } from '@/features/microloans/pages/LoanClientPage'
 import { LoanClientsPage } from '@/features/microloans/pages/LoanClientsPage'
 import { LoanOverduePage } from '@/features/microloans/pages/LoanOverduePage'
+import { AppHomePage } from '@/features/microloans/pages/AppHomePage'
+import { FailedPayoutsPage } from '@/features/microloans/pages/FailedPayoutsPage'
 import { LoanPaymentsPage } from '@/features/microloans/pages/LoanPaymentsPage'
 import { LoanProductsPage } from '@/features/microloans/pages/LoanProductsPage'
 import { LoansPage } from '@/features/microloans/pages/LoansPage'
@@ -103,10 +104,6 @@ function brandRoutes(brand: Brand) {
       element: <QuickRepliesPage key={brand} app={brand} />,
     },
     {
-      path: brandPath(brand, 'decision'),
-      element: <DecisionRulesPage key={brand} brand={brand} />,
-    },
-    {
       path: brandPath(brand, 'contract'),
       element: <ContractRulesPage key={brand} brand={brand} />,
     },
@@ -117,6 +114,7 @@ function brandRoutes(brand: Brand) {
     },
     { path: brandPath(brand, 'overdue'), element: <LoanOverduePage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'payments'), element: <LoanPaymentsPage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'payouts'), element: <FailedPayoutsPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'loans'), element: <LoansPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'loans/:id'), element: <LoanPage key={brand} brand={brand} /> },
     {
@@ -129,6 +127,7 @@ function brandRoutes(brand: Brand) {
     },
     { path: brandPath(brand, 'products'), element: <LoanProductsPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'onboarding'), element: <OnboardingPage key={brand} app={brand} /> },
+    { path: brandPath(brand, 'app-home'), element: <AppHomePage key={brand} brand={brand} /> },
   ]
   const stubs = brandNav(brand)
     .flatMap((group) => group.items)

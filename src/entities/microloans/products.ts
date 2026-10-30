@@ -13,6 +13,14 @@ export const RATE_MODES = ['fixed', 'term', 'amount', 'both'] as const
 export type RateMode = (typeof RATE_MODES)[number]
 
 /**
+ * How the monthly payment is worked out. `annuity` («Standart»): the same sum every month.
+ * `differentiated` («Kamayib boruvchi»): an equal share of the sum plus interest on what is
+ * left, so payments fall. The client picks one in the calculator when the product allows both.
+ */
+export const PAY_TYPES = ['annuity', 'differentiated'] as const
+export type PayType = (typeof PAY_TYPES)[number]
+
+/**
  * One row of the rate table: sums up to `upTo` (the last row reaches the product's largest sum),
  * and the yearly rate, %, for each term. With 'fixed' and 'amount' every term has the same rate.
  */
@@ -34,10 +42,19 @@ export type LoanProduct = {
   termMax: number
   rateMode: RateMode
   rates: RateBand[]
+  /** The payment types the client can pick; the first is the calculator's default. */
+  payTypes: PayType[]
   enabled: boolean
 }
 
-const product = (p: Omit<LoanProduct, 'enabled'>): LoanProduct => ({ enabled: true, ...p })
+// Every product offers both payment types unless it says otherwise, as in the apps
+const product = (
+  p: Omit<LoanProduct, 'enabled' | 'payTypes'> & { payTypes?: PayType[] },
+): LoanProduct => ({
+  enabled: true,
+  payTypes: ['annuity', 'differentiated'],
+  ...p,
+})
 
 /** One rate for every term. */
 const flat = (upTo: number, rate: number, terms: readonly number[]): RateBand => ({
@@ -73,6 +90,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'tezkor',
+    payTypes: ['annuity'],
     brand: 'fortuna',
     name: 'Tezkor',
     for: {
@@ -119,6 +137,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'v-ishonch',
+    payTypes: ['annuity'],
     brand: 'vodiy',
     name: 'Ishonch',
     for: {

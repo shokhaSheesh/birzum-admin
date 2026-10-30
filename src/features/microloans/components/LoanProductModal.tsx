@@ -11,6 +11,8 @@ import {
   type LoanProduct,
   type RateBand,
   type RateMode,
+  PAY_TYPES,
+  type PayType,
 } from '@/entities/microloans/products'
 import { brandPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -19,6 +21,7 @@ import { newId } from '@/shared/lib/createStore'
 import { formatSum } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
+import { Checkbox } from '@/shared/ui/Checkbox'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { controlClass, inputClass } from '@/shared/ui/control'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
@@ -97,6 +100,9 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
   const [bands, setBands] = useState<DraftBand[]>(() =>
     product ? toDraft(product.rates) : [{ id: newId(), upTo: null, byTerm: {} }],
   )
+  const [payTypes, setPayTypes] = useState<PayType[]>(
+    product?.payTypes ?? ['annuity', 'differentiated'],
+  )
   const [enabled, setEnabled] = useState(product?.enabled ?? true)
   const [submitted, setSubmitted] = useState(false)
 
@@ -149,6 +155,7 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
           ? t('mlProducts.error.max')
           : undefined,
     termMax: Number(termMax) < Number(termMin) ? t('mlProducts.error.term') : undefined,
+    payTypes: payTypes.length === 0 ? t('mlProducts.error.payTypes') : undefined,
   }
   const valid =
     Object.values(errors).every((error) => !error) &&
@@ -177,6 +184,8 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
       min: min!,
       max: max!,
       rateMode: mode,
+      // In the order the app lists them, whatever order they were ticked in
+      payTypes: PAY_TYPES.filter((type) => payTypes.includes(type)),
       enabled,
       ...record(),
     }
@@ -205,6 +214,15 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
                   field: 'mlProducts.rate' as const,
                   from: `${text(product)} · ${t(`mlProducts.mode.${product.rateMode}`)}`,
                   to: `${text(next)} · ${t(`mlProducts.mode.${next.rateMode}`)}`,
+                },
+              ]
+            : []),
+          ...(product.payTypes.join() !== next.payTypes.join()
+            ? [
+                {
+                  field: 'mlProducts.payTypes' as const,
+                  from: product.payTypes.map((type) => t(`payType.${type}`)).join(', '),
+                  to: next.payTypes.map((type) => t(`payType.${type}`)).join(', '),
                 },
               ]
             : []),
@@ -315,6 +333,25 @@ export function LoanProductModal({ brand, product, onClose, onDelete }: Props) {
           error={errors.termMax}
         />
       </div>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1 text-sm font-medium text-ink-muted">
+          {t('mlProducts.payTypes')}
+        </legend>
+        {PAY_TYPES.map((type) => (
+          <Checkbox
+            key={type}
+            label={t(`payType.${type}`)}
+            description={t(`payType.${type}.hint`)}
+            checked={payTypes.includes(type)}
+            onChange={(on) =>
+              setPayTypes(on ? [...payTypes, type] : payTypes.filter((item) => item !== type))
+            }
+            error={submitted ? errors.payTypes : undefined}
+          />
+        ))}
+        {submitted && errors.payTypes && <p className="text-sm text-danger">{errors.payTypes}</p>}
+      </fieldset>
 
       <ChoiceGrid
         label={t('mlProducts.mode')}

@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, Plus, ReceiptText, RotateCcw, Search } from 'lucide-react'
+import { CircleCheck, CircleX, ReceiptText, RotateCcw, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { logAction } from '@/entities/audit/audit'
@@ -21,8 +21,6 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { Button } from '@/shared/ui/Button'
-import { LoanManualPaymentModal } from '../components/LoanManualPaymentModal'
 import { LoanReceiptModal } from '../components/LoanReceiptModal'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -49,7 +47,6 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
   const bounds = boundsOf(period)
   const [receipt, setReceipt] = useState<LoanPayment | null>(null)
-  const [entering, setEntering] = useState(false)
   const [charging, setCharging] = useState<LoanPayment | null>(null)
 
   const needle = query.trim().toLowerCase()
@@ -114,15 +111,7 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-      <PageHeader
-        title={t('nav.loanPayments')}
-        actions={
-          <Button size="sm" onClick={() => setEntering(true)}>
-            <Plus size={18} />
-            {t('manual.title')}
-          </Button>
-        }
-      />
+      <PageHeader title={t('nav.loanPayments')} />
 
       <PeriodFilter value={period} onChange={setPeriod} />
 
@@ -316,7 +305,6 @@ export function LoanPaymentsPage({ brand }: { brand: Brand }) {
       </div>
 
       {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
-      {entering && <LoanManualPaymentModal brand={brand} onClose={() => setEntering(false)} />}
       <ConfirmDialog
         open={!!charging}
         onClose={() => setCharging(null)}

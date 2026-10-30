@@ -17,7 +17,6 @@ import {
   type LoanAppEvent,
 } from '@/entities/microloans/applications'
 import { loanProductsStore } from '@/entities/microloans/products'
-import { decisionRulesStore } from '@/entities/microloans/rules'
 import { brandClientPath, brandLoanPath, brandPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -43,6 +42,9 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 /** One of the app's checks: what it looked at and whether it passed. */
+/** The load FlexSoft allows, as its answer reports it; the rules themselves live in FlexSoft. */
+const LOAD_LIMIT = 45
+
 function Check({
   ok,
   warn,
@@ -83,8 +85,6 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
   const { id } = useParams()
   const app = loanApplicationsStore.useAll().find((item) => item.id === id && item.brand === brand)
   const product = loanProductsStore.useAll().find((p) => p.id === app?.productId)
-  // The limits come from Qaror qoidalari
-  const rules = decisionRulesStore.useAll().find((item) => item.id === brand)!
 
   const back = (
     <button
@@ -220,13 +220,13 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
                 }
               />
               <Check
-                ok={checks.load <= rules.approveUpTo}
+                ok={checks.load <= LOAD_LIMIT}
                 title={t('loanApp.check.load')}
                 detail={t('loanApp.check.load.detail', {
                   monthly: formatSum(monthlyOfApp({ ...app, offered: undefined })),
                   income: formatSum(app.income),
                   load: String(checks.load),
-                  limit: String(rules.approveUpTo),
+                  limit: String(LOAD_LIMIT),
                 })}
               />
             </ul>

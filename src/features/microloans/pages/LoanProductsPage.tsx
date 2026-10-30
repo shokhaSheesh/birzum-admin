@@ -75,6 +75,7 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
                   <th className={th}>{t('mlProducts.col.sum')}</th>
                   <th className={th}>{t('mlProducts.col.rate')}</th>
                   <th className={th}>{t('mlProducts.col.term')}</th>
+                  <th className={th}>{t('mlProducts.payTypes')}</th>
                   <th className={th}>{t('mlProducts.col.status')}</th>
                   <th className={cn(th, 'w-px')}>
                     <span className="sr-only">{t('common.actions')}</span>
@@ -115,6 +116,13 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
                         min: String(item.termMin),
                         max: String(item.termMax),
                       })}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm">
+                      {item.payTypes.map((type) => (
+                        <span key={type} className="block whitespace-nowrap">
+                          {t(`payType.${type}`)}
+                        </span>
+                      ))}
                     </td>
                     <td className="px-4 py-3.5">
                       <StatusBadge tone={item.enabled ? 'success' : 'neutral'}>

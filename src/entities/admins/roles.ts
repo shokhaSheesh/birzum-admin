@@ -123,12 +123,6 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
     sections: [
       { key: 'mlProducts', label: 'nav.mlProducts', short: 'nav.products', ops: ALL },
       {
-        key: 'mlDecision',
-        label: 'nav.mlDecision',
-        short: 'nav.decision',
-        ops: ['read', 'update'],
-      },
-      {
         key: 'mlContract',
         label: 'nav.mlContract',
         short: 'nav.contractRules',
@@ -174,7 +168,6 @@ export const SPECIAL_ACTIONS = [
   { key: 'chargeCard', section: 'collections', op: 'create' },
   { key: 'blockClient', section: 'customers', op: 'update' },
   { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
-  { key: 'mlManualPayment', section: 'mlPayments', op: 'create' },
   { key: 'mlBlockClient', section: 'mlClients', op: 'update' },
   { key: 'mlSendBroadcast', section: 'mlBroadcasts', op: 'create' },
   { key: 'mlPauseIntake', section: 'mlApplications', op: 'update' },
@@ -278,7 +271,7 @@ export const rolesStore = createStore<Role>([
     description: 'Arizalarni qoʻlda koʻrib chiqadi, qarzlar va mijozlarni koʻradi.',
     access: grant(
       ['mlApplications'],
-      ['mlDashboard', 'mlLoans', 'mlPayments', 'mlClients', 'mlProducts', 'mlDecision'],
+      ['mlDashboard', 'mlLoans', 'mlPayments', 'mlClients', 'mlProducts'],
     ),
     actions: [],
   },
@@ -286,11 +279,9 @@ export const rolesStore = createStore<Role>([
     id: 'loanCollector',
     brands: ['fortuna', 'vodiy'],
     name: 'Mikroqarz undiruvchisi',
-    description: 'Kechikkanlar bilan ishlaydi, filialdagi toʻlovni kiritadi.',
-    access: grant(['mlOverdue'], ['mlLoans', 'mlPayments', 'mlClients'], {
-      mlPayments: ['read', 'create'],
-    }),
-    actions: ['mlManualPayment'],
+    description: 'Kechikkanlar bilan ishlaydi: qoʻngʻiroq, vaʼda, eslatma.',
+    access: grant(['mlOverdue'], ['mlLoans', 'mlPayments', 'mlClients']),
+    actions: [],
   },
   {
     id: 'loanManager',
@@ -298,7 +289,7 @@ export const rolesStore = createStore<Role>([
     name: 'Filial rahbari',
     description: 'Brendning hamma sahifasi: qoidalar, mahsulotlar, xabarnomalar.',
     access: grant(keysFor(['fortuna'])),
-    actions: ['mlManualPayment', 'mlBlockClient', 'mlSendBroadcast', 'mlPauseIntake'],
+    actions: ['mlBlockClient', 'mlSendBroadcast', 'mlPauseIntake'],
   },
 ])
 

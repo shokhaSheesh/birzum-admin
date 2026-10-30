@@ -5,7 +5,6 @@ import {
   CircleAlert,
   FileText,
   PhoneCall,
-  Plus,
   ReceiptText,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
@@ -35,7 +34,6 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
 import { LoanCallModal, LoanReminderDialog } from '../components/LoanContactDialogs'
-import { LoanManualPaymentModal } from '../components/LoanManualPaymentModal'
 import { LoanReceiptModal } from '../components/LoanReceiptModal'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
@@ -89,7 +87,6 @@ export function LoanPage({ brand }: { brand: Brand }) {
   const app = loanApplicationsStore.useAll().find((item) => item.id === loan?.applicationId)
   const [today] = useState(() => new Date())
   const [receipt, setReceipt] = useState<LoanPayment | null>(null)
-  const [entering, setEntering] = useState(false)
   const [calling, setCalling] = useState(false)
   const [reminding, setReminding] = useState(false)
   const contacts = contactsOfLoan(loanContactsStore.useAll(), id ?? '')
@@ -129,17 +126,9 @@ export function LoanPage({ brand }: { brand: Brand }) {
           <h1 className="text-2xl font-bold tabular-nums">{loan.number}</h1>
           <StatusBadge tone={loanStateTone[state]}>{t(`loan.state.${state}`)}</StatusBadge>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-ink-muted">
-            {product?.name} · {t('loan.issuedOn', { date: formatDate(loan.issuedAt) })}
-          </p>
-          {state !== 'closed' && (
-            <Button size="sm" onClick={() => setEntering(true)}>
-              <Plus size={18} />
-              {t('manual.title')}
-            </Button>
-          )}
-        </div>
+        <p className="text-ink-muted">
+          {product?.name} · {t('loan.issuedOn', { date: formatDate(loan.issuedAt) })}
+        </p>
       </div>
 
       {state === 'overdue' && next && (
@@ -413,9 +402,6 @@ export function LoanPage({ brand }: { brand: Brand }) {
         </aside>
       </div>
       {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
-      {entering && (
-        <LoanManualPaymentModal brand={brand} loan={loan} onClose={() => setEntering(false)} />
-      )}
       {calling && <LoanCallModal loan={loan} onClose={() => setCalling(false)} />}
       {reminding && (
         <LoanReminderDialog

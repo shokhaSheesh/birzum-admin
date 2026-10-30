@@ -1,11 +1,11 @@
 import {
   BadgePercent,
   Banknote,
+  BanknoteX,
   ChartColumn,
   CircleAlert,
   FileSignature,
   MapPin,
-  Scale,
   FileText,
   FolderTree,
   GalleryHorizontal,
@@ -19,6 +19,7 @@ import {
   Package,
   ReceiptText,
   ShieldCheck,
+  Smartphone,
   Star,
   Store,
   Tags,
@@ -172,6 +173,12 @@ export function brandNav(brand: Brand): NavGroup[] {
         },
         { to: to('loans'), icon: Banknote, label: 'nav.loans', about: 'about.ml.loans' },
         { to: to('payments'), icon: Wallet, label: 'nav.loanPayments', about: 'about.ml.payments' },
+        {
+          to: to('payouts'),
+          icon: BanknoteX,
+          label: 'nav.failedPayouts',
+          about: 'about.ml.payouts',
+        },
         { to: to('overdue'), icon: CircleAlert, label: 'nav.overdue', about: 'about.ml.overdue' },
         { to: to('customers'), icon: Users, label: 'nav.borrowers', about: 'about.ml.customers' },
       ],
@@ -180,7 +187,6 @@ export function brandNav(brand: Brand): NavGroup[] {
       title: 'navGroup.rules',
       items: [
         { to: to('products'), icon: Package, label: 'nav.products', about: 'about.ml.products' },
-        { to: to('decision'), icon: Scale, label: 'nav.decision', about: 'about.ml.decision' },
         {
           to: to('contract'),
           icon: FileSignature,
@@ -212,6 +218,7 @@ export function brandNav(brand: Brand): NavGroup[] {
           label: 'nav.onboarding',
           about: 'about.onboarding',
         },
+        { to: to('app-home'), icon: Smartphone, label: 'nav.appHome', about: 'about.ml.appHome' },
         {
           to: to('documents'),
           icon: FileText,

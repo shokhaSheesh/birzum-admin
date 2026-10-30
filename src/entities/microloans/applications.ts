@@ -1,13 +1,16 @@
 import { RELATIONS, type Relation } from '@/entities/people/contacts'
 import { loanProductsStore, monthlyOf, rateOf, termsOf } from '@/entities/microloans/products'
-import { decisionRulesOf } from '@/entities/microloans/rules'
 import type { StatusTone } from '@/shared/ui/StatusBadge'
 import type { Brand } from '@/shared/config/workspaces'
 import { createStore } from '@/shared/lib/createStore'
 
+// FlexSoft decides by each product's rules (they live there, not in the admin). These stand in
+// for them only to make the sample arizalar look real.
+const FLEXSOFT_SAMPLE_RULES = { lateUpTo: 0, approveUpTo: 45, counterOffer: true, offerDays: 3 }
+
 /**
  * Where a microloan ariza is, in the order it moves:
- * - review: the app's checks are running (MyID, credit history, income); the rules decide
+ * - review: FlexSoft is checking (credit history, income) and decides by the product's rules
  * - approved / counter: offered as asked, or a smaller sum; waiting for the borrower to sign
  * - signed: signed with the SMS code, money on its way to the card
  * - paidOut: the money reached the card; the loan is open
@@ -177,7 +180,7 @@ function seed(brand: Brand, base: number, prefix: string): LoanApplication[] {
   const samplePhone = () =>
     `9${1 + Math.floor(next() * 8)}${String(1000000 + Math.floor(next() * 8999999)).slice(0, 7)}`
   const products = loanProductsStore.getAll().filter((p) => p.brand === brand && p.enabled)
-  const rules = decisionRulesOf(brand)
+  const rules = FLEXSOFT_SAMPLE_RULES
   const list: LoanApplication[] = []
   for (let i = 0; i < 40; i++) {
     const product = pick(products)

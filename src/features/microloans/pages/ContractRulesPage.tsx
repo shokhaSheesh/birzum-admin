@@ -16,7 +16,6 @@ import { formatSum } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
-import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { NumberField } from '@/shared/ui/NumberField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { Switch } from '@/shared/ui/Switch'
@@ -61,7 +60,7 @@ function SwitchBox({
 }
 
 /**
- * Shartnoma va toʻlov of a microloan brand: the monthly payment day, when the card is charged
+ * Shartnoma va toʻlov of a microloan brand: when the card is charged
  * and how often again, early repayment, and which cards the app takes. What
  * a borrower would see is worked out on the right. The offer itself lives in Hujjatlar.
  */
@@ -75,10 +74,6 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
   const num = (value: number | null) => value ?? 0
 
   const errors = {
-    payDay:
-      draft.payDayMode === 'fixed' && (draft.payDay < 1 || draft.payDay > 28)
-        ? t('mlRules.error.payDay')
-        : undefined,
     cards: !draft.uzcard && !draft.humo ? t('mlRules.error.cards') : undefined,
   }
 
@@ -94,8 +89,6 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
     if (draft[key] !== saved[key])
       changes.push({ label, from: show(saved[key]), to: show(draft[key]) })
   }
-  track('payDayMode', t('mlRules.payDayMode'), (v) => t(`mlRules.payDayMode.${v}`))
-  track('payDay', t('mlRules.payDay'), String)
   track('chargeHour', t('mlRules.chargeHour'), (v) => `${String(v).padStart(2, '0')}:00`)
   track('retries', t('mlRules.retries'), String)
   track('earlyAfterDays', t('mlRules.earlyAfterDays'), days)
@@ -165,28 +158,8 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
       <div className="mx-auto grid w-full max-w-page items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="flex flex-col gap-6">
           <Group title={t('mlRules.payment')} hint={t('mlRules.payment.hint')}>
-            <ChoiceGrid
-              label={t('mlRules.payDayMode')}
-              columns={2}
-              options={(['issueDay', 'fixed'] as const).map((value) => ({
-                value,
-                label: t(`mlRules.payDayMode.${value}`),
-                description: t(`mlRules.payDayMode.${value}.hint`),
-              }))}
-              value={draft.payDayMode}
-              onChange={(value) => set({ payDayMode: value })}
-            />
+            <p className="text-sm text-ink-muted">{t('mlRules.payDayClient')}</p>
             <div className="grid gap-4 sm:grid-cols-3">
-              {draft.payDayMode === 'fixed' && (
-                <NumberField
-                  label={t('mlRules.payDay')}
-                  value={draft.payDay}
-                  onChange={(v) => set({ payDay: num(v) })}
-                  maxDigits={2}
-                  hint={t('mlRules.payDay.hint')}
-                  error={submitted ? errors.payDay : undefined}
-                />
-              )}
               <SelectField
                 label={t('mlRules.chargeHour')}
                 options={hours}
@@ -259,11 +232,7 @@ export function ContractRulesPage({ brand }: { brand: Brand }) {
           <section className={card}>
             <h2 className="font-bold">{t('mlRules.sees')}</h2>
             <ul className="flex flex-col gap-2.5 text-sm">
-              <li>
-                {draft.payDayMode === 'fixed'
-                  ? t('mlRules.sees.payFixed', { day: String(draft.payDay) })
-                  : t('mlRules.sees.payIssue')}
-              </li>
+              <li>{t('mlRules.sees.payClient')}</li>
               <li>
                 {t('mlRules.sees.charge', {
                   hour: `${String(draft.chargeHour).padStart(2, '0')}:00`,
