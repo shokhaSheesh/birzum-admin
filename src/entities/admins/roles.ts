@@ -123,9 +123,9 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
     sections: [
       { key: 'mlProducts', label: 'nav.mlProducts', short: 'nav.products', ops: ALL },
       {
-        key: 'mlContract',
-        label: 'nav.mlContract',
-        short: 'nav.contractRules',
+        key: 'mlPayDay',
+        label: 'nav.mlPayDay',
+        short: 'nav.payDay',
         ops: ['read', 'update'],
       },
     ],

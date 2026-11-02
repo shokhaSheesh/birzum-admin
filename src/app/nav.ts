@@ -4,7 +4,7 @@ import {
   BanknoteX,
   ChartColumn,
   CircleAlert,
-  FileSignature,
+  CalendarDays,
   MapPin,
   FileText,
   FolderTree,
@@ -188,10 +188,10 @@ export function brandNav(brand: Brand): NavGroup[] {
       items: [
         { to: to('products'), icon: Package, label: 'nav.products', about: 'about.ml.products' },
         {
-          to: to('contract'),
-          icon: FileSignature,
-          label: 'nav.contractRules',
-          about: 'about.ml.contract',
+          to: to('pay-day'),
+          icon: CalendarDays,
+          label: 'nav.payDay',
+          about: 'about.ml.payDay',
         },
       ],
     },

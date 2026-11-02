@@ -1,53 +1,63 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Info, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { logAction } from '@/entities/audit/audit'
-import { loanProductsStore, rateRangeOf, type LoanProduct } from '@/entities/microloans/products'
+import {
+  loanProductsStore,
+  PRODUCTS_SYNCED_AT,
+  rateRangeOf,
+  type LoanProduct,
+} from '@/entities/microloans/products'
 import { brandPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
+import { formatDateTime } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
-import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { RowActions } from '@/shared/ui/RowActions'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
-import { LoanProductModal } from '../components/LoanProductModal'
+import { DragList } from '../components/DragList'
+import { LoanProductSettingsModal } from '../components/LoanProductSettingsModal'
 
-const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
+const millions = (sum: number) => String(Math.round((sum / 1_000_000) * 10) / 10)
 const rateText = (item: LoanProduct) => {
   const { from, to } = rateRangeOf(item)
   return from === to ? `${from}%` : `${from}–${to}%`
 }
-const millions = (sum: number) => String(Math.round((sum / 1_000_000) * 10) / 10)
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
- * Mahsulotlar of one microloan brand: every product its app offers, in the order the app lists
- * them, with the sum range, yearly rate and terms the calculator uses. Added and edited in a
- * modal; the arrows set the order.
+ * Mahsulotlar of one microloan brand, as FlexSoft has them: code, name, sums, longest term and rate
+ * are FlexSoft's and read-only here. The admin sets the order the app lists them in (drag by the
+ * grip), and in a modal who each is for, its payment types and whether the app shows it.
+ * «FlexSoft-dan yangilash» fetches them again.
  */
 export function LoanProductsPage({ brand }: { brand: Brand }) {
   const { t, tl } = useI18n()
   const all = loanProductsStore.useAll()
-  const [editing, setEditing] = useState<LoanProduct | null | undefined>(undefined)
-  const [deleting, setDeleting] = useState<LoanProduct | null>(null)
   const products = all.filter((item) => item.brand === brand)
-  const brandName = WORKSPACE_INFO[brand].name
+  const [editing, setEditing] = useState<LoanProduct | null>(null)
+  const [syncedAt, setSyncedAt] = useState(PRODUCTS_SYNCED_AT)
+  const [syncing, setSyncing] = useState(false)
 
-  // Moves a product one place within its brand, keeping the other brand's where they are
-  const move = (item: LoanProduct, by: -1 | 1) => {
-    const i = products.indexOf(item)
-    const other = products[i + by]
-    if (!other) return
-    loanProductsStore.replaceAll(all.map((p) => (p === item ? other : p === other ? item : p)))
+  // Puts this brand's new order back into the store, the other brand's products where they are
+  const place = (ordered: LoanProduct[]) => {
+    const queue = [...ordered]
+    loanProductsStore.replaceAll(all.map((item) => (item.brand === brand ? queue.shift()! : item)))
     logAction({
       section: 'mlProducts',
       kind: 'update',
       action: 'audit.a.loanProductMoved',
-      params: { brand: brandName },
-      target: item.name,
+      params: { brand: WORKSPACE_INFO[brand].name },
       href: brandPath(brand, 'products'),
     })
+  }
+  const sync = async () => {
+    setSyncing(true)
+    await delay(1200)
+    setSyncedAt(new Date())
+    setSyncing(false)
+    toast(t('mlProducts.synced'))
   }
 
   return (
@@ -55,158 +65,60 @@ export function LoanProductsPage({ brand }: { brand: Brand }) {
       <PageHeader
         title={t('nav.products')}
         actions={
-          <Button onClick={() => setEditing(null)}>
-            <Plus size={20} />
-            {t('mlProducts.add')}
+          <Button variant="secondary" loading={syncing} onClick={() => void sync()}>
+            <RefreshCw size={18} />
+            {t('mlProducts.sync')}
           </Button>
         }
       />
 
+      <p className="flex items-start gap-2 rounded-control bg-surface p-3 text-sm text-ink-muted">
+        <Info size={18} className="mt-0.5 shrink-0" />
+        {t('mlProducts.fromFlexSoft.hint', { time: formatDateTime(syncedAt) })}
+      </p>
+
       <section className="overflow-hidden rounded-card border border-line bg-canvas">
         {products.length === 0 ? (
-          <EmptyState title={t('mlProducts.empty')} hint={t('mlProducts.empty.hint')} />
+          <EmptyState title={t('mlProducts.empty')} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse">
-              <thead className="border-b border-line bg-surface/60">
-                <tr>
-                  <th className={cn(th, 'w-12')}>№</th>
-                  <th className={th}>{t('mlProducts.col.product')}</th>
-                  <th className={th}>{t('mlProducts.col.sum')}</th>
-                  <th className={th}>{t('mlProducts.col.rate')}</th>
-                  <th className={th}>{t('mlProducts.col.term')}</th>
-                  <th className={th}>{t('mlProducts.payTypes')}</th>
-                  <th className={th}>{t('mlProducts.col.status')}</th>
-                  <th className={cn(th, 'w-px')}>
-                    <span className="sr-only">{t('common.actions')}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((item, i) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setEditing(item)}
-                    className={cn(
-                      'cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60',
-                      !item.enabled && 'bg-surface/40',
-                    )}
-                  >
-                    <td className="px-4 py-3.5 text-sm text-ink-subtle tabular-nums">{i + 1}</td>
-                    <td className="px-4 py-3.5">
-                      <p className={cn('font-semibold', !item.enabled && 'text-ink-muted')}>
-                        {item.name}
-                      </p>
-                      <p className="max-w-80 truncate text-xs text-ink-subtle">{tl(item.for)}</p>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm whitespace-nowrap tabular-nums">
-                      {t('mlProducts.sumRange', {
-                        min: millions(item.min),
-                        max: millions(item.max),
-                      })}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-semibold whitespace-nowrap tabular-nums">
-                      {rateText(item)}
-                      <span className="block text-xs font-normal text-ink-muted">
-                        {t(`mlProducts.mode.${item.rateMode}`)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm whitespace-nowrap tabular-nums">
-                      {t('mlProducts.termRange', {
-                        min: String(item.termMin),
-                        max: String(item.termMax),
-                      })}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm">
-                      {item.payTypes.map((type) => (
-                        <span key={type} className="block whitespace-nowrap">
-                          {t(`payType.${type}`)}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <StatusBadge tone={item.enabled ? 'success' : 'neutral'}>
-                        {t(item.enabled ? 'mlProducts.on' : 'mlProducts.off')}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        {(
-                          [
-                            [ArrowUp, -1, 'slides.up'],
-                            [ArrowDown, 1, 'slides.down'],
-                          ] as const
-                        ).map(([Icon, by, label]) => (
-                          <button
-                            key={label}
-                            type="button"
-                            disabled={!products[i + by]}
-                            onClick={() => move(item, by)}
-                            aria-label={t(label)}
-                            title={t(label)}
-                            className="grid size-8 place-items-center rounded-md text-ink-subtle hover:bg-surface hover:text-ink disabled:opacity-30"
-                          >
-                            <Icon size={16} />
-                          </button>
-                        ))}
-                        <RowActions
-                          actions={[
-                            {
-                              icon: Pencil,
-                              label: t('common.edit'),
-                              onClick: () => setEditing(item),
-                            },
-                            {
-                              icon: Trash2,
-                              label: t('common.delete'),
-                              onClick: () => setDeleting(item),
-                              danger: true,
-                            },
-                          ]}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DragList
+            items={products}
+            name={(item) => item.name}
+            onReorder={place}
+            onOpen={setEditing}
+            render={(item) => (
+              <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,1fr))_auto] items-center gap-4">
+                <div className="min-w-0">
+                  <p className={cn('font-semibold', !item.enabled && 'text-ink-muted')}>
+                    {item.name}{' '}
+                    <span className="text-xs font-normal text-ink-subtle tabular-nums">
+                      · {item.code}
+                    </span>
+                  </p>
+                  <p className="truncate text-xs text-ink-subtle">{tl(item.for)}</p>
+                </div>
+                <span className="text-sm whitespace-nowrap tabular-nums">
+                  {t('mlProducts.sumRange', { min: millions(item.min), max: millions(item.max) })}
+                </span>
+                <span className="text-sm whitespace-nowrap tabular-nums">
+                  {t('mlProducts.upToMonths', { n: String(item.termMax) })}
+                </span>
+                <span className="text-sm font-semibold whitespace-nowrap tabular-nums">
+                  {rateText(item)}
+                </span>
+                <span className="text-sm">
+                  {item.payTypes.map((type) => t(`payType.${type}`)).join(', ')}
+                </span>
+                <StatusBadge tone={item.enabled ? 'success' : 'neutral'}>
+                  {t(item.enabled ? 'mlProducts.on' : 'mlProducts.off')}
+                </StatusBadge>
+              </div>
+            )}
+          />
         )}
       </section>
 
-      {editing !== undefined && (
-        <LoanProductModal
-          brand={brand}
-          product={editing}
-          onClose={() => setEditing(undefined)}
-          onDelete={(item) => {
-            setEditing(undefined)
-            setDeleting(item)
-          }}
-        />
-      )}
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title={t('mlProducts.delete.title', { name: deleting?.name ?? '' })}
-        confirmLabel={t('common.delete')}
-        onConfirm={() => {
-          if (deleting) {
-            loanProductsStore.remove(deleting.id)
-            logAction({
-              section: 'mlProducts',
-              kind: 'delete',
-              action: 'audit.a.loanProductDeleted',
-              params: { brand: brandName },
-              target: deleting.name,
-            })
-          }
-          setDeleting(null)
-          toast(t('mlProducts.deleted'))
-        }}
-      >
-        <p>{t('mlProducts.delete.message')}</p>
-      </ConfirmDialog>
+      {editing && <LoanProductSettingsModal product={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }

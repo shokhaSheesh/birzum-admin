@@ -33,7 +33,7 @@ import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { LoanApplicationPage } from '@/features/microloans/pages/LoanApplicationPage'
 import { LoanApplicationsPage } from '@/features/microloans/pages/LoanApplicationsPage'
 import { LoanPage } from '@/features/microloans/pages/LoanPage'
-import { ContractRulesPage } from '@/features/microloans/pages/ContractRulesPage'
+import { PayDayRulesPage } from '@/features/microloans/pages/PayDayRulesPage'
 import { LoanClientPage } from '@/features/microloans/pages/LoanClientPage'
 import { LoanClientsPage } from '@/features/microloans/pages/LoanClientsPage'
 import { LoanOverduePage } from '@/features/microloans/pages/LoanOverduePage'
@@ -104,8 +104,8 @@ function brandRoutes(brand: Brand) {
       element: <QuickRepliesPage key={brand} app={brand} />,
     },
     {
-      path: brandPath(brand, 'contract'),
-      element: <ContractRulesPage key={brand} brand={brand} />,
+      path: brandPath(brand, 'pay-day'),
+      element: <PayDayRulesPage key={brand} brand={brand} />,
     },
     { path: brandPath(brand, 'customers'), element: <LoanClientsPage key={brand} brand={brand} /> },
     {

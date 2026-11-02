@@ -2,49 +2,51 @@ import type { Brand } from '@/shared/config/workspaces'
 import { createStore } from '@/shared/lib/createStore'
 
 /**
- * The contract and payment terms of a brand's loans: when the card is charged and how often
- * again, early repayment, and which cards are taken. The payment day is not set here: the client
- * picks 1–10 in the app's calculator. A partial early repayment always keeps the end date and
- * lowers the payments (user decision).
+ * One line of the "by application day" rule: a client who applies between the `from` and `to`
+ * day of the month can pick a payment day from 1 up to `upTo`, or up to the day they apply
+ * (`'appDay'`), so the choice grows one day at a time.
  */
-export type ContractRules = {
+export type PayDayRule = { from: number; to: number; upTo: number | 'appDay' }
+
+/**
+ * Which payment days the app offers. `fixed`: the same days for everyone. `byDay`: the days
+ * depend on the day the client applies (the lines in `rules`); after the `after` day of the
+ * month only the 1st of next month is offered.
+ */
+export type PayDayRules = {
   id: Brand
-  /** Hour of the automatic charge on the day. */
-  chargeHour: number
-  /** How many more mornings a refused charge is tried. */
-  retries: number
-  /** Early repayment allowed from this many days after payout. */
-  earlyAfterDays: number
-  earlyPartialMin: number
-  /** Fee for repaying early, % of the sum paid early. */
-  earlyFee: number
-  uzcard: boolean
-  humo: boolean
+  mode: 'fixed' | 'byDay'
+  fixedDays: number[]
+  rules: PayDayRule[]
+  after: number
 }
 
-// What the apps and the sample data use today. Replace with the API.
-export const contractRulesStore = createStore<ContractRules>([
-  {
-    id: 'fortuna',
-    chargeHour: 9,
-    retries: 2,
-    earlyAfterDays: 0,
-    earlyPartialMin: 100_000,
-    earlyFee: 0,
-    uzcard: true,
-    humo: true,
-  },
-  {
-    id: 'vodiy',
-    chargeHour: 9,
-    retries: 2,
-    earlyAfterDays: 0,
-    earlyPartialMin: 100_000,
-    earlyFee: 0,
-    uzcard: true,
-    humo: true,
-  },
-])
+const range = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i)
+
+// The rule Fortuna uses in its branches today (31.10 call). Replace with the API.
+const defaults = (id: Brand): PayDayRules => ({
+  id,
+  mode: 'byDay',
+  fixedDays: range(1, 10),
+  rules: [
+    { from: 1, to: 5, upTo: 5 },
+    { from: 6, to: 10, upTo: 10 },
+    { from: 11, to: 20, upTo: 'appDay' },
+  ],
+  after: 20,
+})
+export const payDayRulesStore = createStore<PayDayRules>([defaults('fortuna'), defaults('vodiy')])
+
+/** The payment days a client who applies on `appDay` can pick; `next1st` when only the 1st is left. */
+export function payDaysFor(rules: Omit<PayDayRules, 'id'>, appDay: number) {
+  if (rules.mode === 'fixed')
+    return { days: [...rules.fixedDays].sort((a, b) => a - b), next1st: false }
+  if (appDay > rules.after) return { days: [1], next1st: true }
+  const line = rules.rules.find((rule) => appDay >= rule.from && appDay <= rule.to)
+  if (!line) return { days: [1], next1st: true }
+  return { days: range(1, line.upTo === 'appDay' ? appDay : line.upTo), next1st: false }
+}
 
 /** One field a save changed. */
 export type RuleChange = { label: string; from: string; to: string }
@@ -52,7 +54,7 @@ export type RuleChange = { label: string; from: string; to: string }
 export type RuleRevision = {
   id: string
   brand: Brand
-  page: 'contract'
+  page: 'payDay'
   at: Date
   by: string
   changes: RuleChange[]
@@ -61,9 +63,9 @@ export const ruleRevisionsStore = createStore<RuleRevision>([
   {
     id: 'rr1',
     brand: 'fortuna',
-    page: 'contract',
-    at: new Date(2026, 8, 20, 15, 10),
+    page: 'payDay',
+    at: new Date(2026, 9, 31, 17, 40),
     by: 'Sardor Saidov',
-    changes: [{ label: 'Takroriy urinishlar', from: '3', to: '2' }],
+    changes: [{ label: 'Qanday tanlanadi', from: 'Belgilangan kunlar', to: 'Ariza kuniga qarab' }],
   },
 ])

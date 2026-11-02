@@ -1,7 +1,16 @@
-import { ArrowLeft, Ban, ChevronRight, LockOpen, ShieldCheck, Smartphone } from 'lucide-react'
+import {
+  ArrowLeft,
+  Ban,
+  ChevronRight,
+  LockOpen,
+  MonitorSmartphone,
+  ShieldCheck,
+  Smartphone,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { loanApplicationsStore, loanAppStatusTone, sumOf } from '@/entities/microloans/applications'
+import { sessionsOf } from '@/entities/microloans/clientSessions'
 import { loanClientsStore, segmentOf, segmentTone } from '@/entities/microloans/loanClients'
 import {
   cardText,
@@ -285,6 +294,39 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
                 [t('mlClients.cards'), cards.length ? cards.map(cardText).join(', ') : '—'],
               ]}
             />
+          </section>
+          <section className={card}>
+            <h2 className="flex items-center gap-2 font-bold">
+              <MonitorSmartphone size={18} className="text-brand" />
+              {t('mlClients.sessions')}
+            </h2>
+            <p className="text-sm text-ink-muted">{t('mlClients.sessions.hint')}</p>
+            <ul className="flex flex-col">
+              {sessionsOf(client).map((session) => (
+                <li
+                  key={session.id}
+                  className="flex flex-col gap-0.5 border-b border-line py-2.5 last:border-b-0"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{session.device}</span>
+                    <StatusBadge tone={session.endedAt ? 'neutral' : 'success'}>
+                      {t(session.endedAt ? 'mlClients.session.ended' : 'mlClients.session.active')}
+                    </StatusBadge>
+                  </div>
+                  <span className="text-sm text-ink-muted tabular-nums">
+                    {session.os} · IP {session.ip}
+                  </span>
+                  <span className="text-xs text-ink-subtle tabular-nums">
+                    {session.endedAt
+                      ? t(`mlClients.session.${session.endReason ?? 'signOut'}`, {
+                          from: formatDateTime(session.startedAt),
+                          to: formatDateTime(session.endedAt),
+                        })
+                      : t('mlClients.session.since', { from: formatDateTime(session.startedAt) })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         </aside>
       </div>

@@ -27,13 +27,16 @@ export type PayType = (typeof PAY_TYPES)[number]
 export type RateBand = { upTo: number; byTerm: Record<number, number> }
 
 /**
- * One microloan product of a brand, as its app's calculator and Asosiy show it: name, who it is
- * for, the sum range, the terms, and the yearly rate table. Off: hidden in the app. Every product
- * is a microloan, so there is no kind to pick.
+ * One microloan product of a brand. It is made in FlexSoft (name, sums, longest term, rate) and
+ * comes here by `code`; the ariza carries the code so FlexSoft knows which product it is for.
+ * The admin only sets how the app shows it: who it is for, the payment types, shown or hidden,
+ * and the order. Every product is a microloan, so there is no kind to pick.
  */
 export type LoanProduct = {
   id: string
   brand: Brand
+  /** FlexSoft's product code. */
+  code: string
   name: string
   for: LocalizedText
   min: number
@@ -70,10 +73,12 @@ const T3_12 = [3, 6, 9, 12] as const
 const T3_24 = [3, 6, 9, 12, 18, 24] as const
 const T3_36 = [3, 6, 9, 12, 18, 24, 36] as const
 
-// The products the apps ship with, from fortunabiznes.uz and vodiytaraqqiyot.uz. Replace with the API.
+// The products as FlexSoft has them (sample, from fortunabiznes.uz and vodiytaraqqiyot.uz). Replace
+// with the FlexSoft API.
 export const loanProductsStore = createStore<LoanProduct>([
   product({
     id: 'rivoj',
+    code: '101',
     brand: 'fortuna',
     name: 'Rivoj',
     for: {
@@ -90,6 +95,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'tezkor',
+    code: '102',
     payTypes: ['annuity'],
     brand: 'fortuna',
     name: 'Tezkor',
@@ -106,6 +112,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'ishonch',
+    code: '103',
     brand: 'fortuna',
     name: 'Ishonch',
     for: {
@@ -121,6 +128,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'zar',
+    code: '201',
     brand: 'vodiy',
     name: 'Zar',
     for: {
@@ -137,6 +145,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'v-ishonch',
+    code: '202',
     payTypes: ['annuity'],
     brand: 'vodiy',
     name: 'Ishonch',
@@ -153,6 +162,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'komak',
+    code: '203',
     brand: 'vodiy',
     name: 'Koʻmak',
     for: {
@@ -173,6 +183,7 @@ export const loanProductsStore = createStore<LoanProduct>([
   }),
   product({
     id: 'imkoniyat',
+    code: '204',
     brand: 'vodiy',
     name: 'Imkoniyat',
     for: {
@@ -213,3 +224,6 @@ export function rateRangeOf(p: Pick<LoanProduct, 'rates' | 'termMin' | 'termMax'
   )
   return { from: Math.min(...all), to: Math.max(...all) }
 }
+
+/** When the products were last fetched from FlexSoft. Sample value. */
+export const PRODUCTS_SYNCED_AT = new Date(Date.now() - 2 * 60 * 60 * 1000)
