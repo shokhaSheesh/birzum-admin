@@ -43,10 +43,14 @@ const pad = (n: number) => String(n).padStart(2, '0')
 const tashkent = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T00:00:00+05:00`
 
-/** The log allows at most 366 days at once; "all time" is the last year. */
-function rangeOf(period: Period) {
+/**
+ * `from` and `to` for a period. The log allows at most 366 days at once, so there "all time" is the
+ * last year (`maxYear`); elsewhere it sends no bounds.
+ */
+export function periodRange(period: Period, maxYear = true) {
   const bounds = boundsOf(period)
   if (period.unit === 'all') {
+    if (!maxYear) return {}
     const to = new Date()
     to.setDate(to.getDate() + 1)
     const from = new Date()
@@ -69,7 +73,7 @@ export async function loadAudit(filters: {
   limit: number
 }) {
   const data = await apiGet<{ items: ApiEntry[]; total: number }>('/admin/audit', {
-    ...rangeOf(filters.period),
+    ...periodRange(filters.period),
     q: filters.q,
     staff_id: filters.staffId,
     section: filters.section,

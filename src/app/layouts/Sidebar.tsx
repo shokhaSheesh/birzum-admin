@@ -1,7 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
-import { productsStore, statusOf } from '@/entities/catalog/products'
+import { hasPermission, useAdmin } from '@/entities/session/session'
 import { chatsStore } from '@/entities/support/chats'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import logoOnDark from '@/shared/assets/logo-on-dark.svg'
@@ -10,7 +10,7 @@ import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { brandPath, WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
-import { navOf } from '../nav'
+import { navOf, sectionOfNav } from '../nav'
 
 type Props = {
   onNavigate?: () => void
@@ -33,8 +33,17 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
     .useAll()
     .filter((application) => application.status === 'pending').length
   // Yordam chati counts open chats with messages nobody has read
-  // New products waiting for the admin's check
-  const toReview = productsStore.useAll().filter((product) => statusOf(product) === 'review').length
+  const admin = useAdmin()
+  // The pages the admin's role in this business can open (`<page>.read`); the rest are left out
+  const groups = navOf(workspace)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const section = sectionOfNav(workspace, item.to)
+        return !section || hasPermission(admin, workspace, `${section}.read`)
+      }),
+    }))
+    .filter((group) => group.items.length > 0)
   const unread = chatsStore
     .useAll()
     .filter((chat) => chat.app === workspace && chat.status === 'open' && chat.unread > 0).length
@@ -71,7 +80,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
           </div>
         )}
 
-        {navOf(workspace).map((group, i) => (
+        {groups.map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
             {group.title &&
               (collapsed ? (
@@ -85,12 +94,10 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
               const badge =
                 to === ROUTES.applications
                   ? pending
-                  : to === ROUTES.products
-                    ? toReview
-                    : to ===
-                        (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
-                      ? unread
-                      : fixed
+                  : to ===
+                      (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
+                    ? unread
+                    : fixed
               return (
                 <NavLink
                   key={to}

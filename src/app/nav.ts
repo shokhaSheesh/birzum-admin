@@ -11,6 +11,8 @@ import {
   GalleryHorizontal,
   History,
   KeyRound,
+  Plug,
+  Activity,
   Headset,
   LayoutDashboard,
   Megaphone,
@@ -144,6 +146,13 @@ export const NAV: NavGroup[] = [
       { to: ROUTES.admins, icon: ShieldCheck, label: 'nav.admins', about: 'about.admins' },
       { to: ROUTES.roles, icon: KeyRound, label: 'nav.roles', about: 'about.roles' },
       { to: ROUTES.audit, icon: History, label: 'nav.audit', about: 'about.audit' },
+      {
+        to: ROUTES.integrations,
+        icon: Plug,
+        label: 'nav.integrations',
+        about: 'about.integrations',
+      },
+      { to: ROUTES.apiStatus, icon: Activity, label: 'nav.apiStatus', about: 'about.integrations' },
     ],
   },
 ]
@@ -233,3 +242,54 @@ export function brandNav(brand: Brand): NavGroup[] {
 
 /** The sidebar for a workspace. */
 export const navOf = (workspace: Workspace) => (workspace === 'birzum' ? NAV : brandNav(workspace))
+
+const BIRZUM_SECTION: Record<string, string> = {
+  [ROUTES.dashboard]: 'dashboard',
+  [ROUTES.analytics]: 'analytics',
+  [ROUTES.applications]: 'applications',
+  [ROUTES.customers]: 'customers',
+  [ROUTES.collections]: 'collections',
+  [ROUTES.merchants]: 'merchants',
+  [ROUTES.reviews]: 'reviews',
+  [ROUTES.merchantRoles]: 'merchantRoles',
+  [ROUTES.products]: 'products',
+  [ROUTES.categories]: 'categories',
+  [ROUTES.brands]: 'brands',
+  [ROUTES.pricing]: 'pricing',
+  [ROUTES.support]: 'support',
+  [ROUTES.quickReplies]: 'quickReplies',
+  [ROUTES.broadcasts]: 'broadcasts',
+  [ROUTES.faq]: 'faq',
+  [ROUTES.onboarding]: 'onboarding',
+  [ROUTES.documents]: 'documents',
+  [ROUTES.admins]: 'admins',
+  [ROUTES.roles]: 'roles',
+  [ROUTES.audit]: 'audit',
+  [ROUTES.integrations]: 'integrations',
+}
+
+const ML_SECTION: Record<string, string> = {
+  '': 'mlDashboard',
+  applications: 'mlApplications',
+  loans: 'mlLoans',
+  payments: 'mlPayments',
+  payouts: 'mlPayments',
+  overdue: 'mlOverdue',
+  customers: 'mlClients',
+  products: 'mlProducts',
+  'pay-day': 'mlPayDay',
+  support: 'mlSupport',
+  'quick-replies': 'mlReplies',
+  broadcasts: 'mlBroadcasts',
+  faq: 'mlFaq',
+  onboarding: 'mlOnboarding',
+  'app-home': 'mlOnboarding',
+  documents: 'mlDocuments',
+  contacts: 'mlContacts',
+}
+
+/** The permission page key a sidebar item is behind (`faq` → `faq.read`), or none for pages anyone may open. */
+export function sectionOfNav(workspace: Workspace, to: string) {
+  if (workspace === 'birzum') return BIRZUM_SECTION[to]
+  return ML_SECTION[to.replace(`/${workspace}`, '').replace(/^\//, '')]
+}

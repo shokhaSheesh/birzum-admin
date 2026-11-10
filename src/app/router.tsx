@@ -43,6 +43,8 @@ import { LoanPaymentsPage } from '@/features/microloans/pages/LoanPaymentsPage'
 import { LoanProductsPage } from '@/features/microloans/pages/LoanProductsPage'
 import { LoansPage } from '@/features/microloans/pages/LoansPage'
 import { PricingPage } from '@/features/pricing/pages/PricingPage'
+import { ApiStatusPage } from '@/features/integrations/pages/ApiStatusPage'
+import { IntegrationsPage } from '@/features/integrations/pages/IntegrationsPage'
 import { StubPage } from '@/features/stub/pages/StubPage'
 import { ROUTES } from '@/shared/config/routes'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -69,6 +71,8 @@ const DESIGNED: string[] = [
   ROUTES.admins,
   ROUTES.roles,
   ROUTES.audit,
+  ROUTES.integrations,
+  ROUTES.apiStatus,
   ROUTES.products,
   ROUTES.categories,
   ROUTES.brands,
@@ -166,6 +170,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.admins, element: <AdminsPage /> },
           { path: ROUTES.roles, element: <RolesPage /> },
           { path: ROUTES.audit, element: <AuditLogPage /> },
+          { path: ROUTES.integrations, element: <IntegrationsPage /> },
+          { path: ROUTES.apiStatus, element: <ApiStatusPage /> },
           { path: ROUTES.roleNew, element: <RoleFormPage key="new" /> },
           { path: ROUTES.roleEdit, element: <RoleFormPage key="edit" /> },
           { path: ROUTES.broadcastNew, element: <BroadcastFormPage key="new" /> },

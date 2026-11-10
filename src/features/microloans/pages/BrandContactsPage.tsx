@@ -13,15 +13,15 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
-import { logAction } from '@/entities/audit/audit'
 import {
-  branchesStore,
-  brandContactsStore,
+  type BrandContacts,
   REGIONS,
   type Branch,
   type Region,
 } from '@/entities/microloans/brandContacts'
-import { WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
+import { branchesApi, brandContactsStoreOf } from '@/entities/microloans/brandContactsApi'
+import { attempt } from '@/shared/api/createRemoteStore'
+import { type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatPhone } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
@@ -43,11 +43,10 @@ const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-mut
  */
 export function BrandContactsPage({ brand }: { brand: Brand }) {
   const { t, tl } = useI18n()
-  const contacts = brandContactsStore.useAll().find((item) => item.id === brand)!
-  const all = branchesStore
-    .useAll()
-    .filter((branch) => branch.brand === brand)
-    .sort((a, b) => REGIONS.indexOf(a.region) - REGIONS.indexOf(b.region))
+  const contacts = brandContactsStoreOf(brand).useAll()[0] as BrandContacts | undefined
+  const all = [...branchesApi.storeOf(brand).useAll()].sort(
+    (a, b) => REGIONS.indexOf(a.region) - REGIONS.indexOf(b.region),
+  )
   const [query, setQuery] = useState('')
   const [region, setRegion] = useState<'' | Region>('')
   // undefined: closed; null: adding; a branch: editing it
@@ -65,23 +64,25 @@ export function BrandContactsPage({ brand }: { brand: Brand }) {
   )
   const regions = REGIONS.filter((value) => all.some((branch) => branch.region === value))
 
-  const info: [LucideIcon, string, string][] = [
-    ...contacts.phones.map((phone, i): [LucideIcon, string, string] => [
-      Phone,
-      t(i === 0 ? 'mlContacts.phone' : 'mlContacts.phone2'),
-      formatPhone(phone),
-    ]),
-    [AtSign, t('mlContacts.email'), contacts.email],
-    ...(contacts.telegram
-      ? [[Send, 'Telegram', `@${contacts.telegram}`] as [LucideIcon, string, string]]
-      : []),
-    ...(contacts.instagram
-      ? [[Camera, 'Instagram', `@${contacts.instagram}`] as [LucideIcon, string, string]]
-      : []),
-    [Globe, t('mlContacts.website'), contacts.website],
-    [MapPin, t('mlContacts.office'), tl(contacts.address)],
-    [Clock, t('mlContacts.hours'), tl(contacts.hours)],
-  ]
+  const info: [LucideIcon, string, string][] = !contacts
+    ? []
+    : [
+        ...contacts.phones.map((phone, i): [LucideIcon, string, string] => [
+          Phone,
+          t(i === 0 ? 'mlContacts.phone' : 'mlContacts.phone2'),
+          formatPhone(phone),
+        ]),
+        [AtSign, t('mlContacts.email'), contacts.email],
+        ...(contacts.telegram
+          ? [[Send, 'Telegram', `@${contacts.telegram}`] as [LucideIcon, string, string]]
+          : []),
+        ...(contacts.instagram
+          ? [[Camera, 'Instagram', `@${contacts.instagram}`] as [LucideIcon, string, string]]
+          : []),
+        [Globe, t('mlContacts.website'), contacts.website],
+        [MapPin, t('mlContacts.office'), tl(contacts.address)],
+        [Clock, t('mlContacts.hours'), tl(contacts.hours)],
+      ]
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -179,7 +180,12 @@ export function BrandContactsPage({ brand }: { brand: Brand }) {
           <section className="flex flex-col gap-3 rounded-card border border-line bg-canvas p-5">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold">{t('mlContacts.contacts')}</h2>
-              <Button size="sm" variant="ghost" onClick={() => setEditingContacts(true)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!contacts}
+                onClick={() => setEditingContacts(true)}
+              >
                 <Pencil size={16} />
                 {t('common.edit')}
               </Button>
@@ -214,7 +220,7 @@ export function BrandContactsPage({ brand }: { brand: Brand }) {
           }}
         />
       )}
-      {editingContacts && (
+      {editingContacts && contacts && (
         <BrandContactsModal contacts={contacts} onClose={() => setEditingContacts(false)} />
       )}
       <ConfirmDialog
@@ -222,19 +228,13 @@ export function BrandContactsPage({ brand }: { brand: Brand }) {
         onClose={() => setDeleting(null)}
         title={t('mlContacts.branch.delete.title')}
         confirmLabel={t('common.delete')}
-        onConfirm={() => {
-          if (deleting) {
-            branchesStore.remove(deleting.id)
-            logAction({
-              section: 'mlContacts',
-              kind: 'delete',
-              action: 'audit.a.loanBranchDeleted',
-              params: { brand: WORKSPACE_INFO[brand].name },
-              target: deleting.address,
-            })
-          }
+        onConfirm={async () => {
+          if (deleting)
+            await attempt(
+              () => branchesApi.remove(brand, deleting.id),
+              () => toast(t('mlContacts.branch.deleted')),
+            )
           setDeleting(null)
-          toast(t('mlContacts.branch.deleted'))
         }}
       >
         <p>{t('mlContacts.branch.delete.message', { address: deleting?.address ?? '' })}</p>

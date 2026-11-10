@@ -25,7 +25,7 @@ import {
   type Chat,
   type ChatMessage,
 } from '@/entities/support/chats'
-import { repliesStore } from '@/entities/support/replies'
+import { repliesApi } from '@/entities/support/repliesApi'
 import { applicationPath, clientPath, ROUTES } from '@/shared/config/routes'
 import {
   brandClientPath,
@@ -309,10 +309,9 @@ function Conversation({
   const [replyLang, setReplyLang] = useState<Lang>(lang)
   // Answers for this chat's topic first, then the general ones, then the rest
   const rank = (topic: string) => (topic === chat.topic ? 0 : topic === 'any' ? 1 : 2)
-  const replies = repliesStore
-    .useAll()
-    .filter((reply) => reply.app === chat.app)
-    .sort((a, b) => rank(a.topic) - rank(b.topic))
+  const replies = [...repliesApi.storeOf(chat.app).useAll()].sort(
+    (a, b) => rank(a.topic) - rank(b.topic),
+  )
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' })
