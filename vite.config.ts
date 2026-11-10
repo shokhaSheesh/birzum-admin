@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     // The API is called as /api/v1/... on this origin, so the backend needs no CORS entry for the preview
     proxy: {
-      '/api': { target: 'https://api.birzumnasiya.uz', changeOrigin: true, secure: true },
+      '^/api/': { target: 'https://api.birzumnasiya.uz', changeOrigin: true, secure: true },
     },
   },
   resolve: {

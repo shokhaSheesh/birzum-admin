@@ -43,3 +43,7 @@ src/
 - Import with the `@/` alias.
 - Colours, fonts and radii come from the tokens. Use role tokens (`bg-primary`, `text-ink-muted`) so the dark theme keeps working.
 - Every user-facing string goes through `t()`; add it to both languages in `src/shared/i18n/dictionaries.ts`.
+
+## Branch `api`: the panel on the staging backend
+
+This branch calls the released admin API (`/api/v1`, `X-App: admin`) instead of sample data. Sign in with a real staff login typed in the UI; tokens live in memory and `sessionStorage`. `npm run dev` proxies `/api/` to `https://api.birzumnasiya.uz`; `vercel.json` rewrites it the same way. The page "API holati" (`/api-status`) lists the wired pages and their endpoints; pages without an endpoint keep sample data and show a "Namuna maʼlumot" badge. `master` is the designer's and is not touched.
