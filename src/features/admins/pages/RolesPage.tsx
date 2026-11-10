@@ -1,12 +1,14 @@
 import { Copy, LayoutGrid, Lock, Pencil, Plus, Table2, Trash2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { adminsStore, initialsOfName } from '@/entities/admins/admins'
+import { initialsOfName } from '@/entities/admins/admins'
+import { adminsStore } from '@/entities/admins/adminsApi'
+import { deleteRole, rolesStore } from '@/entities/admins/rolesApi'
+import { attempt } from '@/shared/api/createRemoteStore'
 import {
   actionsFor,
   PERMISSION_GROUPS,
   reachOf,
-  rolesStore,
   scopeOf,
   type Role,
   type Scope,
@@ -24,7 +26,6 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { SegmentedTabs } from '@/shared/ui/SegmentedTabs'
 import { ViewToggle } from '@/shared/ui/ViewToggle'
 import { AccessMark } from '../components/AccessMark'
-import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -266,16 +267,13 @@ export function RolesPage() {
         }
         confirmLabel={deleting && holders(deleting).length ? undefined : t('common.delete')}
         cancelLabel={deleting && holders(deleting).length ? t('common.understood') : undefined}
-        onConfirm={() => {
-          if (deleting) rolesStore.remove(deleting.id)
+        onConfirm={async () => {
+          if (deleting)
+            await attempt(
+              () => deleteRole(deleting.id),
+              () => toast(t('role.deleted')),
+            )
           setDeleting(null)
-          toast(t('role.deleted'))
-          logAction({
-            section: 'roles',
-            kind: 'delete',
-            action: 'audit.a.roleDeleted',
-            target: deleting?.name,
-          })
         }}
       >
         <p>

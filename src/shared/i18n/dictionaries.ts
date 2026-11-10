@@ -1619,7 +1619,8 @@ const uz = {
   'nav.mlPayDay': 'Mikroqarz toʻlov kuni',
   'about.ml.payDay': 'Ilovadagi kalkulyator qaysi toʻlov kunlarini taklif qiladi.',
   'payDay.mode': 'Qanday tanlanadi',
-  'payDay.mode.hint': 'Mijoz kalkulyatorda toʻlov kunini tanlaydi. Qaysi kunlar koʻrinishini shu yerda belgilaysiz.',
+  'payDay.mode.hint':
+    'Mijoz kalkulyatorda toʻlov kunini tanlaydi. Qaysi kunlar koʻrinishini shu yerda belgilaysiz.',
   'payDay.mode.byDay': 'Ariza kuniga qarab',
   'payDay.mode.byDay.hint': 'Mijoz ariza bergan kunga qarab kunlar ochiladi',
   'payDay.mode.fixed': 'Belgilangan kunlar',
@@ -1627,7 +1628,8 @@ const uz = {
   'payDay.fixed': 'Koʻrinadigan kunlar',
   'payDay.fixed.hint': 'Belgilangan kunlar har bir mijozga koʻrinadi.',
   'payDay.lines': 'Ariza kuniga qarab',
-  'payDay.lines.hint': 'Mijoz shu kunlar oraligʻida ariza bersa, toʻlov kunini 1-sanadan tanlangan kungacha tanlay oladi.',
+  'payDay.lines.hint':
+    'Mijoz shu kunlar oraligʻida ariza bersa, toʻlov kunini 1-sanadan tanlangan kungacha tanlay oladi.',
   'payDay.line': '{from}–{to}: 1–{upTo}',
   'payDay.from': 'Ariza kunidan',
   'payDay.to': 'gacha',
@@ -1641,7 +1643,8 @@ const uz = {
   'payDay.preview.dayOption': '{day}-sana',
   'payDay.preview.can': 'Tanlay oladigan toʻlov kunlari',
   'payDay.preview.next1st': 'Faqat keyingi oyning 1-sanasi. Ilovada shu haqda izoh chiqadi.',
-  'payDay.error.order': 'Oraliq oldingi qatordan keyin boshlansin va oxiri boshidan kichik boʻlmasin',
+  'payDay.error.order':
+    'Oraliq oldingi qatordan keyin boshlansin va oxiri boshidan kichik boʻlmasin',
   'payDay.error.after': 'Oraliq {day}-sanadan oshmasin',
   'payDay.error.afterRange': '1 dan 28 gacha',
   'payDay.error.fixed': 'Kamida bitta kunni tanlang',
@@ -1655,7 +1658,8 @@ const uz = {
   'mlProducts.synced': 'Mahsulotlar FlexSoft-dan yangilandi',
   'mlProducts.upToMonths': '{n} oygacha',
   'mlClients.sessions': 'Sessiyalar',
-  'mlClients.sessions.hint': 'Bir vaqtda faqat bitta telefon: yangisidan kirilganda eskisi chiqariladi.',
+  'mlClients.sessions.hint':
+    'Bir vaqtda faqat bitta telefon: yangisidan kirilganda eskisi chiqariladi.',
   'mlClients.session.active': 'Faol',
   'mlClients.session.ended': 'Tugagan',
   'mlClients.session.since': '{from} dan beri',
@@ -1826,6 +1830,21 @@ const uz = {
   'role.scopeTab.birzum': 'Birzum',
   'role.scopeTab.microloans': 'Mikroqarzlar',
   'loanApps.stat.reviewHint': 'Ilova hozir tekshirmoqda',
+  'common.loading': 'Yuklanmoqda…',
+  'nav.integrations': 'Integratsiyalar',
+  'about.integrations': 'Yandex xarita kalitlari.',
+  'password.change': 'Parolni almashtirish',
+  'password.changed': 'Parol almashtirildi',
+  'password.old': 'Joriy parol',
+  'password.wrongOld': 'Joriy parol notoʻgʻri',
+  'password.mustChange.title': 'Yangi parol tanlang',
+  'password.mustChange.subtitle':
+    'Parolingizni boshqa admin bergan. Davom etish uchun uni oʻzingiznikiga almashtiring.',
+  'role.action.viewPinfl': 'JSHSHIRni koʻrish',
+  'role.action.viewPinfl.hint': 'Klient sahifasida JSHSHIR toʻliq koʻrinadi',
+  'api.sample': 'Namuna maʼlumot',
+  'api.sample.title': 'Bu sahifa uchun backendda hali endpoint yoʻq',
+  'nav.apiStatus': 'API holati',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -3426,7 +3445,8 @@ const ru: Record<TranslationKey, string> = {
   'nav.mlPayDay': 'День платежа по микрозаймам',
   'about.ml.payDay': 'Какие дни платежа предлагает калькулятор в приложении.',
   'payDay.mode': 'Как выбирается',
-  'payDay.mode.hint': 'Клиент выбирает день платежа в калькуляторе. Здесь задаётся, какие дни ему видны.',
+  'payDay.mode.hint':
+    'Клиент выбирает день платежа в калькуляторе. Здесь задаётся, какие дни ему видны.',
   'payDay.mode.byDay': 'По дню заявки',
   'payDay.mode.byDay.hint': 'Дни открываются в зависимости от дня заявки',
   'payDay.mode.fixed': 'Фиксированные дни',
@@ -3434,7 +3454,8 @@ const ru: Record<TranslationKey, string> = {
   'payDay.fixed': 'Видимые дни',
   'payDay.fixed.hint': 'Отмеченные дни видны каждому клиенту.',
   'payDay.lines': 'По дню заявки',
-  'payDay.lines.hint': 'Если клиент подаёт заявку в этот промежуток, он выбирает день платежа с 1-го до указанного.',
+  'payDay.lines.hint':
+    'Если клиент подаёт заявку в этот промежуток, он выбирает день платежа с 1-го до указанного.',
   'payDay.line': '{from}–{to}: 1–{upTo}',
   'payDay.from': 'День заявки с',
   'payDay.to': 'по',
@@ -3469,7 +3490,8 @@ const ru: Record<TranslationKey, string> = {
   'mlClients.session.newDevice': '{from} – {to} · вход с нового устройства',
   'mlClients.session.signOut': '{from} – {to} · клиент вышел',
   'nav.failedPayouts': 'Неудачные выплаты',
-  'about.ml.payouts': 'Деньги по займам, не дошедшие до карты: причина банка, попытки, повторная отправка.',
+  'about.ml.payouts':
+    'Деньги по займам, не дошедшие до карты: причина банка, попытки, повторная отправка.',
   'payouts.stat.count': 'Не отправлено',
   'payouts.stat.countHint': 'Договор подписан, деньги на карту не поступили',
   'payouts.stat.sum': 'Сумма',
@@ -3633,6 +3655,21 @@ const ru: Record<TranslationKey, string> = {
   'role.scopeTab.birzum': 'Birzum',
   'role.scopeTab.microloans': 'Микрозаймы',
   'loanApps.stat.reviewHint': 'Приложение проверяет сейчас',
+  'common.loading': 'Загрузка…',
+  'nav.integrations': 'Интеграции',
+  'about.integrations': 'Ключи Яндекс Карт.',
+  'password.change': 'Сменить пароль',
+  'password.changed': 'Пароль изменён',
+  'password.old': 'Текущий пароль',
+  'password.wrongOld': 'Текущий пароль неверный',
+  'password.mustChange.title': 'Задайте новый пароль',
+  'password.mustChange.subtitle':
+    'Пароль вам задал другой админ. Чтобы продолжить, замените его на свой.',
+  'role.action.viewPinfl': 'Просмотр ПИНФЛ',
+  'role.action.viewPinfl.hint': 'ПИНФЛ клиента виден полностью',
+  'api.sample': 'Пример данных',
+  'api.sample.title': 'Для этой страницы на бэкенде ещё нет эндпоинта',
+  'nav.apiStatus': 'Статус API',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }
