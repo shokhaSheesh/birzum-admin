@@ -1,14 +1,12 @@
 import { CircleAlert, CircleCheck, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
-import { logAction } from '@/entities/audit/audit'
 import {
-  MODERATION_REASONS,
-  productsStore,
-  type ModerationReason,
-  type Product,
-} from '@/entities/catalog/products'
-import { useAdmin } from '@/entities/session/session'
-import { productPath } from '@/shared/config/routes'
+  approveProduct,
+  rejectProduct,
+  type ModProductDetail,
+} from '@/entities/catalog/moderationApi'
+import { MODERATION_REASONS, type ModerationReason } from '@/entities/catalog/products'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDateTime } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
@@ -21,42 +19,42 @@ const card = 'flex flex-col gap-3 rounded-card border border-line bg-canvas p-5'
 
 /**
  * Where the product stands with the admin. A new one waits here: approve it and the merchant
- * can fill in its stock, or turn it down with a reason the merchant reads.
+ * can fill in its stock, or turn it down with a reason the merchant reads. `onChanged` reads the
+ * product again.
  */
-export function ModerationCard({ product }: { product: Product }) {
-  const { t, tl } = useI18n()
-  const admin = useAdmin()
+export function ModerationCard({
+  product,
+  onChanged,
+}: {
+  product: ModProductDetail
+  onChanged: () => void
+}) {
+  const { t } = useI18n()
   const [rejecting, setRejecting] = useState(false)
+  const [busy, setBusy] = useState(false)
   const { moderation } = product
 
-  const approve = () => {
-    productsStore.save({
-      ...product,
-      moderation: {
-        state: 'approved',
-        submittedAt: moderation.submittedAt,
-        decidedAt: new Date(),
-        by: admin?.name ?? '—',
-      },
-    })
-    toast(t('moderation.approved'))
-    logAction({
-      section: 'products',
-      kind: 'update',
-      action: 'audit.a.productApproved',
-      target: tl(product.name),
-      href: productPath(product.id),
-    })
+  const approve = async () => {
+    setBusy(true)
+    // A product someone else just decided comes back as a 409 with the server's message
+    await attempt(
+      () => approveProduct(product.id),
+      () => toast(t('moderation.approved')),
+    )
+    setBusy(false)
+    onChanged()
   }
 
   if (moderation.state === 'approved') {
     return (
       <p className="flex items-center gap-2 px-1 text-sm text-ink-muted">
         <CircleCheck size={16} className="shrink-0 text-success" />
-        {t('moderation.approvedNote', {
-          date: formatDateTime(moderation.decidedAt),
-          name: moderation.by,
-        })}
+        {moderation.decidedAt
+          ? t('moderation.approvedNote', {
+              date: formatDateTime(moderation.decidedAt),
+              name: moderation.by.slice(0, 8),
+            })
+          : t('moderation.approved')}
       </p>
     )
   }
@@ -67,15 +65,19 @@ export function ModerationCard({ product }: { product: Product }) {
         <CircleAlert size={20} className="mt-0.5 shrink-0" />
         <div className="flex min-w-0 flex-col gap-1">
           <p className="font-semibold">
-            {t('moderation.rejectedNote', { reason: t(`moderation.reason.${moderation.reason}`) })}
-          </p>
-          {moderation.comment && <p className="text-sm break-words">{moderation.comment}</p>}
-          <p className="text-sm opacity-80">
-            {t('moderation.decided', {
-              date: formatDateTime(moderation.decidedAt),
-              name: moderation.by,
+            {t('moderation.rejectedNote', {
+              reason: moderation.reason ? t(`moderation.reason.${moderation.reason}`) : '—',
             })}
           </p>
+          {moderation.comment && <p className="text-sm break-words">{moderation.comment}</p>}
+          {moderation.decidedAt && (
+            <p className="text-sm opacity-80">
+              {t('moderation.decided', {
+                date: formatDateTime(moderation.decidedAt),
+                name: moderation.by.slice(0, 8),
+              })}
+            </p>
+          )}
         </div>
       </section>
     )
@@ -92,49 +94,44 @@ export function ModerationCard({ product }: { product: Product }) {
       </p>
       <p className="text-sm text-ink-muted">{t('moderation.check')}</p>
       <div className="flex gap-2 pt-1">
-        <Button size="sm" className="flex-1" onClick={approve}>
+        <Button size="sm" className="flex-1" loading={busy} onClick={() => void approve()}>
           {t('moderation.approve')}
         </Button>
         <Button size="sm" variant="ghost" className="flex-1" onClick={() => setRejecting(true)}>
           {t('moderation.reject')}
         </Button>
       </div>
-      {rejecting && <RejectModal product={product} onClose={() => setRejecting(false)} />}
+      {rejecting && (
+        <RejectModal
+          product={product}
+          onClose={() => {
+            setRejecting(false)
+            onChanged()
+          }}
+        />
+      )}
     </section>
   )
 }
 
 /** Turning a product down: a reason from the list and a comment the merchant acts on. */
-function RejectModal({ product, onClose }: { product: Product; onClose: () => void }) {
+function RejectModal({ product, onClose }: { product: ModProductDetail; onClose: () => void }) {
   const { t, tl } = useI18n()
-  const admin = useAdmin()
   const [reason, setReason] = useState<ModerationReason>('photo')
   const [comment, setComment] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const reject = () => {
+  const reject = async () => {
     setSubmitted(true)
     if (!comment.trim()) return
-    productsStore.save({
-      ...product,
-      moderation: {
-        state: 'rejected',
-        submittedAt: product.moderation.submittedAt,
-        decidedAt: new Date(),
-        by: admin?.name ?? '—',
-        reason,
-        comment: comment.trim(),
-      },
-    })
-    toast(t('moderation.rejectedToast'))
-    logAction({
-      section: 'products',
-      kind: 'update',
-      action: 'audit.a.productRejected',
-      target: tl(product.name),
-      href: productPath(product.id),
-    })
-    onClose()
+    setSaving(true)
+    const ok = await attempt(
+      () => rejectProduct(product.id, reason, comment.trim()),
+      () => toast(t('moderation.rejectedToast')),
+    )
+    setSaving(false)
+    if (ok) onClose()
   }
 
   return (
@@ -148,7 +145,13 @@ function RejectModal({ product, onClose }: { product: Product; onClose: () => vo
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" variant="danger" className="px-4!" onClick={reject}>
+          <Button
+            size="sm"
+            variant="danger"
+            className="px-4!"
+            loading={saving}
+            onClick={() => void reject()}
+          >
             {t('moderation.reject')}
           </Button>
         </>

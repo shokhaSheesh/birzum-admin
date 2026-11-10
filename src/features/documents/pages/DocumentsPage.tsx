@@ -1,16 +1,17 @@
 import { Download, FileText, Upload } from 'lucide-react'
-import { useRef } from 'react'
-import { documentsStore, type DocFile, type LegalDoc } from '@/entities/documents/documents'
-import { useAdmin } from '@/entities/session/session'
+import { useRef, useState } from 'react'
+import { type DocFile, type LegalDoc } from '@/entities/documents/documents'
+import { attachDocument, documentsStoreOf } from '@/entities/documents/documentsApi'
+import { uploadFile } from '@/shared/api/upload'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
-import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
+import { type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDate } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
-import { logAction } from '@/entities/audit/audit'
 
 const MAX_MB = 10
 const sizeOf = (bytes: number) =>
@@ -25,7 +26,7 @@ const sizeOf = (bytes: number) =>
  */
 export function DocumentsPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t } = useI18n()
-  const docs = documentsStore.useAll().filter((doc) => doc.app === app)
+  const docs = documentsStoreOf(app).useAll()
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -63,34 +64,20 @@ export function DocumentsPage({ app = 'birzum' }: { app?: Workspace }) {
 /** One language's file: its name, size and who uploaded it when, with open and replace. */
 function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFile | null }) {
   const { t } = useI18n()
-  const admin = useAdmin()
   const picker = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
 
-  const upload = (picked: File) => {
+  // The file goes up first (PDF, 10 MB), then it is attached to the document as a new version
+  const upload = async (picked: File) => {
     if (picked.type !== 'application/pdf') return toast(t('document.error.pdf'), 'error')
     if (picked.size > MAX_MB * 1_048_576)
       return toast(t('document.error.size', { max: String(MAX_MB) }), 'error')
-    documentsStore.update(doc.id, {
-      files: {
-        ...doc.files,
-        [lang]: {
-          name: picked.name,
-          size: picked.size,
-          url: URL.createObjectURL(picked),
-          uploadedAt: new Date(),
-          uploadedBy: admin?.name ?? '—',
-        },
-      },
-    })
-    toast(t(file ? 'document.replaced' : 'document.uploaded'))
-    const ml = doc.app !== 'birzum'
-    logAction({
-      section: ml ? 'mlDocuments' : 'documents',
-      kind: 'update',
-      action: ml ? 'audit.a.loanDocumentUploaded' : 'audit.a.documentUploaded',
-      params: ml ? { brand: WORKSPACE_INFO[doc.app].name } : undefined,
-      target: `${picked.name} (${lang.toUpperCase()})`,
-    })
+    setUploading(true)
+    await attempt(
+      async () => attachDocument(doc, lang, await uploadFile(picked, 'document')),
+      () => toast(t(file ? 'document.replaced' : 'document.uploaded')),
+    )
+    setUploading(false)
   }
 
   return (
@@ -113,16 +100,9 @@ function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFil
       )}
       {file && (
         <a
-          href={file.url ?? '#'}
+          href={file.url}
           target="_blank"
           rel="noreferrer"
-          onClick={(e) => {
-            // Sample files have no real file behind them
-            if (!file.url) {
-              e.preventDefault()
-              toast(t('document.sample'))
-            }
-          }}
           aria-label={t('document.open')}
           title={t('document.open')}
           className="grid size-9 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
@@ -130,7 +110,12 @@ function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFil
           <Download size={18} />
         </a>
       )}
-      <Button size="sm" variant="secondary" onClick={() => picker.current?.click()}>
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={uploading}
+        onClick={() => picker.current?.click()}
+      >
         <Upload size={16} />
         {t(file ? 'document.replace' : 'document.upload')}
       </Button>
@@ -142,7 +127,7 @@ function FileSlot({ doc, lang, file }: { doc: LegalDoc; lang: Lang; file: DocFil
         className="hidden"
         onChange={(e) => {
           const picked = e.target.files?.[0]
-          if (picked) upload(picked)
+          if (picked) void upload(picked)
           e.target.value = ''
         }}
       />

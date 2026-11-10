@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { logAction } from '@/entities/audit/audit'
-import { brandContactsStore, type BrandContacts } from '@/entities/microloans/brandContacts'
-import { brandPath, WORKSPACE_INFO } from '@/shared/config/workspaces'
+import { type BrandContacts } from '@/entities/microloans/brandContacts'
+import { saveBrandContacts } from '@/entities/microloans/brandContactsApi'
+import { attempt } from '@/shared/api/createRemoteStore'
+import { WORKSPACE_INFO } from '@/shared/config/workspaces'
 import { isComplete } from '@/shared/i18n/localized'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { PHONE_DIGITS } from '@/shared/lib/phone'
@@ -53,27 +54,23 @@ export function BrandContactsModal({
         : undefined,
   }
 
-  const save = () => {
+  const save = async () => {
     setSubmitted(true)
     if (Object.values(errors).some(Boolean) || !isComplete(address) || !isComplete(hours)) return
-    brandContactsStore.update(contacts.id, {
-      phones: [phone, ...(phone2 ? [phone2] : [])],
-      email: email.trim(),
-      website: website.trim().replace(/^https?:\/\//, ''),
-      telegram: handleOf(telegram) || undefined,
-      instagram: handleOf(instagram) || undefined,
-      address: { uz: address.uz.trim(), ru: address.ru.trim() },
-      hours: { uz: hours.uz.trim(), ru: hours.ru.trim() },
-    })
-    toast(t('toast.saved'))
-    logAction({
-      section: 'mlContacts',
-      kind: 'update',
-      action: 'audit.a.loanContactsSaved',
-      params: { brand: WORKSPACE_INFO[contacts.id].name },
-      href: brandPath(contacts.id, 'contacts'),
-    })
-    onClose()
+    const ok = await attempt(
+      () =>
+        saveBrandContacts(contacts.id, {
+          phones: [phone, ...(phone2 ? [phone2] : [])],
+          email: email.trim(),
+          website: website.trim().replace(/^https?:\/\//, ''),
+          telegram: handleOf(telegram) || undefined,
+          instagram: handleOf(instagram) || undefined,
+          address: { uz: address.uz.trim(), ru: address.ru.trim() },
+          hours: { uz: hours.uz.trim(), ru: hours.ru.trim() },
+        }),
+      () => toast(t('toast.saved')),
+    )
+    if (ok) onClose()
   }
 
   return (
@@ -88,7 +85,7 @@ export function BrandContactsModal({
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" onClick={save}>
+          <Button size="sm" className="px-4!" onClick={() => void save()}>
             {t('common.save')}
           </Button>
         </>

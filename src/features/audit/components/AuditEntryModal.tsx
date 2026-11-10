@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { initialsOfName } from '@/entities/admins/admins'
 import { SECTIONS } from '@/entities/admins/roles'
 import type { AuditEntry } from '@/entities/audit/audit'
+import { auditChangeField, auditTarget, auditText } from '@/entities/audit/auditApi'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatDateTime } from '@/shared/lib/format'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -30,8 +31,12 @@ export function AuditEntryModal({ entry, onClose }: { entry: AuditEntry; onClose
       ? [
           [
             t('audit.col.target'),
-            entry.href ? (
-              <Link key="t" to={entry.href} className="font-semibold text-brand hover:underline">
+            auditTarget(entry).href ? (
+              <Link
+                key="t"
+                to={auditTarget(entry).href!}
+                className="font-semibold text-brand hover:underline"
+              >
                 {entry.target}
               </Link>
             ) : (
@@ -53,7 +58,7 @@ export function AuditEntryModal({ entry, onClose }: { entry: AuditEntry; onClose
       open
       onClose={onClose}
       eyebrow={t('nav.audit')}
-      title={t(entry.action, entry.params)}
+      title={auditText(t, entry)}
       footer={
         <Button variant="ghost" className="ml-auto" onClick={onClose}>
           {t('common.close')}
@@ -71,16 +76,18 @@ export function AuditEntryModal({ entry, onClose }: { entry: AuditEntry; onClose
           </div>
         ))}
       </dl>
-      {entry.changes && entry.changes.length > 0 && (
+      {entry.changes.length > 0 && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-bold">{t('audit.changes')}</h3>
           <ul className="flex flex-col gap-2">
             {entry.changes.map((change) => (
               <li
-                key={change.field}
+                key={change.field + change.to}
                 className="flex flex-col gap-1.5 rounded-control bg-surface p-3"
               >
-                <span className="text-xs font-semibold text-ink-muted">{t(change.field)}</span>
+                <span className="text-xs font-semibold text-ink-muted">
+                  {auditChangeField(t, change.field)}
+                </span>
                 <span className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="rounded-md bg-danger-soft px-2 py-0.5 text-danger line-through">
                     {change.from}

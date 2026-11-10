@@ -1,5 +1,4 @@
 import type { TranslationKey } from '@/shared/i18n/dictionaries'
-import { createStore } from '@/shared/lib/createStore'
 
 /**
  * What a merchant app user can be allowed to do, by the app's sections. The same keys the
@@ -24,9 +23,3 @@ export const MERCHANT_PERMISSIONS = MERCHANT_PERMISSION_GROUPS.flatMap((g) => g.
  * what each one may do in the merchant app.
  */
 export type MerchantRole = { id: 'admin' | 'seller'; permissions: MerchantPermission[] }
-
-// Sample settings. Replace with the API.
-export const merchantRolesStore = createStore<MerchantRole>([
-  { id: 'admin', permissions: [...MERCHANT_PERMISSIONS] },
-  { id: 'seller', permissions: ['clients', 'approve', 'status', 'inventory'] },
-])

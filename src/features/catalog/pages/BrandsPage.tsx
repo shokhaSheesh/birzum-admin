@@ -1,6 +1,8 @@
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { brandsStore, type Brand } from '@/entities/catalog/brands'
+import { type Brand } from '@/entities/catalog/brands'
+import { brandsStore, deleteBrand } from '@/entities/catalog/brandsApi'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { groupDigits } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
@@ -11,7 +13,6 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { BrandModal } from '../components/BrandModal'
 import { BrandLogo } from '../components/BrandLogo'
-import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -36,16 +37,12 @@ export function BrandsPage() {
     setEditing(undefined)
     setDeleting(brand)
   }
-  const remove = (brand: Brand) => {
-    brandsStore.remove(brand.id)
+  const remove = async (brand: Brand) => {
+    await attempt(
+      () => deleteBrand(brand.id),
+      () => toast(t('brand.deleted')),
+    )
     setDeleting(null)
-    toast(t('brand.deleted'))
-    logAction({
-      section: 'brands',
-      kind: 'delete',
-      action: 'audit.a.brandDeleted',
-      target: brand.name,
-    })
   }
 
   return (

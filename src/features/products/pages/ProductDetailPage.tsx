@@ -1,21 +1,10 @@
-import { ArrowLeft, ChevronRight, EyeOff, Package } from 'lucide-react'
+import { ArrowLeft, EyeOff, Package } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { brandsStore } from '@/entities/catalog/brands'
-import { categoriesStore, categoryPath } from '@/entities/catalog/categories'
+import { useNavigate, useParams } from 'react-router-dom'
+import { loadProduct } from '@/entities/catalog/moderationApi'
 import { productStatusTone } from '@/entities/catalog/productStatus'
-import {
-  priceOf,
-  productsStore,
-  statusOf,
-  stockOf,
-  stockOfVariant,
-} from '@/entities/catalog/products'
-import { useFilialsOf } from '@/entities/merchants/filials'
-import { merchantsStore } from '@/entities/merchants/merchants'
-import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
-import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
-import { merchantPath, ROUTES } from '@/shared/config/routes'
+import { useResource } from '@/shared/api/useResource'
+import { ROUTES } from '@/shared/config/routes'
 import { LANGS } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -36,10 +25,7 @@ export function ProductDetailPage() {
   const { t, tl } = useI18n()
   const navigate = useNavigate()
   const { id } = useParams()
-  const product = productsStore.useAll().find((item) => item.id === id)
-  const categories = categoriesStore.useAll()
-  const merchant = merchantsStore.useAll().find((item) => item.id === product?.merchantId)
-  const filials = useFilialsOf(product?.merchantId)
+  const { data: product, loading, reload } = useResource(() => loadProduct(id ?? ''), id ?? '')
   const [photo, setPhoto] = useState(0)
 
   const back = (
@@ -57,15 +43,18 @@ export function ProductDetailPage() {
     return (
       <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
         {back}
-        <EmptyState title={t('products.notFound')} />
+        <EmptyState title={t(loading ? 'common.loading' : 'products.notFound')} />
       </div>
     )
   }
 
-  const status = statusOf(product)
-  const brand = brandsStore.get(product.brandId)
-  const category = categoryPath(categories, product.categoryId, (item) => tl(item.name))
-  const hasVariants = product.variants.length > 1 || product.variants[0].label.uz !== ''
+  const status = product.status
+  const category = [product.category, product.subcategory].filter(Boolean).join(' › ')
+  const hasVariants = product.variants.length > 1 || product.variants[0]?.label.uz !== ''
+  const photos = product.images.uz.length ? product.images.uz : product.images.ru
+  // Every filial of the merchant, as the first variant lists them
+  const filials = product.variants[0]?.stock ?? []
+  const stock = product.stock
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -79,7 +68,7 @@ export function ProductDetailPage() {
           </StatusBadge>
         </div>
         <p className="text-ink-muted">
-          {brand?.name} · {category}
+          {product.brand} · {category}
         </p>
       </div>
 
@@ -93,7 +82,7 @@ export function ProductDetailPage() {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
           <section className={card}>
-            {product.photos.length === 0 ? (
+            {photos.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center text-ink-subtle">
                 <Package size={48} />
                 <p className="text-sm text-ink-muted">{t('product.noPhotos')}</p>
@@ -101,13 +90,13 @@ export function ProductDetailPage() {
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row-reverse sm:items-start">
                 <img
-                  src={product.photos[photo]}
+                  src={photos[photo]}
                   alt={tl(product.name)}
                   className="aspect-[4/3] min-w-0 flex-1 rounded-control border border-line bg-white object-contain"
                 />
-                {product.photos.length > 1 && (
+                {photos.length > 1 && (
                   <div className="flex gap-2 sm:flex-col">
-                    {product.photos.map((src, index) => (
+                    {photos.map((src, index) => (
                       <button
                         key={src}
                         type="button"
@@ -142,8 +131,8 @@ export function ProductDetailPage() {
                     {hasVariants && <th className={th}>{t('product.variant')}</th>}
                     <th className={`${th} text-right`}>{t('products.col.price')}</th>
                     {filials.map((filial) => (
-                      <th key={filial.id} className={`${th} text-right whitespace-nowrap`}>
-                        {tl(filial.name)}
+                      <th key={filial.locationId} className={`${th} text-right whitespace-nowrap`}>
+                        {filial.locationName}
                       </th>
                     ))}
                     <th className={`${th} text-right`}>{t('product.total')}</th>
@@ -151,28 +140,33 @@ export function ProductDetailPage() {
                 </thead>
                 <tbody>
                   {product.variants.map((variant) => {
-                    const total = stockOfVariant(variant)
+                    const total = variant.stock.reduce((sum, row) => sum + row.count, 0)
                     return (
-                      <tr key={variant.label.uz} className="border-b border-line last:border-b-0">
+                      <tr key={variant.key} className="border-b border-line last:border-b-0">
                         {hasVariants && (
                           <td className="px-4 py-3 font-semibold whitespace-nowrap">
                             {tl(variant.label)}
                           </td>
                         )}
                         <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                          {formatSum(variant.price)}
+                          {formatSum(variant.priceTiyin / 100)}
                         </td>
-                        {filials.map((filial) => (
-                          <td
-                            key={filial.id}
-                            className={cn(
-                              'px-4 py-3 text-right tabular-nums',
-                              !variant.stock[filial.id] && 'text-ink-subtle',
-                            )}
-                          >
-                            {variant.stock[filial.id] ?? 0}
-                          </td>
-                        ))}
+                        {filials.map((filial) => {
+                          const count =
+                            variant.stock.find((row) => row.locationId === filial.locationId)
+                              ?.count ?? 0
+                          return (
+                            <td
+                              key={filial.locationId}
+                              className={cn(
+                                'px-4 py-3 text-right tabular-nums',
+                                !count && 'text-ink-subtle',
+                              )}
+                            >
+                              {count}
+                            </td>
+                          )
+                        })}
                         <td
                           className={cn(
                             'px-4 py-3 text-right font-semibold tabular-nums',
@@ -220,24 +214,8 @@ export function ProductDetailPage() {
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          <ModerationCard product={product} />
-          {merchant && (
-            <Link
-              to={merchantPath(merchant.id)}
-              className="flex items-center gap-3 rounded-card border border-line bg-canvas p-4 hover:bg-surface/60"
-            >
-              <MerchantLogo merchant={merchant} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="truncate font-semibold">{merchant.name}</p>
-                <span className="self-start">
-                  <StatusBadge tone={merchantStatusTone[merchant.status]}>
-                    {t(`merchant.status.${merchant.status}`)}
-                  </StatusBadge>
-                </span>
-              </div>
-              <ChevronRight size={18} className="shrink-0 text-ink-subtle" />
-            </Link>
-          )}
+          <ModerationCard product={product} onChanged={reload} />
+          <p className="px-1 text-sm font-semibold">{product.merchantName}</p>
           <section className={card}>
             <dl className="flex flex-col gap-2.5">
               {(
@@ -245,16 +223,12 @@ export function ProductDetailPage() {
                   [
                     t('products.col.price'),
                     hasVariants
-                      ? t('products.fromPrice', { sum: formatSum(priceOf(product)) })
-                      : formatSum(priceOf(product)),
+                      ? t('products.fromPrice', { sum: formatSum(product.priceTiyin / 100) })
+                      : formatSum(product.priceTiyin / 100),
                   ],
-                  [
-                    t('product.total'),
-                    t('product.pieces', { count: groupDigits(stockOf(product)) }),
-                  ],
-                  [t('product.sold'), groupDigits(product.sold)],
+                  [t('product.total'), t('product.pieces', { count: groupDigits(stock) })],
                   [t('categories.col.name'), category],
-                  [t('brands.col.brand'), brand?.name ?? '—'],
+                  [t('brands.col.brand'), product.brand || '—'],
                   [t('product.created'), formatDate(product.createdAt)],
                 ] as const
               ).map(([label, value]) => (

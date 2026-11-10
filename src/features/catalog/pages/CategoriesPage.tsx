@@ -9,13 +9,14 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
+import { childrenOf, productsIn, rootsOf, type Category } from '@/entities/catalog/categories'
 import {
   categoriesStore,
-  childrenOf,
-  productsIn,
-  rootsOf,
-  type Category,
-} from '@/entities/catalog/categories'
+  deleteCategory,
+  orderCategories,
+  setCategoryVisible,
+} from '@/entities/catalog/categoriesApi'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { groupDigits } from '@/shared/lib/format'
@@ -29,7 +30,6 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { ViewToggle } from '@/shared/ui/ViewToggle'
 import { CategoryModal } from '../components/CategoryModal'
 import { CategoryThumb } from '../components/CategoryThumb'
-import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -65,27 +65,19 @@ export function CategoriesPage() {
     setEditing(undefined)
     setDeleting(category)
   }
-  const remove = (category: Category) => {
-    categoriesStore.remove(category.id)
+  const remove = async (category: Category) => {
+    await attempt(
+      () => deleteCategory(category.id),
+      () => toast(t('category.deleted')),
+    )
     setDeleting(null)
-    toast(t('category.deleted'))
-    logAction({
-      section: 'categories',
-      kind: 'delete',
-      action: 'audit.a.categoryDeleted',
-      target: tl(category.name),
-    })
   }
-  const hide = (category: Category) => {
-    categoriesStore.update(category.id, { visible: false })
+  const hide = async (category: Category) => {
+    await attempt(
+      () => setCategoryVisible(category.id, false),
+      () => toast(t('category.hidden')),
+    )
     setDeleting(null)
-    toast(t('category.hidden'))
-    logAction({
-      section: 'categories',
-      kind: 'update',
-      action: 'audit.a.categoryHidden',
-      target: tl(category.name),
-    })
   }
 
   const dragOver = (e: DragEvent, target: Category) => {
@@ -96,7 +88,7 @@ export function CategoriesPage() {
   }
   const dropOn = (target: Category) => {
     if (dragged && drop && dragged !== target)
-      categoriesStore.replaceAll(reorder(all, dragged, target, drop.after))
+      void orderCategories(reorder(all, dragged, target, drop.after), dragged.parentId)
     setDragged(null)
     setDrop(null)
   }
@@ -106,7 +98,8 @@ export function CategoriesPage() {
     e.preventDefault()
     const siblings = all.filter((item) => item.parentId === category.parentId)
     const target = siblings[siblings.indexOf(category) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target) categoriesStore.replaceAll(reorder(all, category, target, e.key === 'ArrowDown'))
+    if (target)
+      void orderCategories(reorder(all, category, target, e.key === 'ArrowDown'), category.parentId)
   }
 
   const parentOf = (category: Category) => all.find((item) => item.id === category.parentId)

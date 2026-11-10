@@ -1,81 +1,95 @@
 import { Eye, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { brandsStore } from '@/entities/catalog/brands'
-import { categoriesStore, categoryPath, childrenOf, rootsOf } from '@/entities/catalog/categories'
-import {
-  PRODUCT_STATUSES,
-  priceOf,
-  productsStore,
-  statusOf,
-  stockOf,
-  type ProductStatus,
-} from '@/entities/catalog/products'
+import { loadProducts } from '@/entities/catalog/moderationApi'
+import { PRODUCT_STATUSES, type ProductStatus } from '@/entities/catalog/products'
 import { productStatusTone } from '@/entities/catalog/productStatus'
 import { ProductThumb } from '@/entities/catalog/ui/ProductThumb'
-import { merchantsStore } from '@/entities/merchants/merchants'
-import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
+import { useResource } from '@/shared/api/useResource'
+import { useServerPager } from '@/shared/api/useServerPager'
 import { productPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { Pagination } from '@/shared/ui/Pagination'
 import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
+const COUNT_KEY = {
+  review: 'review',
+  selling: 'selling',
+  soldOut: 'sold_out',
+  hidden: 'hidden',
+  rejected: 'rejected',
+} as const
 
 /**
- * Every merchant's products: figures on top, then a table filtered by status, search, merchant,
- * category and brand. New ones wait in "Tekshiruvda" until the admin approves them on their page.
+ * Every merchant's products (`GET /admin/products`): figures on top, then a table filtered by
+ * status, search, merchant, category and brand, all by the server. New ones wait in "Tekshiruvda"
+ * until the admin approves them on their page. The merchant, category and brand lists are read from
+ * the first 100 products, since the backend has no lists of its own for them.
  */
 export function ProductsPage() {
   const { t, tl } = useI18n()
   const navigate = useNavigate()
-  const all = productsStore.useAll()
-  const merchants = merchantsStore.useAll()
-  const categories = categoriesStore.useAll()
-  const brands = brandsStore.useAll()
-  const waiting = all.filter((product) => statusOf(product) === 'review').length
-  // Products waiting for a check are the admin's work, so the list opens on them
-  const [status, setStatus] = useState<'all' | ProductStatus>(() => (waiting ? 'review' : 'all'))
+  const [status, setStatus] = useState<'all' | ProductStatus>('all')
   const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')
   const [merchant, setMerchant] = useState('')
   const [category, setCategory] = useState('')
   const [brand, setBrand] = useState('')
 
-  const needle = query.trim().toLowerCase()
-  const brandName = (id: string) => brands.find((item) => item.id === id)?.name ?? ''
-  // Picking a category also matches the products in its subcategories
-  const inCategory = (id: string) =>
-    !category || id === category || categories.find((item) => item.id === id)?.parentId === category
-  const filtered = all.filter(
-    (product) =>
-      (needle === '' ||
-        tl(product.name).toLowerCase().includes(needle) ||
-        brandName(product.brandId).toLowerCase().includes(needle)) &&
-      (!merchant || product.merchantId === merchant) &&
-      inCategory(product.categoryId) &&
-      (!brand || product.brandId === brand),
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(query.trim()), 350)
+    return () => clearTimeout(id)
+  }, [query])
+
+  const filters = JSON.stringify([status, search, merchant, category, brand])
+  const { page, limit, pager: pagerOf } = useServerPager(filters)
+  const list = useResource(
+    () => loadProducts({ status, q: search, merchantId: merchant, category, brand, page, limit }),
+    JSON.stringify([filters, page, limit]),
   )
-  const rows = filtered.filter((product) => status === 'all' || statusOf(product) === status)
-  const countOf = (value: ProductStatus) =>
-    all.filter((product) => statusOf(product) === value).length
+  const options = useResource(() => loadProducts({ limit: 100 }), 'options')
+  const rows = list.data?.items ?? []
+  const counts = list.data?.counts
+  const pager = pagerOf(list.data?.total ?? 0)
+
+  const pickFrom = (
+    pick: (p: {
+      merchantId: string
+      merchantName: string
+      category: string
+      brand: string
+    }) => [string, string],
+  ) => {
+    const seen = new Map<string, string>()
+    for (const product of options.data?.items ?? []) {
+      const [value, label] = pick(product)
+      if (value) seen.set(value, label)
+    }
+    return [...seen].sort((a, b) => a[1].localeCompare(b[1]))
+  }
+  const merchants = pickFrom((p) => [p.merchantId, p.merchantName])
+  const categories = pickFrom((p) => [p.category, p.category])
+  const brands = pickFrom((p) => [p.brand, p.brand])
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
       <PageHeader title={t('nav.products')} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label={t('products.stat.total')} value={String(all.length)} />
+        <StatCard label={t('products.stat.total')} value={String(counts?.all ?? '—')} />
         {PRODUCT_STATUSES.map((value) => (
           <StatCard
             key={value}
             label={t(`product.status.${value}`)}
-            value={String(countOf(value))}
+            value={String(counts?.[COUNT_KEY[value]] ?? '—')}
           />
         ))}
       </div>
@@ -85,11 +99,11 @@ export function ProductsPage() {
           <UnderlineTabs
             label={t('merchants.status')}
             options={[
-              { value: 'all', label: t('common.all'), count: filtered.length },
+              { value: 'all', label: t('common.all'), count: counts?.all },
               ...PRODUCT_STATUSES.map((value) => ({
                 value,
                 label: t(`product.status.${value}`),
-                count: filtered.filter((product) => statusOf(product) === value).length,
+                count: counts?.[COUNT_KEY[value]],
               })),
             ]}
             value={status}
@@ -111,7 +125,7 @@ export function ProductsPage() {
             label={t('products.col.merchant')}
             options={[
               { value: '', label: t('products.allMerchants') },
-              ...merchants.map((item) => ({ value: item.id, label: item.name })),
+              ...merchants.map(([value, label]) => ({ value, label })),
             ]}
             value={merchant}
             onChange={setMerchant}
@@ -120,14 +134,7 @@ export function ProductsPage() {
             label={t('categories.col.name')}
             options={[
               { value: '', label: t('products.allCategories') },
-              ...rootsOf(categories).flatMap((root) => [
-                { value: root.id, label: tl(root.name) },
-                ...childrenOf(categories, root.id).map((child) => ({
-                  value: child.id,
-                  label: tl(child.name),
-                  indent: true,
-                })),
-              ]),
+              ...categories.map(([value, label]) => ({ value, label })),
             ]}
             value={category}
             onChange={setCategory}
@@ -136,16 +143,16 @@ export function ProductsPage() {
             label={t('brands.col.brand')}
             options={[
               { value: '', label: t('products.allBrands') },
-              ...[...brands]
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((item) => ({ value: item.id, label: item.name })),
+              ...brands.map(([value, label]) => ({ value, label })),
             ]}
             value={brand}
             onChange={setBrand}
           />
         </div>
 
-        {rows.length === 0 ? (
+        {list.loading && !list.data ? (
+          <EmptyState title={t('common.loading')} />
+        ) : rows.length === 0 ? (
           <EmptyState title={t('products.empty')} />
         ) : (
           <div className="overflow-x-auto">
@@ -162,68 +169,56 @@ export function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((product) => {
-                  const owner = merchants.find((item) => item.id === product.merchantId)
-                  const productStatus = statusOf(product)
-                  return (
-                    <tr
-                      key={product.id}
-                      onClick={() => navigate(productPath(product.id))}
-                      className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <ProductThumb photo={product.photos[0]} />
-                          <div className="flex min-w-0 flex-col">
-                            <span className="truncate font-semibold">{tl(product.name)}</span>
-                            <span className="truncate text-sm text-ink-muted">
-                              {brandName(product.brandId)}
-                            </span>
-                          </div>
+                {rows.map((product) => (
+                  <tr
+                    key={product.id}
+                    onClick={() => navigate(productPath(product.id))}
+                    className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <ProductThumb photo={product.photo || undefined} />
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate font-semibold">{tl(product.name)}</span>
+                          <span className="truncate text-sm text-ink-muted">{product.brand}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {owner && (
-                          <div className="flex items-center gap-2">
-                            <MerchantLogo merchant={owner} size="xs" />
-                            <span className="truncate text-sm">{owner.name}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-ink-muted">
-                        {categoryPath(categories, product.categoryId, (item) => tl(item.name))}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold whitespace-nowrap tabular-nums">
-                        {product.variants.length > 1
-                          ? t('products.fromPrice', { sum: formatSum(priceOf(product)) })
-                          : formatSum(priceOf(product))}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {groupDigits(stockOf(product))}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge tone={productStatusTone[productStatus]}>
-                          {t(`product.status.${productStatus}`)}
-                        </StatusBadge>
-                      </td>
-                      <td className="pr-3">
-                        <RowActions
-                          actions={[
-                            {
-                              icon: Eye,
-                              label: t('common.view'),
-                              onClick: () => navigate(productPath(product.id)),
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{product.merchantName}</td>
+                    <td className="px-4 py-3 text-sm text-ink-muted">
+                      {[product.category, product.subcategory].filter(Boolean).join(' › ')}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold whitespace-nowrap tabular-nums">
+                      {product.hasVariants
+                        ? t('products.fromPrice', { sum: formatSum(product.priceTiyin / 100) })
+                        : formatSum(product.priceTiyin / 100)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {groupDigits(product.stock)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge tone={productStatusTone[product.status]}>
+                        {t(`product.status.${product.status}`)}
+                      </StatusBadge>
+                    </td>
+                    <td className="pr-3">
+                      <RowActions
+                        actions={[
+                          {
+                            icon: Eye,
+                            label: t('common.view'),
+                            onClick: () => navigate(productPath(product.id)),
+                          },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
+        <Pagination pager={pager} />
       </div>
     </div>
   )
