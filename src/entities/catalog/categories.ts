@@ -1,9 +1,4 @@
-import appliancesImage from '@/shared/assets/categories/appliances.jpg'
-import laptopsImage from '@/shared/assets/categories/laptops.jpg'
-import phonesImage from '@/shared/assets/categories/phones.jpg'
-import tvsImage from '@/shared/assets/categories/tvs.jpg'
 import type { LocalizedText } from '@/shared/i18n/dictionaries'
-import { createStore } from '@/shared/lib/createStore'
 
 /**
  * A product category, or a subcategory of one (one level deep). Only the admin creates them;
@@ -21,83 +16,10 @@ export type Category = {
   visible: boolean
   /**
    * Products filed directly under it across all merchants. A category with subcategories has
-   * none of its own; see `productsIn`. The backend counts them. Sample values.
+   * none of its own; see `productsIn`. The backend counts them (`products_count`).
    */
   products: number
 }
-
-const text = (uz: string, ru: string): LocalizedText => ({ uz, ru })
-
-// The categories the apps use today, plus two invented ones. Replace with the API.
-export const categoriesStore = createStore<Category>([
-  {
-    id: 'phones',
-    name: text('Telefonlar', 'Телефоны'),
-    image: phonesImage,
-    visible: true,
-    products: 0,
-  },
-  {
-    id: 'smartphones',
-    parentId: 'phones',
-    name: text('Smartfonlar', 'Смартфоны'),
-    image: phonesImage,
-    visible: true,
-    products: 88,
-  },
-  {
-    id: 'feature-phones',
-    parentId: 'phones',
-    name: text('Tugmali telefonlar', 'Кнопочные телефоны'),
-    visible: true,
-    products: 8,
-  },
-  {
-    id: 'tvs',
-    name: text('Televizorlar', 'Телевизоры'),
-    image: tvsImage,
-    visible: true,
-    products: 42,
-  },
-  {
-    id: 'appliances',
-    name: text('Maishiy texnika', 'Бытовая техника'),
-    image: appliancesImage,
-    visible: true,
-    products: 0,
-  },
-  {
-    id: 'washers',
-    parentId: 'appliances',
-    name: text('Kir yuvish mashinalari', 'Стиральные машины'),
-    image: appliancesImage,
-    visible: true,
-    products: 34,
-  },
-  {
-    id: 'fridges',
-    parentId: 'appliances',
-    name: text('Muzlatgichlar', 'Холодильники'),
-    visible: true,
-    products: 25,
-  },
-  {
-    id: 'air-conditioners',
-    parentId: 'appliances',
-    name: text('Konditsionerlar', 'Кондиционеры'),
-    visible: true,
-    products: 12,
-  },
-  {
-    id: 'laptops',
-    name: text('Noutbuklar', 'Ноутбуки'),
-    image: laptopsImage,
-    visible: true,
-    products: 38,
-  },
-  { id: 'tablets', name: text('Planshetlar', 'Планшеты'), visible: true, products: 23 },
-  { id: 'accessories', name: text('Aksessuarlar', 'Аксессуары'), visible: false, products: 0 },
-])
 
 /** Top-level categories, in order. */
 export const rootsOf = (all: Category[]) => all.filter((category) => !category.parentId)

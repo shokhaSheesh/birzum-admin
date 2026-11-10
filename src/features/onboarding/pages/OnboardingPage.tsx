@@ -1,9 +1,10 @@
 import { EyeOff, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { logAction } from '@/entities/audit/audit'
-import { bannersStore, type Banner } from '@/entities/onboarding/banners'
-import { slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
+import { type Banner } from '@/entities/onboarding/banners'
+import { bannersApi, slidesApi } from '@/entities/onboarding/onboardingApi'
+import { type AppId, type Slide } from '@/entities/onboarding/slides'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { toast } from '@/shared/lib/toast'
@@ -32,23 +33,16 @@ function reorder(list: Slide[], moved: Slide, target: Slide, after: boolean) {
  */
 export function OnboardingPage({ app }: { app: AppId }) {
   const { t, tl } = useI18n()
-  const all = slidesStore.useAll()
+  const slides = slidesApi.storeOf(app).useAll()
   const [editing, setEditing] = useState<Slide | null | undefined>(undefined)
   const [deleting, setDeleting] = useState<Slide | null>(null)
   const [dragged, setDragged] = useState<Slide | null>(null)
   const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null)
   const [params, setParams] = useSearchParams()
   const kind = params.get('kind') === 'banners' ? 'banners' : 'slides'
-  const bannerCount = bannersStore.useAll().filter((banner) => banner.app === app).length
+  const bannerCount = bannersApi.storeOf(app).useAll().length
   const [editingBanner, setEditingBanner] = useState<Banner | null | undefined>(undefined)
 
-  const slides = all.filter((slide) => slide.app === app)
-
-  // Puts this app's new order back into the store, the other apps' slides where they are
-  const place = (ordered: Slide[]) => {
-    const queue = [...ordered]
-    slidesStore.replaceAll(all.map((item) => (item.app === app ? queue.shift()! : item)))
-  }
   const dragOver = (e: DragEvent, target: Slide) => {
     if (!dragged || dragged === target) return
     e.preventDefault()
@@ -56,7 +50,8 @@ export function OnboardingPage({ app }: { app: AppId }) {
     setDrop({ id: target.id, after: e.clientY > box.top + box.height / 2 })
   }
   const dropOn = (target: Slide) => {
-    if (dragged && drop && dragged !== target) place(reorder(slides, dragged, target, drop.after))
+    if (dragged && drop && dragged !== target)
+      void slidesApi.order(app, reorder(slides, dragged, target, drop.after))
     setDragged(null)
     setDrop(null)
   }
@@ -65,18 +60,13 @@ export function OnboardingPage({ app }: { app: AppId }) {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const target = slides[slides.indexOf(slide) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target) place(reorder(slides, slide, target, e.key === 'ArrowDown'))
+    if (target) void slidesApi.order(app, reorder(slides, slide, target, e.key === 'ArrowDown'))
   }
-  const toggle = (slide: Slide) => {
-    slidesStore.update(slide.id, { visible: !slide.visible })
-    logAction({
-      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
-      kind: 'update',
-      action: slide.visible ? 'audit.a.slideHidden' : 'audit.a.slideShown',
-      target: tl(slide.title),
-    })
-    toast(t(slide.visible ? 'slides.hidden' : 'slides.shown'))
-  }
+  const toggle = (slide: Slide) =>
+    attempt(
+      () => slidesApi.setVisible(app, slide.id, !slide.visible),
+      () => toast(t(slide.visible ? 'slides.hidden' : 'slides.shown')),
+    )
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -167,7 +157,6 @@ export function OnboardingPage({ app }: { app: AppId }) {
                       <p className={cn('font-semibold', !slide.visible && 'text-ink-muted')}>
                         {tl(slide.title)}
                       </p>
-                      <p className="line-clamp-2 text-sm text-ink-muted">{tl(slide.text)}</p>
                       {!slide.visible && (
                         <span className="flex items-center gap-1 text-xs font-medium text-ink-subtle">
                           <EyeOff size={14} />
@@ -178,7 +167,7 @@ export function OnboardingPage({ app }: { app: AppId }) {
                     <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={slide.visible}
-                        onChange={() => toggle(slide)}
+                        onChange={() => void toggle(slide)}
                         label={t('slides.visible')}
                       />
                     </span>
@@ -215,18 +204,13 @@ export function OnboardingPage({ app }: { app: AppId }) {
             onClose={() => setDeleting(null)}
             title={t('slides.delete.title')}
             confirmLabel={t('common.delete')}
-            onConfirm={() => {
-              if (deleting) {
-                slidesStore.remove(deleting.id)
-                logAction({
-                  section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
-                  kind: 'delete',
-                  action: 'audit.a.slideDeleted',
-                  target: tl(deleting.title),
-                })
-              }
+            onConfirm={async () => {
+              if (deleting)
+                await attempt(
+                  () => slidesApi.remove(app, deleting.id),
+                  () => toast(t('slides.deleted')),
+                )
               setDeleting(null)
-              toast(t('slides.deleted'))
             }}
           >
             <p>{t('slides.delete.message')}</p>

@@ -1845,6 +1845,8 @@ const uz = {
   'api.sample': 'Namuna maʼlumot',
   'api.sample.title': 'Bu sahifa uchun backendda hali endpoint yoʻq',
   'nav.apiStatus': 'API holati',
+  'banners.pick.loanIds.hint':
+    'Qarz mahsulotlari uchun backendda hali roʻyxat yoʻq: id (uuid) larini har bir qatorga yozing.',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -3670,6 +3672,8 @@ const ru: Record<TranslationKey, string> = {
   'api.sample': 'Пример данных',
   'api.sample.title': 'Для этой страницы на бэкенде ещё нет эндпоинта',
   'nav.apiStatus': 'Статус API',
+  'banners.pick.loanIds.hint':
+    'Для займов на бэкенде пока нет списка: впишите id (uuid), по одному в строке.',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }
