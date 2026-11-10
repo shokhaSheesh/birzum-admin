@@ -149,6 +149,21 @@ export const WIRED_PAGES: WiredPage[] = [
     section: '5.15',
     endpoints: '/admin/apps/{fortuna|vodiy}/quick-replies',
   },
+  {
+    label: 'nav.payDay',
+    path: '/pay-day',
+    scope: 'ml',
+    section: '5.11d',
+    endpoints: '/admin/apps/{fortuna|vodiy}/pay-day, /pay-day/history',
+  },
+  {
+    label: 'nav.support',
+    path: '/support',
+    scope: 'ml',
+    section: '5.15a',
+    endpoints:
+      '/admin/apps/{fortuna|vodiy}/chats (+ take, assign, messages, close, reopen, read), /chat-topics',
+  },
 ]
 
 const BRAND_PREFIX = /^\/(fortuna|vodiy)(?=\/|$)/

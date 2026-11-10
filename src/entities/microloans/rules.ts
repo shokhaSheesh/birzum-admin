@@ -1,5 +1,4 @@
 import type { Brand } from '@/shared/config/workspaces'
-import { createStore } from '@/shared/lib/createStore'
 
 /**
  * One line of the "by application day" rule: a client who applies between the `from` and `to`
@@ -15,6 +14,9 @@ export type PayDayRule = { from: number; to: number; upTo: number | 'appDay' }
  */
 export type PayDayRules = {
   id: Brand
+  /** Who saved it last and when; none on the initial values. */
+  updatedAt?: Date
+  updatedBy?: string
   mode: 'fixed' | 'byDay'
   fixedDays: number[]
   rules: PayDayRule[]
@@ -23,20 +25,6 @@ export type PayDayRules = {
 
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i)
-
-// The rule Fortuna uses in its branches today (31.10 call). Replace with the API.
-const defaults = (id: Brand): PayDayRules => ({
-  id,
-  mode: 'byDay',
-  fixedDays: range(1, 10),
-  rules: [
-    { from: 1, to: 5, upTo: 5 },
-    { from: 6, to: 10, upTo: 10 },
-    { from: 11, to: 20, upTo: 'appDay' },
-  ],
-  after: 20,
-})
-export const payDayRulesStore = createStore<PayDayRules>([defaults('fortuna'), defaults('vodiy')])
 
 /** The payment days a client who applies on `appDay` can pick; `next1st` when only the 1st is left. */
 export function payDaysFor(rules: Omit<PayDayRules, 'id'>, appDay: number) {
@@ -47,25 +35,3 @@ export function payDaysFor(rules: Omit<PayDayRules, 'id'>, appDay: number) {
   if (!line) return { days: [1], next1st: true }
   return { days: range(1, line.upTo === 'appDay' ? appDay : line.upTo), next1st: false }
 }
-
-/** One field a save changed. */
-export type RuleChange = { label: string; from: string; to: string }
-/** One save of a brand's rules page: who, when, what. */
-export type RuleRevision = {
-  id: string
-  brand: Brand
-  page: 'payDay'
-  at: Date
-  by: string
-  changes: RuleChange[]
-}
-export const ruleRevisionsStore = createStore<RuleRevision>([
-  {
-    id: 'rr1',
-    brand: 'fortuna',
-    page: 'payDay',
-    at: new Date(2026, 9, 31, 17, 40),
-    by: 'Sardor Saidov',
-    changes: [{ label: 'Qanday tanlanadi', from: 'Belgilangan kunlar', to: 'Ariza kuniga qarab' }],
-  },
-])

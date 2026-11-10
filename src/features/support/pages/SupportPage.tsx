@@ -9,36 +9,36 @@ import {
   SendHorizontal,
   UserRound,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { applicationStatusTone } from '@/entities/applications/applicationStatus'
-import { applicationsStore } from '@/entities/applications/applications'
-import { clientStatusTone } from '@/entities/clients/clientStatus'
-import { clientsStore, fullName, initialsOf, type Client } from '@/entities/clients/clients'
-import { clientStatusOf, debtOf } from '@/entities/clients/debt'
-import { paymentsStore } from '@/entities/collections/payments'
-import { useAdmin } from '@/entities/session/session'
 import {
-  chatsStore,
-  lastMessageOf,
-  OPERATORS,
-  type Chat,
-  type ChatMessage,
-} from '@/entities/support/chats'
+  assignChat,
+  closeChat,
+  loadChat,
+  loadChats,
+  loadOperators,
+  loadTopics,
+  markChatRead,
+  reopenChat,
+  sendChatMessage,
+  takeChat,
+  type ChatBox,
+  type ChatDetail,
+  type ChatLine,
+  type ChatRow,
+} from '@/entities/support/chatsApi'
 import { repliesApi } from '@/entities/support/repliesApi'
-import { applicationPath, clientPath, ROUTES } from '@/shared/config/routes'
-import {
-  brandClientPath,
-  brandPath,
-  WORKSPACE_INFO,
-  type Workspace,
-} from '@/shared/config/workspaces'
+import { attempt } from '@/shared/api/createRemoteStore'
+import { toastError } from '@/shared/api/errors'
+import { uploadFile } from '@/shared/api/upload'
+import { useResource } from '@/shared/api/useResource'
+import { ROUTES } from '@/shared/config/routes'
+import { brandPath, WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
-import { newId } from '@/shared/lib/createStore'
 import { addDays, sameDay } from '@/shared/lib/dates'
-import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
+import { formatDate } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
 import { usePopover } from '@/shared/lib/usePopover'
@@ -46,93 +46,64 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Listbox, SelectChevron } from '@/shared/ui/Listbox'
-import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { logAction } from '@/entities/audit/audit'
-import { loanClientsStore, type LoanClient } from '@/entities/microloans/loanClients'
-import { LoanClientPanel } from '@/features/microloans/components/LoanClientPanel'
 
-type Box = 'queue' | 'mine' | 'open' | 'closed'
-const BOXES: Box[] = ['queue', 'mine', 'open', 'closed']
+const BOXES: ChatBox[] = ['queue', 'mine', 'open', 'closed']
 const now = () => new Date()
-/** Who wrote: a Birzum client or a brand's, in the few fields the chat shows. */
-type Person = { name: string; initials: string; photoUrl?: string; phone: string; href: string }
-const fromClient = (client: Client): Person => ({
-  name: fullName(client),
-  initials: initialsOf(client),
-  photoUrl: client.photoUrl,
-  phone: client.phone,
-  href: clientPath(client.id),
-})
-const fromLoanClient = (client: LoanClient): Person => ({
-  name: client.name,
-  initials: client.name
-    .split(' ')
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join(''),
-  phone: client.phone,
-  href: brandClientPath(client.brand, client.id),
-})
-
 const clock = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+const initialsOf = (name: string) =>
+  name
+    .split(' ')
+    .slice(0, 2)
+    .map((word) => word[0] ?? '')
+    .join('')
+    .toUpperCase() || '?'
+
+/** Calls `reload` every few seconds while the tab is visible: the backend has no push. */
+function usePoll(reload: () => void, ms: number) {
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) reload()
+    }, ms)
+    return () => clearInterval(id)
+  }, [reload, ms])
+}
 
 /**
- * Where support staff answer chats from an app: Birzum's client app, or a microloan brand's
- * (`app`). The chats on the left (waiting in the queue, mine, all open, closed), the
- * conversation in the middle with a reply or an internal note, and on the right who the client
- * is and where their money stands.
+ * Where support staff answer chats from an app (admin doc 5.15a): the chats on the left (queue,
+ * mine, all open, closed; the server says who sees which), the conversation in the middle with a
+ * reply or an internal note, and who the client is on the right. The list is read again every 10
+ * seconds, an open chat every 5.
  */
 export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
-  const { t } = useI18n()
-  const admin = useAdmin()
-  const me = admin?.name ?? OPERATORS[0]
-  const chats = chatsStore.useAll().filter((chat) => chat.app === app)
-  const clients = clientsStore.useAll()
-  const loanClients = loanClientsStore.useAll()
+  const { t, tl } = useI18n()
   const [params, setParams] = useSearchParams()
-  const [box, setBox] = useState<Box>('queue')
+  const [box, setBox] = useState<ChatBox>('queue')
   const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')
   const [today] = useState(now)
 
-  const inBox = (chat: Chat, which: Box) =>
-    which === 'closed'
-      ? chat.status === 'closed'
-      : chat.status === 'open' &&
-        (which === 'open' || (which === 'queue' ? !chat.assignee : chat.assignee === me))
-  const needle = query.trim().toLowerCase()
-  const clientOf = (chat: Chat) => clients.find((client) => client.id === chat.clientId)
-  const loanClientOf = (chat: Chat) => loanClients.find((client) => client.id === chat.clientId)
-  const personOf = (chat: Chat) => {
-    if (app === 'birzum') {
-      const client = clientOf(chat)
-      return client && fromClient(client)
-    }
-    const client = loanClientOf(chat)
-    return client && fromLoanClient(client)
-  }
-  const list = chats
-    .filter((chat) => inBox(chat, box))
-    .filter((chat) => {
-      const person = personOf(chat)
-      return (
-        needle === '' ||
-        (!!person &&
-          (person.name.toLowerCase().includes(needle) || person.phone.includes(needle))) ||
-        chat.messages.some((m) => m.text.toLowerCase().includes(needle))
-      )
-    })
-    .sort((a, b) => lastMessageOf(b).at.getTime() - lastMessageOf(a).at.getTime())
-
-  const openId = params.get('chat')
-  const current = chats.find((chat) => chat.id === openId)
-  const open = (id: string) => setParams({ chat: id }, { replace: true })
-
-  // Reading a chat clears its unread count
   useEffect(() => {
-    if (current?.unread) chatsStore.update(current.id, { unread: 0 })
-  }, [current])
+    const id = setTimeout(() => setSearch(query.trim()), 350)
+    return () => clearTimeout(id)
+  }, [query])
+
+  const list = useResource(
+    () => loadChats(app, { box, q: search }),
+    JSON.stringify([app, box, search]),
+  )
+  usePoll(list.reload, 10_000)
+  const topics = useResource(() => loadTopics(app), app)
+  const rows = list.data?.items ?? []
+  const counts = list.data?.counts
+
+  const topicName = (code: string) => {
+    const found = topics.data?.find((topic) => topic.code === code)
+    return found ? tl(found.label) : code
+  }
+  const openId = params.get('chat')
+  const open = (id: string) => setParams({ chat: id }, { replace: true })
 
   const when = (date: Date) =>
     sameDay(date, today)
@@ -143,11 +114,10 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Chats */}
       <aside
         className={cn(
           'flex w-full shrink-0 flex-col border-r border-line bg-canvas lg:w-[380px]',
-          current && 'hidden lg:flex',
+          openId && 'hidden lg:flex',
         )}
       >
         <div className="flex flex-col gap-3 px-4 pt-5">
@@ -175,103 +145,95 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
               value,
               label: t(`support.box.${value}`),
               // Counts only where they ask for action: the queue and my chats
-              count:
-                value === 'queue' || value === 'mine'
-                  ? chats.filter((chat) => inBox(chat, value)).length
-                  : undefined,
+              count: value === 'queue' || value === 'mine' ? counts?.[value] : undefined,
             }))}
             value={box}
             onChange={setBox}
           />
         </div>
-        {list.length === 0 ? (
+        {list.loading && !list.data ? (
+          <div className="flex-1">
+            <EmptyState title={t('common.loading')} />
+          </div>
+        ) : rows.length === 0 ? (
           <div className="flex-1">
             <EmptyState title={t(`support.empty.${box}`)} />
           </div>
         ) : (
           <ul className="min-h-0 flex-1 overflow-y-auto p-2">
-            {list.map((chat) => {
-              const person = personOf(chat)
-              const last = lastMessageOf(chat)
-              return (
-                <li key={chat.id}>
-                  <button
-                    type="button"
-                    onClick={() => open(chat.id)}
-                    aria-current={chat.id === openId || undefined}
-                    className={cn(
-                      'flex w-full gap-3 rounded-control p-3 text-left transition-colors',
-                      chat.id === openId ? 'bg-green-200' : 'hover:bg-surface',
-                    )}
-                  >
-                    <Avatar initials={person?.initials ?? '?'} photoUrl={person?.photoUrl} />
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="flex items-baseline gap-2">
-                        <span
-                          className={cn(
-                            'flex-1 truncate',
-                            chat.unread ? 'font-bold' : 'font-semibold',
-                          )}
-                        >
-                          {person?.name ?? '—'}
-                        </span>
-                        <span className="shrink-0 text-xs text-ink-subtle tabular-nums">
-                          {when(last.at)}
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            'flex-1 truncate text-sm',
-                            chat.unread ? 'text-ink' : 'text-ink-muted',
-                          )}
-                        >
-                          {last.from === 'operator' && `${t('support.you')}: `}
-                          {last.image && !last.text ? t('support.photo') : last.text}
-                        </span>
-                        {chat.unread > 0 && (
-                          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-xs font-bold text-on-primary">
-                            {chat.unread}
-                          </span>
+            {rows.map((chat) => (
+              <li key={chat.id}>
+                <button
+                  type="button"
+                  onClick={() => open(chat.id)}
+                  aria-current={chat.id === openId || undefined}
+                  className={cn(
+                    'flex w-full gap-3 rounded-control p-3 text-left transition-colors',
+                    chat.id === openId ? 'bg-green-200' : 'hover:bg-surface',
+                  )}
+                >
+                  <Avatar initials={initialsOf(chat.client.name)} />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="flex items-baseline gap-2">
+                      <span
+                        className={cn(
+                          'flex-1 truncate',
+                          chat.unread ? 'font-bold' : 'font-semibold',
                         )}
+                      >
+                        {chat.client.name ||
+                          formatPhone(chat.client.phone.replace('+998', '')) ||
+                          '—'}
                       </span>
-                      <span className="flex items-center gap-2 pt-1 text-xs text-ink-subtle">
-                        <span className="rounded-full bg-surface px-2 py-0.5 text-ink-muted">
-                          {t(`support.topic.${chat.topic}`)}
-                        </span>
-                        {chat.status === 'open' &&
-                          (chat.assignee ? (
-                            <span className="truncate">{chat.assignee}</span>
-                          ) : (
-                            <span className="font-semibold text-warning">
-                              {t('support.waiting')}
-                            </span>
-                          ))}
+                      <span className="shrink-0 text-xs text-ink-subtle tabular-nums">
+                        {when(chat.lastMessage?.at ?? chat.updatedAt)}
                       </span>
                     </span>
-                  </button>
-                </li>
-              )
-            })}
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'flex-1 truncate text-sm',
+                          chat.unread ? 'text-ink' : 'text-ink-muted',
+                        )}
+                      >
+                        {chat.lastMessage?.from === 'operator' && `${t('support.you')}: `}
+                        {chat.lastMessage?.hasImage && !chat.lastMessage.text
+                          ? t('support.photo')
+                          : chat.lastMessage?.text}
+                      </span>
+                      {chat.unread > 0 && (
+                        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-xs font-bold text-on-primary">
+                          {chat.unread}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-2 pt-1 text-xs text-ink-subtle">
+                      <span className="rounded-full bg-surface px-2 py-0.5 text-ink-muted">
+                        {topicName(chat.topic)}
+                      </span>
+                      {chat.status === 'open' &&
+                        (chat.assignee ? (
+                          <span className="truncate">{chat.assignee.name}</span>
+                        ) : (
+                          <span className="font-semibold text-warning">{t('support.waiting')}</span>
+                        ))}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </aside>
 
-      {current ? (
+      {openId ? (
         <Conversation
-          key={current.id}
-          chat={current}
-          person={personOf(current)}
-          me={me}
+          key={openId}
+          app={app}
+          id={openId}
+          topicName={topicName}
+          onChanged={list.reload}
           onBack={() => setParams({}, { replace: true })}
-          panel={(() => {
-            if (app === 'birzum') {
-              const client = clientOf(current)
-              return client && <ClientPanel client={client} />
-            }
-            const client = loanClientOf(current)
-            return client && <LoanClientPanel brand={app} client={client} />
-          })()}
         />
       ) : (
         <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-surface text-ink-muted lg:flex">
@@ -285,95 +247,110 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
 
 /** One chat: header with who answers it, the messages, and the reply box. */
 function Conversation({
-  chat,
-  person,
-  me,
+  app,
+  id,
+  topicName,
+  onChanged,
   onBack,
-  panel,
 }: {
-  chat: Chat
-  person?: Person
-  me: string
+  app: Workspace
+  id: string
+  topicName: (code: string) => string
+  /** The list should be read again (a chat moved box or its count changed). */
+  onChanged: () => void
   onBack: () => void
-  /** Who the client is, on the right. */
-  panel: ReactNode
 }) {
   const { t, lang } = useI18n()
+  const chatRes = useResource(() => loadChat(app, id), `${app}/${id}`)
+  usePoll(chatRes.reload, 5000)
+  const chat = chatRes.data
+  const operators = useResource(() => loadOperators(app).catch(() => []), app).data ?? []
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   const picker = useRef<HTMLInputElement>(null)
   const { open: quickOpen, setOpen: setQuickOpen, ref: quickRef } = usePopover()
   const [today] = useState(now)
-  const operators = OPERATORS.includes(me) ? OPERATORS : [me, ...OPERATORS]
   const [replyLang, setReplyLang] = useState<Lang>(lang)
-  // Answers for this chat's topic first, then the general ones, then the rest
-  const rank = (topic: string) => (topic === chat.topic ? 0 : topic === 'any' ? 1 : 2)
-  const replies = [...repliesApi.storeOf(chat.app).useAll()].sort(
+  const rank = (topic: string) => (topic === chat?.topic ? 0 : topic === 'any' ? 1 : 2)
+  const replies = [...repliesApi.storeOf(app).useAll()].sort(
     (a, b) => rank(a.topic) - rank(b.topic),
   )
 
+  // Reading a chat clears its unread count on the server
+  const unread = chat?.unread ?? 0
+  useEffect(() => {
+    if (unread > 0) markChatRead(app, id).then(onChanged, () => {})
+  }, [unread, app, id, onChanged])
+
+  const count = chat?.messages.length ?? 0
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' })
-  }, [chat.messages.length])
+  }, [count])
 
-  const line = (from: ChatMessage['from'], text: string, extra: Partial<ChatMessage> = {}) => ({
-    id: newId(),
-    from,
-    text,
-    at: now(),
-    author: me,
-    ...extra,
-  })
-  const save = (patch: Partial<Chat>, ...messages: ChatMessage[]) =>
-    chatsStore.update(chat.id, { ...patch, messages: [...chat.messages, ...messages] })
-
-  const take = () => save({ assignee: me }, line('system', t('support.sys.took', { name: me })))
-  const assign = (name: string) =>
-    name !== chat.assignee &&
-    save(
-      { assignee: name },
-      line(
-        'system',
-        name === me
-          ? t('support.sys.took', { name: me })
-          : t('support.sys.handed', { name: me, to: name }),
-      ),
+  if (!chat)
+    return (
+      <section className="flex min-w-0 flex-1 flex-col bg-surface">
+        <EmptyState title={t(chatRes.loading ? 'common.loading' : 'support.pick')} />
+      </section>
     )
-  const close = () => {
-    save({ status: 'closed' }, line('system', t('support.sys.closed', { name: me })))
-    toast(t('support.closed'))
-    logAction({
-      section: chat.app === 'birzum' ? 'support' : 'mlSupport',
-      kind: 'update',
-      action: chat.app === 'birzum' ? 'audit.a.chatClosed' : 'audit.a.loanChatClosed',
-      params: chat.app === 'birzum' ? undefined : { brand: WORKSPACE_INFO[chat.app].name },
-      target: person?.name,
-      href: person?.href,
-    })
+
+  // After any change: this chat and the list are read again
+  const done = () => {
+    chatRes.reload()
+    onChanged()
   }
-  const reopen = () =>
-    save({ status: 'open' }, line('system', t('support.sys.reopened', { name: me })))
-
-  const send = (text: string, image?: string) => {
-    const clean = text.trim()
-    if (!clean && !image) return
-    const message = line(mode === 'note' ? 'note' : 'operator', clean, { image })
-    // Answering a chat from the queue takes it
-    const takes = !chat.assignee && mode === 'reply'
-    save(
-      { assignee: takes ? me : chat.assignee, status: 'open' },
-      ...(takes ? [line('system', t('support.sys.took', { name: me }))] : []),
-      message,
+  const take = async () => {
+    // Two operators taking at once: the loser gets chat_taken and sees the chat as it is now
+    await attempt(() => takeChat(app, id))
+    done()
+  }
+  const assign = async (staffId: string) => {
+    if (staffId === chat.assignee?.id) return
+    await attempt(() => assignChat(app, id, staffId))
+    done()
+  }
+  const close = async () => {
+    await attempt(
+      () => closeChat(app, id),
+      () => toast(t('support.closed')),
     )
-    setDraft('')
+    done()
+  }
+  const reopen = async () => {
+    await attempt(() => reopenChat(app, id))
+    done()
+  }
+
+  const send = async (text: string, files: File[] = []) => {
+    const clean = text.trim()
+    if (!clean && files.length === 0) return
+    setSending(true)
+    try {
+      // Pictures go up first, then their URLs go with the message
+      const images: string[] = []
+      for (const file of files) images.push((await uploadFile(file, 'image')).url)
+      await sendChatMessage(app, id, { kind: mode, text: clean, images })
+      setDraft('')
+    } catch (e) {
+      toastError(e)
+    }
+    setSending(false)
+    done()
   }
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    send(draft)
+    void send(draft)
   }
 
-  // Day headers between messages from different days
+  const sysText = (line: ChatLine) => {
+    const name = line.author?.name ?? chat.client.name
+    if (line.key === 'took') return t('support.sys.took', { name })
+    if (line.key === 'handed') return t('support.sys.handed', { name, to: line.targetName ?? '' })
+    if (line.key === 'closed') return t('support.sys.closed', { name })
+    return t('support.sys.reopened', { name })
+  }
   const dayLabel = (date: Date) =>
     sameDay(date, today)
       ? t('support.today')
@@ -394,19 +371,22 @@ function Conversation({
             <ArrowLeft size={20} />
           </button>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-bold">{person?.name ?? '—'}</span>
+            <span className="truncate font-bold">{chat.client.name || '—'}</span>
             <span className="text-sm text-ink-muted">
-              {t(`support.topic.${chat.topic}`)}
-              {person && ` · ${formatPhone(person.phone)}`}
+              {topicName(chat.topic)}
+              {chat.client.phone && ` · ${formatPhone(chat.client.phone.replace('+998', ''))}`}
             </span>
           </div>
           {chat.status === 'open' ? (
             <>
               {chat.assignee ? (
                 <Listbox
-                  options={operators.map((name) => ({ value: name, label: name }))}
-                  value={chat.assignee}
-                  onChange={assign}
+                  options={(operators.some((o) => o.id === chat.assignee?.id)
+                    ? operators
+                    : [chat.assignee, ...operators]
+                  ).map((operator) => ({ value: operator.id, label: operator.name }))}
+                  value={chat.assignee.id}
+                  onChange={(staffId) => void assign(staffId)}
                   ariaLabel={t('support.assignee')}
                   fit
                   triggerClassName="flex h-10 items-center gap-2 rounded-control border border-line bg-canvas px-3 text-sm hover:border-navy-400"
@@ -419,18 +399,18 @@ function Conversation({
                   )}
                 />
               ) : (
-                <Button size="sm" variant="secondary" onClick={take}>
+                <Button size="sm" variant="secondary" onClick={() => void take()}>
                   <UserRound size={18} />
                   {t('support.take')}
                 </Button>
               )}
-              <Button size="sm" onClick={close}>
+              <Button size="sm" onClick={() => void close()}>
                 <CheckCheck size={18} />
                 {t('support.close')}
               </Button>
             </>
           ) : (
-            <Button size="sm" variant="secondary" onClick={reopen}>
+            <Button size="sm" variant="secondary" onClick={() => void reopen()}>
               <RotateCcw size={18} />
               {t('support.reopen')}
             </Button>
@@ -447,7 +427,7 @@ function Conversation({
                     {dayLabel(message.at)}
                   </span>
                 )}
-                <Bubble message={message} person={person} />
+                <Bubble message={message} chat={chat} system={sysText(message)} />
               </div>
             )
           })}
@@ -487,9 +467,10 @@ function Conversation({
               // Enter sends, Shift+Enter breaks the line
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                send(draft)
+                void send(draft)
               }
             }}
+            maxLength={4000}
             rows={2}
             placeholder={t(
               mode === 'note' ? 'support.placeholder.note' : 'support.placeholder.reply',
@@ -544,7 +525,7 @@ function Conversation({
                             {reply.title[replyLang]}
                             {reply.topic === chat.topic && (
                               <span className="rounded-full bg-green-200 px-2 py-0.5 text-[11px] font-semibold">
-                                {t(`support.topic.${chat.topic}`)}
+                                {topicName(chat.topic)}
                               </span>
                             )}
                           </span>
@@ -556,11 +537,7 @@ function Conversation({
                     ))}
                   </ul>
                   <Link
-                    to={
-                      chat.app === 'birzum'
-                        ? ROUTES.quickReplies
-                        : brandPath(chat.app, 'quick-replies')
-                    }
+                    to={app === 'birzum' ? ROUTES.quickReplies : brandPath(app, 'quick-replies')}
                     className="mt-1 flex items-center justify-between rounded-control border-t border-line px-3 pt-2.5 pb-1.5 text-sm font-semibold text-brand hover:bg-surface"
                   >
                     {t('replies.manage')}
@@ -578,19 +555,25 @@ function Conversation({
             >
               <ImagePlus size={18} />
             </button>
-            {/* Hidden: the button above is what people see */}
+            {/* Hidden: the button above is what people see. jpeg and png, up to 5 MiB */}
             <input
               ref={picker}
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0]
-                if (file) send(draft, URL.createObjectURL(file))
+                if (file) void send(draft, [file])
                 e.target.value = ''
               }}
             />
-            <Button size="sm" type="submit" className="ml-auto" disabled={!draft.trim()}>
+            <Button
+              size="sm"
+              type="submit"
+              className="ml-auto"
+              loading={sending}
+              disabled={!draft.trim()}
+            >
               <SendHorizontal size={18} />
               {t(mode === 'note' ? 'support.send.note' : 'support.send')}
             </Button>
@@ -598,47 +581,55 @@ function Conversation({
         </form>
       </section>
 
-      {panel}
+      <ClientPanel chat={chat} />
     </>
   )
 }
 
-/** One line of the chat: the shopper on the left, admins on the right, events in the middle. */
-function Bubble({ message, person }: { message: ChatMessage; person?: Person }) {
+/** One line of the chat: the client on the left, staff on the right, events in the middle. */
+function Bubble({
+  message,
+  chat,
+  system,
+}: {
+  message: ChatLine
+  chat: ChatDetail
+  system: string
+}) {
   const { t } = useI18n()
-  if (message.from === 'system')
+  if (message.kind === 'system')
     return (
       <p className="self-center text-center text-xs text-ink-subtle">
-        {message.text} · {clock(message.at)}
+        {system} · {clock(message.at)}
       </p>
     )
-  const mine = message.from !== 'client'
+  const mine = message.kind !== 'client'
   return (
     <div className={cn('flex max-w-[78%] gap-2', mine && 'self-end')}>
       {!mine && (
         <span className="mt-auto">
-          <Avatar size="sm" initials={person?.initials ?? '?'} photoUrl={person?.photoUrl} />
+          <Avatar size="sm" initials={initialsOf(chat.client.name)} />
         </span>
       )}
       <div className={cn('flex flex-col gap-1', mine && 'items-end')}>
         <div
           className={cn(
             'flex flex-col gap-2 rounded-[18px] px-3.5 py-2.5 text-sm',
-            message.from === 'client' && 'rounded-bl-md border border-line bg-canvas',
-            message.from === 'operator' && 'rounded-br-md bg-primary text-on-primary',
-            message.from === 'note' && 'rounded-br-md border border-warning/30 bg-warning-soft',
+            message.kind === 'client' && 'rounded-bl-md border border-line bg-canvas',
+            message.kind === 'operator' && 'rounded-br-md bg-primary text-on-primary',
+            message.kind === 'note' && 'rounded-br-md border border-warning/30 bg-warning-soft',
           )}
         >
-          {message.from === 'note' && (
+          {message.kind === 'note' && (
             <span className="text-xs font-semibold text-warning">{t('support.mode.note')}</span>
           )}
-          {message.image && (
-            <img src={message.image} alt="" className="max-h-56 rounded-control object-cover" />
-          )}
+          {message.images.map((src) => (
+            <img key={src} src={src} alt="" className="max-h-56 rounded-control object-cover" />
+          ))}
           {message.text && <p className="whitespace-pre-line">{message.text}</p>}
         </div>
         <span className="px-1 text-xs text-ink-subtle tabular-nums">
-          {mine && message.author ? `${message.author} · ` : ''}
+          {mine && message.author ? `${message.author.name} · ` : ''}
           {clock(message.at)}
         </span>
       </div>
@@ -646,74 +637,23 @@ function Bubble({ message, person }: { message: ChatMessage; person?: Person }) 
   )
 }
 
-/** Who the shopper is and where their money stands, so the answer does not need another page. */
-function ClientPanel({ client }: { client: Client }) {
+/** Who wrote. The backend has no client account, debt or applications for a chat yet (admin doc, 5.15a). */
+function ClientPanel({ chat }: { chat: ChatRow }) {
   const { t } = useI18n()
-  const applications = applicationsStore.useAll()
-  const payments = paymentsStore.useAll()
-  const [today] = useState(now)
-  const debt = debtOf(client, applications, payments, today)
-  const status = clientStatusOf(client, debt)
-  const own = applications.filter((application) => application.clientId === client.id)
-  const rows: [string, string, boolean?][] = [
-    [t('client.limit'), client.limit ? formatSum(client.limit.amount) : t('clients.limit.none')],
-    [t('clients.col.nasiya'), String(debt.running)],
-    [t('clients.col.debt'), formatSum(debt.remaining)],
-    [t('client.overdue'), debt.overdue ? formatSum(debt.overdue) : '—', debt.overdue > 0],
-    [t('support.nextPayment'), debt.next ? formatDate(debt.next) : '—'],
-  ]
-
   return (
     <aside className="hidden w-[320px] shrink-0 flex-col gap-5 overflow-y-auto border-l border-line bg-canvas p-5 xl:flex">
       <div className="flex flex-col items-center gap-2 text-center">
-        <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} size="lg" />
-        <p className="font-bold">
-          {client.lastName} {client.firstName}
-        </p>
-        <p className="text-sm text-ink-muted tabular-nums">{formatPhone(client.phone)}</p>
-        <StatusBadge tone={clientStatusTone[status]}>{t(`client.status.${status}`)}</StatusBadge>
-      </div>
-      <dl className="flex flex-col gap-2.5 border-t border-line pt-4 text-sm">
-        {rows.map(([label, value, red]) => (
-          <div key={label} className="flex justify-between gap-3">
-            <dt className="text-ink-muted">{label}</dt>
-            <dd className={cn('text-right font-semibold tabular-nums', red && 'text-danger')}>
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <div className="flex flex-col gap-2 border-t border-line pt-4">
-        <p className="text-sm font-semibold">{t('client.purchases')}</p>
-        {own.length === 0 ? (
-          <p className="text-sm text-ink-subtle">{t('client.purchases.empty')}</p>
-        ) : (
-          own.slice(0, 4).map((application) => (
-            <Link
-              key={application.id}
-              to={applicationPath(application.id)}
-              className="-mx-2 flex items-center gap-2 rounded-control p-2 hover:bg-surface"
-            >
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium">{application.lines[0].name}</span>
-                <span className="text-xs text-ink-muted tabular-nums">
-                  № {groupDigits(application.number)} · {formatDate(application.createdAt)}
-                </span>
-              </span>
-              <StatusBadge tone={applicationStatusTone[application.status]}>
-                {t(`application.status.${application.status}`)}
-              </StatusBadge>
-            </Link>
-          ))
+        <Avatar initials={initialsOf(chat.client.name)} size="lg" />
+        <p className="font-bold">{chat.client.name || '—'}</p>
+        {chat.client.phone && (
+          <p className="text-sm text-ink-muted tabular-nums">
+            {formatPhone(chat.client.phone.replace('+998', ''))}
+          </p>
         )}
       </div>
-      <Link
-        to={clientPath(client.id)}
-        className="mt-auto flex items-center justify-between rounded-control bg-surface px-4 py-3 text-sm font-semibold hover:bg-navy-100"
-      >
-        {t('support.openClient')}
-        <ChevronRight size={18} />
-      </Link>
+      <p className="border-t border-line pt-4 text-sm text-ink-subtle">
+        {t('support.panel.later')}
+      </p>
     </aside>
   )
 }

@@ -1908,13 +1908,15 @@ const uz = {
   'apiStatus.doc': 'Hujjat',
   'apiStatus.wired': 'Ulangan',
   'apiStatus.sample':
-    'Roʻyxatda yoʻq sahifalar (dashboard, analitika, arizalar, klientlar, undiruv, merchantlar, narxlash, yordam chati, xabarnomalar, mikroqarz operatsion sahifalari) hali namuna maʼlumot bilan ishlaydi: ularning sarlavhasida «Namuna maʼlumot» belgisi bor. Toʻlov kuni (5.11d) va Yordam chati (5.15a) boʻlimlari hujjatda yoʻq.',
+    'Roʻyxatda yoʻq sahifalar (dashboard, analitika, arizalar, klientlar, undiruv, merchantlar, narxlash, xabarnomalar, mikroqarz operatsion sahifalari) hali namuna maʼlumot bilan ishlaydi: ularning sarlavhasida «Namuna maʼlumot» belgisi bor.',
   'audit.a.signInFailed': 'Kirishga urindi (parol notoʻgʻri)',
   'audit.a.passwordChanged': 'Parolini almashtirdi',
   'audit.a.refreshReuse': 'Eski tokendan qayta foydalanildi: sessiya yopildi',
   'audit.a.geoKeyAdded': 'Xarita kalitini qoʻshdi',
   'audit.a.geoKeySaved': 'Xarita kalitini oʻzgartirdi',
   'audit.a.geoKeyDeleted': 'Xarita kalitini oʻchirdi',
+  'support.panel.later':
+    'Mijoz hisobi, qarzi va arizalari backendda hali yoʻq: bu yerda faqat chatdagi ism va telefon.',
 }
 
 export type TranslationKey = keyof typeof uz
@@ -3803,13 +3805,15 @@ const ru: Record<TranslationKey, string> = {
   'apiStatus.doc': 'Документ',
   'apiStatus.wired': 'Подключена',
   'apiStatus.sample':
-    'Страницы, которых нет в списке (дашборд, аналитика, заявки, клиенты, взыскание, мерчанты, тарифы, чат поддержки, рассылки, операционные страницы микрозаймов), пока на примерах: в их заголовке значок «Пример данных». Разделов «День платежа» (5.11d) и «Чат поддержки» (5.15a) в документе нет.',
+    'Страницы, которых нет в списке (дашборд, аналитика, заявки, клиенты, взыскание, мерчанты, тарифы, рассылки, операционные страницы микрозаймов), пока на примерах: в их заголовке значок «Пример данных».',
   'audit.a.signInFailed': 'Неудачная попытка входа',
   'audit.a.passwordChanged': 'Сменил пароль',
   'audit.a.refreshReuse': 'Повторное использование старого токена: сессия закрыта',
   'audit.a.geoKeyAdded': 'Добавил ключ карты',
   'audit.a.geoKeySaved': 'Изменил ключ карты',
   'audit.a.geoKeyDeleted': 'Удалил ключ карты',
+  'support.panel.later':
+    'Счёт, долг и заявки клиента на бэкенде пока нет: здесь только имя и телефон из чата.',
 }
 
 export const dictionaries: Record<Lang, Record<TranslationKey, string>> = { uz, ru }

@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
 import { hasPermission, useAdmin } from '@/entities/session/session'
-import { chatsStore } from '@/entities/support/chats'
+import { loadChats } from '@/entities/support/chatsApi'
+import { useResource } from '@/shared/api/useResource'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import logoOnDark from '@/shared/assets/logo-on-dark.svg'
 import logo from '@/shared/assets/logo.svg'
@@ -32,7 +34,6 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const pending = applicationsStore
     .useAll()
     .filter((application) => application.status === 'pending').length
-  // Yordam chati counts open chats with messages nobody has read
   const admin = useAdmin()
   // The pages the admin's role in this business can open (`<page>.read`); the rest are left out
   const groups = navOf(workspace)
@@ -44,9 +45,25 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
       }),
     }))
     .filter((group) => group.items.length > 0)
-  const unread = chatsStore
-    .useAll()
-    .filter((chat) => chat.app === workspace && chat.status === 'open' && chat.unread > 0).length
+  // Yordam chati's badge: chats waiting in the queue, read again every 30 seconds
+  const canSee = hasPermission(
+    admin,
+    workspace,
+    workspace === 'birzum' ? 'support.read' : 'mlSupport.read',
+  )
+  const queue = useResource(
+    () =>
+      canSee ? loadChats(workspace, { box: 'queue', q: '', limit: 1 }) : Promise.resolve(undefined),
+    `${workspace}${canSee}`,
+  )
+  const reloadQueue = queue.reload
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) reloadQueue()
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [reloadQueue])
+  const unread = queue.data?.counts.queue ?? 0
 
   return (
     <nav aria-label={t('common.menu')} className="flex h-full flex-col">
