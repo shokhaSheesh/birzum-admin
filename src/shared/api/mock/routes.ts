@@ -1,0 +1,16 @@
+// Every sample endpoint registers itself here (one file per area). Order matters where one path
+// pattern would also match another: the first registered route that fits answers.
+import './audit'
+import './roles'
+import './admins'
+import './catalog'
+import './faq'
+import './documents'
+import './onboarding'
+import './reviews'
+import './products'
+import './replies'
+import './merchantRoles'
+import './geo'
+import './chats'
+import './loanApps'

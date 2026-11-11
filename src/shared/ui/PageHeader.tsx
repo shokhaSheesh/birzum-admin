@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
-import { isWiredPath } from '@/shared/api/wired'
+import { isDemo } from '@/shared/api/demo'
 import { useI18n } from '@/shared/i18n/useI18n'
 
 type Props = {
@@ -11,11 +10,11 @@ type Props = {
 
 /**
  * The top of every admin page: the title and the page's actions on the right. No subtitle (user).
- * A page that is not wired to the backend yet wears a small "Namuna maʼlumot" badge.
+ * In the sample panel every page wears a small "Namuna maʼlumot" badge.
  */
 export function PageHeader({ title, actions }: Props) {
   const { t } = useI18n()
-  const sample = !isWiredPath(useLocation().pathname)
+  const sample = isDemo()
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex min-w-0 flex-wrap items-center gap-3">

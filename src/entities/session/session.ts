@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { api, setSignedOutHandler, tokensOf } from '@/shared/api/client'
+import { isDemo, setDemo } from '@/shared/api/demo'
 import { getTokens, setTokens } from '@/shared/api/tokens'
 import type { Workspace } from '@/shared/config/workspaces'
 
@@ -33,6 +34,8 @@ export type Admin = {
   memberships: Membership[]
   /** The password was set by someone else; only the change-password screen opens until it is changed. */
   mustChangePassword: boolean
+  /** The sample panel: every page, answered by the in-browser sample backend; no sign-in. */
+  demo?: boolean
 }
 
 type State = { status: 'out' | 'loading' | 'in'; admin: Admin | null }
@@ -54,7 +57,32 @@ const adminOf = (me: MeData): Admin => {
   }
 }
 
-let state: State = { status: getTokens() ? 'loading' : 'out', admin: null }
+const demoMembership = (company_code: Workspace, company_name: string): Membership => ({
+  company_id: company_code,
+  company_code,
+  company_name,
+  role_name: 'Namuna',
+  permissions: [],
+})
+
+/** The sample panel's admin: every business, every page (`hasPermission` lets a demo admin through). */
+const DEMO_ADMIN: Admin = {
+  id: 'demo',
+  name: 'Namuna admin',
+  username: 'demo',
+  initials: 'NA',
+  memberships: [
+    demoMembership('birzum', 'Birzum'),
+    demoMembership('fortuna', 'Fortuna Biznes'),
+    demoMembership('vodiy', 'Vodiy Taraqqiyot'),
+  ],
+  mustChangePassword: false,
+  demo: true,
+}
+
+let state: State = isDemo()
+  ? { status: 'in', admin: DEMO_ADMIN }
+  : { status: getTokens() ? 'loading' : 'out', admin: null }
 const listeners = new Set<() => void>()
 const set = (next: State) => {
   state = next
@@ -90,9 +118,19 @@ export const session = {
     setTokens(tokensOf(data))
     await loadMe()
   },
+  /** Opens the sample panel: no sign-in, every page on sample data, kept for this tab. */
+  enterDemo() {
+    setDemo(true)
+    set({ status: 'in', admin: DEMO_ADMIN })
+  },
   /** Re-reads `me`, e.g. after the password was changed or a role was edited. */
   refresh: loadMe,
   async signOut() {
+    if (state.admin?.demo) {
+      setDemo(false)
+      set({ status: 'out', admin: null })
+      return
+    }
     try {
       await api('POST', '/admin/auth/logout')
     } catch {
@@ -120,6 +158,7 @@ export const useSessionStatus = () => useSyncExternalStore(subscribe, () => stat
 
 /** True when the admin's role in that business has the permission, e.g. `can('birzum', 'faq.update')`. */
 export const hasPermission = (admin: Admin | null, company: Workspace, code: string) =>
+  !!admin?.demo ||
   !!admin?.memberships.find((m) => m.company_code === company)?.permissions.includes(code)
 
 /** `can(company, code)` for the current admin. The backend still checks every call; this only hides buttons. */

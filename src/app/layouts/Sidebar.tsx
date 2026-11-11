@@ -46,8 +46,8 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
       }),
     }))
     .filter((group) => group.items.length > 0)
-  // Pages not wired to the backend yet are locked: greyed out with a lock, not a link
-  const disabled = (to: string) => !isWiredPath(to)
+  // The API panel locks the pages not wired to the backend yet; the sample panel opens them all
+  const disabled = (to: string) => !admin?.demo && !isWiredPath(to)
   // Yordam chati's badge: chats waiting in the queue, read again every 30 seconds
   const canSee = hasPermission(
     admin,

@@ -1,3 +1,4 @@
+import { isDemo } from './demo'
 import { getTokens, setTokens, type Tokens } from './tokens'
 
 /** Same origin: Vite's dev proxy and Vercel's rewrite send /api to the staging backend. */
@@ -146,6 +147,8 @@ export async function api<T = unknown>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
+  // The sample panel never reaches the network
+  if (isDemo()) return (await import('./mock').then((m) => m.mockApi(method, path, options))) as T
   if (options.anonymous) return (await send(method, path, options)) as T
   const tokens = getTokens()
   try {

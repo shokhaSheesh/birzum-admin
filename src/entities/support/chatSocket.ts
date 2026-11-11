@@ -37,7 +37,8 @@ export function useChatEvents(app: Workspace, onEvent: (event: ChatEvent) => voi
   })
 
   useEffect(() => {
-    if (!getAdmin()) return
+    // The sample panel has no backend to listen to
+    if (!getAdmin() || getAdmin()?.demo) return
     let socket: WebSocket | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
     let stopped = false

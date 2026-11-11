@@ -15,8 +15,9 @@ const firstWiredPage = (workspace: Workspace) =>
 /**
  * Lets the panel open only for a signed-in admin; everyone else goes to the sign-in page. While
  * `me` is being read after a page refresh there is nothing to show yet; an admin who still has the
- * password someone else set only gets the change-password screen. Pages not wired to the backend
- * are locked: they open the business's first wired page instead.
+ * password someone else set only gets the change-password screen. In the API panel pages not wired
+ * to the backend are locked: they open the business's first wired page instead; the sample panel
+ * opens every page.
  */
 export function RequireAdmin() {
   const admin = useAdmin()
@@ -25,7 +26,7 @@ export function RequireAdmin() {
   if (status === 'loading') return <div className="min-h-full bg-surface" />
   if (!admin) return <Navigate to={ROUTES.login} replace />
   if (admin.mustChangePassword) return <ChangePasswordPage />
-  if (!isWiredPath(pathname)) {
+  if (!admin.demo && !isWiredPath(pathname)) {
     const first = firstWiredPage(workspaceOf(pathname))
     if (first && first !== pathname) return <Navigate to={first} replace />
   }
