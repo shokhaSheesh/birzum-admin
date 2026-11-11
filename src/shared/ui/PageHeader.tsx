@@ -1,7 +1,4 @@
 import type { ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
-import { isWiredPath } from '@/shared/api/wired'
-import { useI18n } from '@/shared/i18n/useI18n'
 
 type Props = {
   title: string
@@ -9,26 +6,11 @@ type Props = {
   actions?: ReactNode
 }
 
-/**
- * The top of every admin page: the title and the page's actions on the right. No subtitle (user).
- * A page that is not wired to the backend yet wears a small "Namuna maʼlumot" badge.
- */
+/** The top of every admin page: the title and the page's actions on the right. No subtitle (user). */
 export function PageHeader({ title, actions }: Props) {
-  const { t } = useI18n()
-  const sample = !isWiredPath(useLocation().pathname)
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <h1 className="min-w-0 text-2xl font-bold text-balance">{title}</h1>
-        {sample && (
-          <span
-            title={t('api.sample.title')}
-            className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning"
-          >
-            {t('api.sample')}
-          </span>
-        )}
-      </div>
+      <h1 className="min-w-0 text-2xl font-bold text-balance">{title}</h1>
       {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
     </div>
   )

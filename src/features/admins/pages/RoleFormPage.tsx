@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { initialsOfName } from '@/entities/admins/admins'
-import { adminsStore } from '@/entities/admins/adminsApi'
-import { createRole, rolesStore, updateRole } from '@/entities/admins/rolesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { adminsStore, initialsOfName } from '@/entities/admins/admins'
 import {
   actionsFor,
   keysFor,
   reachOf,
+  rolesStore,
   SECTION_KEYS,
   SECTIONS,
   SPECIAL_ACTIONS,
@@ -19,6 +17,7 @@ import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -29,6 +28,7 @@ import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 import { BrandChecks } from '../components/BrandChecks'
 import { PermissionTable } from '../components/PermissionTable'
+import { logAction } from '@/entities/audit/audit'
 
 const blank = () =>
   Object.fromEntries(SECTION_KEYS.map((key) => [key, [] as Op[]])) as Record<string, Op[]>
@@ -40,20 +40,6 @@ const blank = () =>
  * permission it needs on its page. "Nusxa olish" opens it filled from another role.
  */
 export function RoleFormPage() {
-  const { t } = useI18n()
-  // The form starts from the loaded role, so it opens once the list is here
-  const loading = rolesStore.useLoading()
-  rolesStore.useAll()
-  if (loading)
-    return (
-      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-        <EmptyState title={t('common.loading')} />
-      </div>
-    )
-  return <RoleForm />
-}
-
-function RoleForm() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const { id } = useParams()
@@ -75,7 +61,6 @@ function RoleForm() {
     source && !source.system ? [...source.actions] : [],
   )
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   if (existing?.system)
     return (
@@ -117,12 +102,13 @@ function RoleForm() {
           })
         : undefined
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (nameError || brandsError) return
     // Pages of a page set the role no longer has are cleared
     const keys = keysFor(brands)
-    const record: Omit<Role, 'id'> = {
+    const record: Role = {
+      id: existing?.id ?? newId(),
       name: name.trim(),
       description: description.trim(),
       brands,
@@ -131,13 +117,16 @@ function RoleForm() {
       ),
       actions: liveActions,
     }
-    setSaving(true)
-    const ok = await attempt(
-      () => (existing ? updateRole(existing.id, record) : createRole(record)),
-      () => toast(t(existing ? 'toast.saved' : 'role.created')),
-    )
-    setSaving(false)
-    if (ok) navigate(ROUTES.roles)
+    if (existing) rolesStore.update(existing.id, record)
+    else rolesStore.replaceAll([...rolesStore.getAll(), record])
+    toast(t(existing ? 'toast.saved' : 'role.created'))
+    logAction({
+      section: 'roles',
+      kind: existing ? 'update' : 'create',
+      action: existing ? 'audit.a.roleSaved' : 'audit.a.roleCreated',
+      target: record.name,
+    })
+    navigate(ROUTES.roles)
   }
 
   return (
@@ -150,7 +139,7 @@ function RoleForm() {
         <Button size="sm" variant="ghost" className="px-4!" onClick={() => navigate(ROUTES.roles)}>
           {t('common.cancel')}
         </Button>
-        <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+        <Button size="sm" className="px-4!" onClick={save}>
           {t(existing ? 'common.save' : 'role.create')}
         </Button>
       </ActionBar>

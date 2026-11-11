@@ -1,7 +1,5 @@
 import { ImageUp, Trash2 } from 'lucide-react'
-import { useRef, useState, type ReactNode } from 'react'
-import { toastError } from '@/shared/api/errors'
-import { uploadFile } from '@/shared/api/upload'
+import { useRef, type ReactNode } from 'react'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { Button } from './Button'
 
@@ -21,18 +19,6 @@ type Props = {
 export function ImageField({ label, hint, preview, value, onChange, labelEnd }: Props) {
   const { t } = useI18n()
   const input = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-
-  const upload = async (file: File) => {
-    setUploading(true)
-    try {
-      onChange((await uploadFile(file, 'image')).url)
-    } catch (e) {
-      toastError(e)
-    } finally {
-      setUploading(false)
-    }
-  }
 
   return (
     <div className="flex items-center gap-5">
@@ -43,12 +29,7 @@ export function ImageField({ label, hint, preview, value, onChange, labelEnd }: 
           {labelEnd}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={uploading}
-            onClick={() => input.current?.click()}
-          >
+          <Button size="sm" variant="secondary" onClick={() => input.current?.click()}>
             <ImageUp size={18} />
             {t(value ? 'image.replace' : 'image.upload')}
           </Button>
@@ -73,7 +54,7 @@ export function ImageField({ label, hint, preview, value, onChange, labelEnd }: 
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0]
-          if (file) void upload(file)
+          if (file) onChange(URL.createObjectURL(file))
           e.target.value = ''
         }}
       />

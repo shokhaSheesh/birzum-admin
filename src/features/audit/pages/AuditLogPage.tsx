@@ -1,17 +1,14 @@
 import { Search } from 'lucide-react'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { initialsOfName } from '@/entities/admins/admins'
+import { adminsStore, initialsOfName } from '@/entities/admins/admins'
 import { SECTIONS } from '@/entities/admins/roles'
-import { AUDIT_KINDS, type AuditEntry } from '@/entities/audit/audit'
-import { auditTarget, auditText, loadAudit } from '@/entities/audit/auditApi'
-import { loadAdmins } from '@/entities/admins/adminsApi'
-import { useResource } from '@/shared/api/useResource'
-import { useServerPager } from '@/shared/api/useServerPager'
+import { AUDIT_KINDS, auditStore, type AuditEntry } from '@/entities/audit/audit'
 import { useI18n } from '@/shared/i18n/useI18n'
-import { addDays, sameDay } from '@/shared/lib/dates'
+import { addDays, inRange, sameDay } from '@/shared/lib/dates'
 import { formatDate, groupDigits } from '@/shared/lib/format'
-import { thisMonth, type Period } from '@/shared/lib/period'
+import { boundsOf, thisMonth, type Period } from '@/shared/lib/period'
+import { usePagination } from '@/shared/lib/usePagination'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
@@ -32,33 +29,32 @@ const time = (date: Date) =>
  */
 export function AuditLogPage() {
   const { t } = useI18n()
+  const entries = auditStore.useAll()
+  const admins = adminsStore.useAll()
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
   const [query, setQuery] = useState('')
-  const [search, setSearch] = useState('')
   const [admin, setAdmin] = useState('')
   const [section, setSection] = useState('')
   const [kind, setKind] = useState('')
   const [open, setOpen] = useState<AuditEntry | null>(null)
 
-  // The search goes to the server a moment after typing stops
-  useEffect(() => {
-    const id = setTimeout(() => setSearch(query.trim()), 350)
-    return () => clearTimeout(id)
-  }, [query])
-
-  const filters = JSON.stringify([period, search, admin, section, kind])
-  const { page, limit, pager: pagerOf } = useServerPager(filters)
-  const log = useResource(
-    () => loadAudit({ period, q: search, staffId: admin, section, kind, page, limit }),
-    JSON.stringify([filters, page, limit]),
-  )
-  const staff = useResource(() => loadAdmins({ limit: 100 }).catch(() => undefined), 'staff')
-  const rows = log.data?.items ?? []
-  const pager = pagerOf(log.data?.total ?? 0)
   const sectionLabel = (key: string) => {
     const found = SECTIONS.find((s) => s.key === key)
-    return found ? t(found.label) : key || '—'
+    return found ? t(found.label) : '—'
   }
+  const needle = query.trim().toLowerCase()
+  const rows = entries.filter(
+    (entry) =>
+      inRange(entry.at, boundsOf(period)) &&
+      (!admin || entry.admin === admin) &&
+      (!section || entry.section === section) &&
+      (!kind || entry.kind === kind) &&
+      (needle === '' ||
+        [entry.admin, entry.target ?? '', t(entry.action, entry.params)].some((text) =>
+          text.toLowerCase().includes(needle),
+        )),
+  )
+  const pager = usePagination(rows, JSON.stringify([period, query, admin, section, kind]))
   const [today] = useState(() => new Date())
   const dayLabel = (date: Date) =>
     sameDay(date, today)
@@ -66,6 +62,8 @@ export function AuditLogPage() {
       : sameDay(date, addDays(today, -1))
         ? t('audit.yesterday')
         : formatDate(date)
+  // Sections that have entries, in sidebar order, so the filter offers nothing empty
+  const usedSections = SECTIONS.filter((s) => entries.some((entry) => entry.section === s.key))
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -88,7 +86,7 @@ export function AuditLogPage() {
             label={t('audit.col.admin')}
             options={[
               { value: '', label: t('audit.allAdmins') },
-              ...(staff.data?.items ?? []).map((item) => ({ value: item.id, label: item.name })),
+              ...admins.map((item) => ({ value: item.name, label: item.name })),
             ]}
             value={admin}
             onChange={setAdmin}
@@ -97,7 +95,7 @@ export function AuditLogPage() {
             label={t('audit.col.section')}
             options={[
               { value: '', label: t('audit.allSections') },
-              ...SECTIONS.map((s) => ({ value: s.key, label: t(s.label) })),
+              ...usedSections.map((s) => ({ value: s.key, label: t(s.label) })),
             ]}
             value={section}
             onChange={setSection}
@@ -113,12 +111,10 @@ export function AuditLogPage() {
           />
         </div>
         <p className="px-4 pb-3 text-sm text-ink-muted">
-          {t('audit.count', { count: groupDigits(pager.total) })}
+          {t('audit.count', { count: groupDigits(rows.length) })}
         </p>
 
-        {log.loading && !log.data ? (
-          <EmptyState title={t('common.loading')} />
-        ) : rows.length === 0 ? (
+        {rows.length === 0 ? (
           <EmptyState title={t('audit.empty')} />
         ) : (
           <div className="overflow-x-auto">
@@ -134,8 +130,8 @@ export function AuditLogPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((entry, i) => {
-                  const previous = rows[i - 1]
+                {pager.rows.map((entry, i) => {
+                  const previous = pager.rows[i - 1]
                   const newDay = !previous || !sameDay(previous.at, entry.at)
                   return (
                     <Fragment key={entry.id}>
@@ -163,8 +159,8 @@ export function AuditLogPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold">
-                          {auditText(t, entry)}
-                          {entry.changes.length > 0 && (
+                          {t(entry.action, entry.params)}
+                          {entry.changes && entry.changes.length > 0 && (
                             <span className="ml-2 text-xs font-normal text-ink-subtle">
                               {t('audit.changed', { count: String(entry.changes.length) })}
                             </span>
@@ -172,14 +168,11 @@ export function AuditLogPage() {
                         </td>
                         <td
                           className="px-4 py-3 text-sm"
-                          onClick={(e) => auditTarget(entry).href && e.stopPropagation()}
+                          onClick={(e) => entry.href && e.stopPropagation()}
                         >
                           {entry.target ? (
-                            auditTarget(entry).href ? (
-                              <Link
-                                to={auditTarget(entry).href!}
-                                className="text-brand hover:underline"
-                              >
+                            entry.href ? (
+                              <Link to={entry.href} className="text-brand hover:underline">
                                 {entry.target}
                               </Link>
                             ) : (

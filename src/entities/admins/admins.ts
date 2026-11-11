@@ -1,4 +1,5 @@
 import { WORKSPACES, type Workspace } from '@/shared/config/workspaces'
+import { createStore } from '@/shared/lib/createStore'
 
 /** `blocked`: cannot sign in; what they did stays in the history. */
 export type AdminStatus = 'active' | 'blocked'
@@ -20,8 +21,6 @@ export type AdminUser = {
   phone: string
   grants: Grant[]
   status: AdminStatus
-  /** Holds the Bosh admin role in Birzum. */
-  isOwner: boolean
   createdAt: Date
   lastSeenAt?: Date
 }
@@ -54,3 +53,133 @@ export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valu
 
 export const strongEnough = (password: string) =>
   password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password)
+
+const at = (month: number, day: number, hour = 10, minute = 0) =>
+  new Date(2026, month, day, hour, minute)
+
+// The panel's people today. Replace with the API.
+export const adminsStore = createStore<AdminUser>([
+  {
+    id: 'a1',
+    name: 'Sardor Saidov',
+    login: 'admin',
+    email: 'sardor.saidov@birzum.uz',
+    phone: '901112233',
+    grants: [
+      { workspace: 'birzum', roleId: 'owner' },
+      { workspace: 'fortuna', roleId: 'owner' },
+      { workspace: 'vodiy', roleId: 'owner' },
+    ],
+    status: 'active',
+    createdAt: at(6, 1),
+    lastSeenAt: at(9, 18, 9, 5),
+  },
+  {
+    id: 'a2',
+    name: 'Malika Rasulova',
+    login: 'malika.r',
+    email: 'malika.r@birzum.uz',
+    phone: '935554411',
+    grants: [{ workspace: 'birzum', roleId: 'finance' }],
+    status: 'active',
+    createdAt: at(6, 15),
+    lastSeenAt: at(9, 18, 8, 40),
+  },
+  {
+    id: 'a3',
+    name: 'Sardor Nematov',
+    login: 'sardor.n',
+    email: 'sardor.n@birzum.uz',
+    phone: '977003322',
+    grants: [
+      { workspace: 'birzum', roleId: 'support' },
+      { workspace: 'fortuna', roleId: 'support' },
+      { workspace: 'vodiy', roleId: 'support' },
+    ],
+    status: 'active',
+    createdAt: at(7, 3),
+    lastSeenAt: at(9, 17, 19, 12),
+  },
+  {
+    id: 'a4',
+    name: 'Dilshod Karimov',
+    login: 'dilshod.k',
+    email: 'dilshod.k@birzum.uz',
+    phone: '909990011',
+    grants: [{ workspace: 'birzum', roleId: 'collections' }],
+    status: 'active',
+    createdAt: at(8, 10),
+    lastSeenAt: at(9, 16, 17, 30),
+  },
+  {
+    id: 'a5',
+    name: 'Nodira Aliyeva',
+    login: 'nodira.a',
+    email: 'nodira.a@birzum.uz',
+    phone: '933217788',
+    grants: [{ workspace: 'birzum', roleId: 'content' }],
+    status: 'active',
+    createdAt: at(8, 20),
+    lastSeenAt: at(9, 14, 11, 0),
+  },
+  {
+    id: 'a6',
+    name: 'Bobur Tursunov',
+    login: 'bobur.t',
+    email: 'bobur.t@birzum.uz',
+    phone: '946541230',
+    grants: [{ workspace: 'fortuna', roleId: 'support' }],
+    status: 'active',
+    createdAt: at(9, 17, 15),
+  },
+  {
+    id: 'a7',
+    name: 'Jamshid Olimov',
+    login: 'jamshid.o',
+    email: 'jamshid.o@birzum.uz',
+    phone: '901237654',
+    grants: [{ workspace: 'birzum', roleId: 'collections' }],
+    status: 'blocked',
+    createdAt: at(7, 12),
+    lastSeenAt: at(8, 30, 18, 0),
+  },
+  {
+    id: 'a8',
+    name: 'Gulnoza Ergasheva',
+    login: 'gulnoza.e',
+    email: 'gulnoza.e@birzum.uz',
+    phone: '915553040',
+    grants: [
+      { workspace: 'fortuna', roleId: 'credit' },
+      { workspace: 'vodiy', roleId: 'credit' },
+    ],
+    status: 'active',
+    createdAt: at(9, 5),
+    lastSeenAt: at(9, 18, 10, 20),
+  },
+  {
+    id: 'a9',
+    name: 'Azizbek Qodirov',
+    login: 'azizbek.q',
+    email: 'azizbek.q@birzum.uz',
+    phone: '998887766',
+    grants: [{ workspace: 'vodiy', roleId: 'loanManager' }],
+    status: 'active',
+    createdAt: at(9, 8),
+    lastSeenAt: at(9, 17, 16, 45),
+  },
+  {
+    id: 'a10',
+    name: 'Shahzod Yoqubov',
+    login: 'shahzod.y',
+    email: 'shahzod.y@birzum.uz',
+    phone: '935001020',
+    grants: [
+      { workspace: 'fortuna', roleId: 'loanCollector' },
+      { workspace: 'vodiy', roleId: 'loanCollector' },
+    ],
+    status: 'active',
+    createdAt: at(9, 10),
+    lastSeenAt: at(9, 18, 11, 5),
+  },
+])

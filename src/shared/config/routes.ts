@@ -33,8 +33,6 @@ export const ROUTES = {
   roleNew: '/roles/new',
   roleEdit: '/roles/:id/edit',
   audit: '/audit',
-  integrations: '/integrations',
-  apiStatus: '/api-status',
 } as const
 
 /** A merchant's detail page. */

@@ -1,14 +1,20 @@
 import { Info, LayoutGrid, MapPin, ShoppingBag, Store, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { categoriesStore } from '@/entities/catalog/categoriesApi'
-import { loadProducts } from '@/entities/catalog/moderationApi'
-import { targetsFor, type Banner, type BannerTargetKind } from '@/entities/onboarding/banners'
-import { bannersApi } from '@/entities/onboarding/onboardingApi'
-import { attempt } from '@/shared/api/createRemoteStore'
-import { useResource } from '@/shared/api/useResource'
+import { logAction } from '@/entities/audit/audit'
+import { categoriesStore } from '@/entities/catalog/categories'
+import { productsStore } from '@/entities/catalog/products'
+import { loanProductsStore } from '@/entities/microloans/products'
+import { merchantsStore } from '@/entities/merchants/merchants'
+import {
+  bannersStore,
+  targetsFor,
+  type Banner,
+  type BannerTargetKind,
+} from '@/entities/onboarding/banners'
 import type { AppId } from '@/entities/onboarding/slides'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { parseDate } from '@/shared/lib/dates'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -20,7 +26,6 @@ import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
 import { MultiSelectField, type MultiOption } from '@/shared/ui/MultiSelectField'
 import { Switch } from '@/shared/ui/Switch'
-import { TextAreaField } from '@/shared/ui/TextAreaField'
 import { BannerThumb } from './BannerThumb'
 
 type Props = {
@@ -47,12 +52,10 @@ const filled = (text: { uz: string; ru: string }) => !!text.uz.trim() && !!text.
  */
 export function BannerModal({ app, banner, onClose, onDelete }: Props) {
   const { t, tl, lang: panelLang } = useI18n()
+  const products = productsStore.useAll()
   const categories = categoriesStore.useAll()
-  // The backend has no lists of products or shops for a banner to pick from: the first 100
-  // products (and the shops they belong to) stand in, with the ids the backend accepts
-  const catalog = useResource(() => loadProducts({ limit: 100 }), 'banner-products')
-  const products = catalog.data?.items ?? []
-  const merchants = [...new Map(products.map((p) => [p.merchantId, p.merchantName]))]
+  const merchants = merchantsStore.useAll()
+  const loanProducts = loanProductsStore.useAll()
   const targets = targetsFor(app)
   const [image, setImage] = useState<Partial<Record<Lang, string>>>(banner?.image ?? {})
   const [imageLang, setImageLang] = useState<Lang>(panelLang)
@@ -71,19 +74,10 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
   const [endsOn, setEndsOn] = useState(banner?.endsOn ?? '')
   const [visible, setVisible] = useState(banner?.visible ?? true)
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
-  // Loan products have no endpoint yet, so their ids are typed, one per line
-  const [loanIds, setLoanIds] = useState(
-    (banner?.target === 'loanProducts' ? banner.ids : []).join('\n'),
-  )
 
   const keepsDrawn = !!banner?.builtIn && !image.uz && !image.ru
   const missingImage = keepsDrawn ? [] : LANGS.filter((l) => !image[l])
-  const typedIds = loanIds
-    .split(/[\s,;]+/)
-    .map((id) => id.trim())
-    .filter(Boolean)
-  const ids = target === 'nearest' ? [] : target === 'loanProducts' ? typedIds : picks[target]
+  const ids = target === 'nearest' ? [] : picks[target]
   const from = parseDate(startsOn)
   const to = parseDate(endsOn)
   const errors = {
@@ -93,11 +87,11 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
     endsOn: !!(from && to && to < from),
   }
 
-  const options: Record<Exclude<BannerTargetKind, 'nearest' | 'loanProducts'>, MultiOption[]> = {
+  const options: Record<Exclude<BannerTargetKind, 'nearest'>, MultiOption[]> = {
     products: products.map((product) => ({
       value: product.id,
       label: tl(product.name),
-      sub: product.merchantName,
+      sub: merchants.find((m) => m.id === product.merchantId)?.name,
     })),
     categories: categories.map((category) => ({
       value: category.id,
@@ -106,10 +100,19 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
         ? tl(categories.find((c) => c.id === category.parentId)?.name ?? { uz: '', ru: '' })
         : undefined,
     })),
-    merchants: merchants.map(([id, name]) => ({ value: id, label: name })),
+    loanProducts: loanProducts
+      .filter((product) => product.brand === app)
+      .map((product) => ({ value: product.id, label: product.name, sub: tl(product.for) })),
+    merchants: merchants.map((merchant) => ({
+      value: merchant.id,
+      label: merchant.name,
+      leading: merchant.logo ? (
+        <img src={merchant.logo} alt="" className="size-7 rounded-md object-cover" />
+      ) : undefined,
+    })),
   }
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (Object.values(errors).some(Boolean)) return
     const record = {
@@ -121,13 +124,16 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
       endsOn,
       visible,
     }
-    setSaving(true)
-    const ok = await attempt(
-      () => (banner ? bannersApi.update(app, banner.id, record) : bannersApi.create(app, record)),
-      () => toast(t(banner ? 'toast.saved' : 'banners.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    if (banner) bannersStore.update(banner.id, record)
+    else bannersStore.replaceAll([...bannersStore.getAll(), { id: newId(), app, ...record }])
+    logAction({
+      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
+      kind: banner ? 'update' : 'create',
+      action: banner ? 'audit.a.bannerSaved' : 'audit.a.bannerCreated',
+      target: tl(record.title),
+    })
+    toast(t(banner ? 'toast.saved' : 'banners.created'))
+    onClose()
   }
 
   return (
@@ -152,7 +158,7 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(banner ? 'common.save' : 'common.add')}
           </Button>
         </>
@@ -207,15 +213,6 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
           <Info size={18} className="mt-0.5 shrink-0" />
           {t('banners.target.nearest.hint')}
         </p>
-      ) : target === 'loanProducts' ? (
-        <TextAreaField
-          label={t(`banners.pick.${target}`)}
-          hint={t('banners.pick.loanIds.hint')}
-          rows={3}
-          value={loanIds}
-          onChange={(e) => setLoanIds(e.target.value)}
-          error={submitted && errors.ids ? t('banners.pick.required') : undefined}
-        />
       ) : (
         <MultiSelectField
           key={target}
@@ -224,6 +221,7 @@ export function BannerModal({ app, banner, onClose, onDelete }: Props) {
           options={options[target]}
           value={{ all: false, ids }}
           onChange={(next) => setPicks({ ...picks, [target]: next.ids })}
+          hint={target === 'loanProducts' ? t('banners.pick.loanProducts.hint') : undefined}
           error={submitted && errors.ids ? t('banners.pick.required') : undefined}
         />
       )}

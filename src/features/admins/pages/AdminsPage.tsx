@@ -2,14 +2,13 @@ import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  adminsStore,
   initialsOfName,
   sortGrants,
   type AdminStatus,
   type AdminUser,
 } from '@/entities/admins/admins'
-import { adminsStore, deleteAdmin } from '@/entities/admins/adminsApi'
-import { rolesStore } from '@/entities/admins/rolesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { rolesStore } from '@/entities/admins/roles'
 import { useAdmin } from '@/entities/session/session'
 import { ROUTES } from '@/shared/config/routes'
 import { WORKSPACE_INFO, WORKSPACES, type Workspace } from '@/shared/config/workspaces'
@@ -27,6 +26,7 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { AdminModal } from '../components/AdminDialogs'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const tones: Record<AdminStatus, StatusTone> = {
@@ -52,8 +52,8 @@ export function AdminsPage() {
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
 
   const roleName = (id: string) => roles.find((role) => role.id === id)?.name
-  const isMe = (admin: AdminUser) => admin.id === me?.id
-  const isOwner = (admin: AdminUser) => admin.isOwner
+  const isMe = (admin: AdminUser) => admin.login === me?.username || admin.name === me?.name
+  const isOwner = (admin: AdminUser) => admin.grants.some((grant) => grant.roleId === 'owner')
   const owners = admins.filter((a) => isOwner(a) && a.status === 'active')
   // The panel must always keep one active Bosh admin
   const lastOwner = (admin: AdminUser) =>
@@ -247,14 +247,16 @@ export function AdminsPage() {
         onClose={() => setDeleting(null)}
         title={t('admin.delete.title', { name: deleting?.name ?? '' })}
         confirmLabel={t('common.delete')}
-        onConfirm={async () => {
-          if (!deleting) return
-          // The server refuses the last Bosh admin and yourself, with its own message
-          await attempt(
-            () => deleteAdmin(deleting.id),
-            () => toast(t('admin.deleted')),
-          )
+        onConfirm={() => {
+          if (deleting) adminsStore.remove(deleting.id)
           setDeleting(null)
+          toast(t('admin.deleted'))
+          logAction({
+            section: 'admins',
+            kind: 'delete',
+            action: 'audit.a.adminDeleted',
+            target: deleting?.name,
+          })
         }}
       >
         <p>{t('admin.delete.message')}</p>

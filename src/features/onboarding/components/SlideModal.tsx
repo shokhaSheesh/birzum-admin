@@ -1,10 +1,10 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { slidesApi } from '@/entities/onboarding/onboardingApi'
-import { type AppId, type Slide } from '@/entities/onboarding/slides'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { logAction } from '@/entities/audit/audit'
+import { slidesStore, type AppId, type Slide } from '@/entities/onboarding/slides'
 import { LANGS, type Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { ImageField } from '@/shared/ui/ImageField'
@@ -31,29 +31,34 @@ export function SlideModal({ app, slide, onClose, onDelete }: Props) {
   const [image, setImage] = useState<Partial<Record<Lang, string>>>(slide?.image ?? {})
   const [imageLang, setImageLang] = useState<Lang>(panelLang)
   const [title, setTitle] = useState(slide?.title ?? { uz: '', ru: '' })
+  const [text, setText] = useState(slide?.text ?? { uz: '', ru: '' })
   const [visible, setVisible] = useState(slide?.visible ?? true)
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
   // A picture in both languages; only the slides the app ships with may have none at all
   const keepsDrawn = !!slide?.builtIn && !image.uz && !image.ru
   const missingImage = keepsDrawn ? [] : LANGS.filter((l) => !image[l])
   const imageMissing = missingImage.length > 0
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
-    if (imageMissing || !filled(title)) return
+    if (imageMissing || !filled(title) || !filled(text)) return
+    const clean = (v: { uz: string; ru: string }) => ({ uz: v.uz.trim(), ru: v.ru.trim() })
     const record = {
       image: keepsDrawn ? undefined : image,
-      title: { uz: title.uz.trim(), ru: title.ru.trim() },
+      title: clean(title),
+      text: clean(text),
       visible,
     }
-    setSaving(true)
-    const ok = await attempt(
-      () => (slide ? slidesApi.update(app, slide.id, record) : slidesApi.create(app, record)),
-      () => toast(t(slide ? 'toast.saved' : 'slides.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    if (slide) slidesStore.update(slide.id, record)
+    else slidesStore.replaceAll([...slidesStore.getAll(), { id: newId(), app, ...record }])
+    logAction({
+      section: app === 'birzum' ? 'onboarding' : 'mlOnboarding',
+      kind: slide ? 'update' : 'create',
+      action: slide ? 'audit.a.slideSaved' : 'audit.a.slideCreated',
+      target: tl(record.title),
+    })
+    toast(t(slide ? 'toast.saved' : 'slides.created'))
+    onClose()
   }
 
   return (
@@ -78,7 +83,7 @@ export function SlideModal({ app, slide, onClose, onDelete }: Props) {
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(slide ? 'common.save' : 'common.add')}
           </Button>
         </>
@@ -113,6 +118,13 @@ export function SlideModal({ app, slide, onClose, onDelete }: Props) {
         label={t('slides.title')}
         value={title}
         onChange={setTitle}
+        requireBoth={submitted}
+      />
+      <LocalizedTextField
+        label={t('slides.text')}
+        value={text}
+        onChange={setText}
+        multiline
         requireBoth={submitted}
       />
       <div className="flex items-center justify-between gap-4 rounded-control bg-surface p-4">

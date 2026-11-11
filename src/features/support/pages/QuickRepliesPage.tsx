@@ -1,10 +1,8 @@
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { topicsOf } from '@/entities/support/chats'
-import { type QuickReply } from '@/entities/support/replies'
-import { repliesApi } from '@/entities/support/repliesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
-import { type Workspace } from '@/shared/config/workspaces'
+import { repliesStore, type QuickReply } from '@/entities/support/replies'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -14,6 +12,7 @@ import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { RowActions } from '@/shared/ui/RowActions'
 import { ReplyModal } from '../components/ReplyModal'
+import { logAction } from '@/entities/audit/audit'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
@@ -23,7 +22,7 @@ const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-mut
  */
 export function QuickRepliesPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
-  const all = repliesApi.storeOf(app).useAll()
+  const all = repliesStore.useAll().filter((reply) => reply.app === app)
   const [query, setQuery] = useState('')
   const [topic, setTopic] = useState('')
   // undefined: closed; null: creating; an answer: editing it
@@ -147,13 +146,17 @@ export function QuickRepliesPage({ app = 'birzum' }: { app?: Workspace }) {
         onClose={() => setDeleting(null)}
         title={t('replies.delete.title')}
         confirmLabel={t('common.delete')}
-        onConfirm={async () => {
-          if (deleting)
-            await attempt(
-              () => repliesApi.remove(app, deleting.id),
-              () => toast(t('replies.deleted')),
-            )
+        onConfirm={() => {
+          if (deleting) repliesStore.remove(deleting.id)
           setDeleting(null)
+          toast(t('replies.deleted'))
+          logAction({
+            section: app === 'birzum' ? 'quickReplies' : 'mlReplies',
+            kind: 'delete',
+            action: app === 'birzum' ? 'audit.a.replyDeleted' : 'audit.a.loanReplyDeleted',
+            params: app === 'birzum' ? undefined : { brand: WORKSPACE_INFO[app].name },
+            target: deleting ? tl(deleting.title) : undefined,
+          })
         }}
       >
         <p>{t('replies.delete.message', { title: deleting ? tl(deleting.title) : '' })}</p>

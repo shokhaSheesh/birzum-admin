@@ -1,9 +1,8 @@
 import { GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
+import { logAction } from '@/entities/audit/audit'
 import { loanProductsStore } from '@/entities/microloans/products'
-import { bannerState, type Banner } from '@/entities/onboarding/banners'
-import { bannersApi } from '@/entities/onboarding/onboardingApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { bannersStore, bannerState, type Banner } from '@/entities/onboarding/banners'
 import type { AppId } from '@/entities/onboarding/slides'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -39,8 +38,15 @@ export function BannerList({
   setEditing: (banner: Banner | null | undefined) => void
 }) {
   const { t, tl } = useI18n()
-  const banners = bannersApi.storeOf(app).useAll()
+  const all = bannersStore.useAll()
   const products = loanProductsStore.useAll()
+  const banners = all.filter((banner) => banner.app === app)
+  const section = app === 'birzum' ? 'onboarding' : 'mlOnboarding'
+  // Puts this app's new order back into the store, the other apps' banners where they are
+  const place = (ordered: Banner[]) => {
+    const queue = [...ordered]
+    bannersStore.replaceAll(all.map((item) => (item.app === app ? queue.shift()! : item)))
+  }
   const summary = (banner: Banner) =>
     banner.target === 'loanProducts'
       ? banner.ids.map((id) => products.find((p) => p.id === id)?.name ?? id).join(', ')
@@ -56,8 +62,7 @@ export function BannerList({
     setDrop({ id: target.id, after: e.clientY > box.top + box.height / 2 })
   }
   const dropOn = (target: Banner) => {
-    if (dragged && drop && dragged !== target)
-      void bannersApi.order(app, reorder(banners, dragged, target, drop.after))
+    if (dragged && drop && dragged !== target) place(reorder(banners, dragged, target, drop.after))
     setDragged(null)
     setDrop(null)
   }
@@ -66,13 +71,18 @@ export function BannerList({
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const target = banners[banners.indexOf(banner) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target) void bannersApi.order(app, reorder(banners, banner, target, e.key === 'ArrowDown'))
+    if (target) place(reorder(banners, banner, target, e.key === 'ArrowDown'))
   }
-  const toggle = (banner: Banner) =>
-    attempt(
-      () => bannersApi.setVisible(app, banner.id, !banner.visible),
-      () => toast(t(banner.visible ? 'banners.hidden' : 'banners.shown')),
-    )
+  const toggle = (banner: Banner) => {
+    bannersStore.update(banner.id, { visible: !banner.visible })
+    logAction({
+      section,
+      kind: 'update',
+      action: banner.visible ? 'audit.a.bannerHidden' : 'audit.a.bannerShown',
+      target: tl(banner.title),
+    })
+    toast(t(banner.visible ? 'banners.hidden' : 'banners.shown'))
+  }
 
   return (
     <>
@@ -82,8 +92,7 @@ export function BannerList({
         ) : (
           <ol className="flex flex-col">
             {banners.map((banner, i) => {
-              // The server works out the state (Tashkent's today); the local rule is only the fallback
-              const state = banner.state ?? bannerState(banner)
+              const state = bannerState(banner)
               return (
                 <li
                   key={banner.id}
@@ -136,7 +145,7 @@ export function BannerList({
                   <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={banner.visible}
-                      onChange={() => void toggle(banner)}
+                      onChange={() => toggle(banner)}
                       label={t('slides.visible')}
                     />
                   </span>
@@ -174,13 +183,18 @@ export function BannerList({
         onClose={() => setDeleting(null)}
         title={t('banners.delete.title')}
         confirmLabel={t('common.delete')}
-        onConfirm={async () => {
-          if (deleting)
-            await attempt(
-              () => bannersApi.remove(app, deleting.id),
-              () => toast(t('banners.deleted')),
-            )
+        onConfirm={() => {
+          if (deleting) {
+            bannersStore.remove(deleting.id)
+            logAction({
+              section,
+              kind: 'delete',
+              action: 'audit.a.bannerDeleted',
+              target: tl(deleting.title),
+            })
+          }
           setDeleting(null)
+          toast(t('banners.deleted'))
         }}
       >
         <p>{t('banners.delete.message')}</p>

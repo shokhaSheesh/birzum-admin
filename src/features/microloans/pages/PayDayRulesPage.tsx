@@ -1,22 +1,30 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { payDayStoreOf, savePayDay } from '@/entities/microloans/payDayApi'
-import { payDaysFor, type PayDayRule, type PayDayRules } from '@/entities/microloans/rules'
-import { attempt } from '@/shared/api/createRemoteStore'
-import { WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
+import { logAction } from '@/entities/audit/audit'
+import {
+  payDayRulesStore,
+  payDaysFor,
+  ruleRevisionsStore,
+  type PayDayRule,
+  type PayDayRules,
+  type RuleChange,
+} from '@/entities/microloans/rules'
+import { useAdmin } from '@/entities/session/session'
+import { brandPath, WORKSPACE_INFO, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
 import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { NumberField } from '@/shared/ui/NumberField'
 import { SelectField } from '@/shared/ui/SelectField'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { RuleHistory } from '../components/RuleHistory'
 
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
 const DAYS = Array.from({ length: 28 }, (_, i) => i + 1)
+const now = () => new Date()
 
 function Group({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
@@ -38,20 +46,8 @@ function Group({ title, hint, children }: { title: string; hint: string; childre
  */
 export function PayDayRulesPage({ brand }: { brand: Brand }) {
   const { t } = useI18n()
-  const saved = payDayStoreOf(brand).useAll()[0]
-  const loading = payDayStoreOf(brand).useLoading()
-  // The draft starts from the saved rule, so the form opens once it is here
-  if (!saved)
-    return (
-      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
-        <EmptyState title={t(loading ? 'common.loading' : 'products.empty')} />
-      </div>
-    )
-  return <PayDayForm brand={brand} saved={saved} />
-}
-
-function PayDayForm({ brand, saved }: { brand: Brand; saved: PayDayRules }) {
-  const { t } = useI18n()
+  const admin = useAdmin()
+  const saved = payDayRulesStore.useAll().find((rules) => rules.id === brand)!
   const [draft, setDraft] = useState<PayDayRules>(saved)
   const [submitted, setSubmitted] = useState(false)
   const [appDay, setAppDay] = useState(12)
@@ -73,25 +69,59 @@ function PayDayForm({ brand, saved }: { brand: Brand; saved: PayDayRules }) {
   }
 
   const modeText = (mode: PayDayRules['mode']) => t(`payDay.mode.${mode}`)
-  const changes = [
-    draft.mode !== saved.mode,
-    draft.fixedDays.join() !== saved.fixedDays.join(),
-    JSON.stringify(draft.rules) !== JSON.stringify(saved.rules),
-    draft.after !== saved.after,
-  ].filter(Boolean)
+  const lineText = (rules: PayDayRule[]) =>
+    rules
+      .map((rule) =>
+        t('payDay.line', {
+          from: String(rule.from),
+          to: String(rule.to),
+          upTo: rule.upTo === 'appDay' ? t('payDay.upTo.appDay') : String(rule.upTo),
+        }),
+      )
+      .join('; ')
+  const changes: RuleChange[] = []
+  if (draft.mode !== saved.mode)
+    changes.push({ label: t('payDay.mode'), from: modeText(saved.mode), to: modeText(draft.mode) })
+  if (draft.fixedDays.join() !== saved.fixedDays.join())
+    changes.push({
+      label: t('payDay.fixed'),
+      from: saved.fixedDays.join(', '),
+      to: draft.fixedDays.join(', '),
+    })
+  if (JSON.stringify(draft.rules) !== JSON.stringify(saved.rules))
+    changes.push({
+      label: t('payDay.lines'),
+      from: lineText(saved.rules),
+      to: lineText(draft.rules),
+    })
+  if (draft.after !== saved.after)
+    changes.push({ label: t('payDay.after'), from: String(saved.after), to: String(draft.after) })
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (Object.values(errors).some(Boolean)) {
       toast(t('pricing.error.form'), 'error')
       return
     }
-    // The server checks the rule again and names the field it refuses; its message is shown
-    const ok = await attempt(
-      () => savePayDay(brand, draft),
-      () => toast(t('rules.saved')),
-    )
-    if (ok) setSubmitted(false)
+    payDayRulesStore.update(brand, draft)
+    ruleRevisionsStore.save({
+      id: newId(),
+      brand,
+      page: 'payDay',
+      at: now(),
+      by: admin?.name ?? '—',
+      changes,
+    })
+    logAction({
+      section: 'mlPayDay',
+      kind: 'update',
+      action: 'audit.a.payDaySaved',
+      params: { brand: WORKSPACE_INFO[brand].name },
+      target: t('nav.payDay'),
+      href: brandPath(brand, 'pay-day'),
+    })
+    setSubmitted(false)
+    toast(t('rules.saved'))
   }
 
   const preview = payDaysFor(draft, appDay)
@@ -120,12 +150,7 @@ function PayDayForm({ brand, saved }: { brand: Brand; saved: PayDayRules }) {
         >
           {t('common.cancel')}
         </Button>
-        <Button
-          size="sm"
-          className="px-4!"
-          disabled={changes.length === 0}
-          onClick={() => void save()}
-        >
+        <Button size="sm" className="px-4!" disabled={changes.length === 0} onClick={save}>
           {t('common.save')}
         </Button>
       </ActionBar>
@@ -248,7 +273,7 @@ function PayDayForm({ brand, saved }: { brand: Brand; saved: PayDayRules }) {
             </Group>
           )}
 
-          <RuleHistory brand={brand} />
+          <RuleHistory brand={brand} page="payDay" />
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24">

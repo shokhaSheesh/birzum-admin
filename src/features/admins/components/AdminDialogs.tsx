@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import {
+  adminsStore,
   sortGrants,
   strongEnough,
   isEmail,
@@ -9,11 +10,10 @@ import {
   type AdminUser,
   type Grant,
 } from '@/entities/admins/admins'
-import { createAdmin, updateAdmin } from '@/entities/admins/adminsApi'
-import { rolesStore } from '@/entities/admins/rolesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { rolesStore } from '@/entities/admins/roles'
 import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { PHONE_DIGITS } from '@/shared/lib/phone'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -24,6 +24,7 @@ import { PhoneField } from '@/shared/ui/PhoneField'
 import { SelectField } from '@/shared/ui/SelectField'
 import { TextField } from '@/shared/ui/TextField'
 import { BrandChecks } from './BrandChecks'
+import { logAction } from '@/entities/audit/audit'
 
 /**
  * Add or edit an admin: name, login, phone, the businesses they work in with a role in each
@@ -43,6 +44,7 @@ export function AdminModal({
 }) {
   const { t } = useI18n()
   const roles = rolesStore.useAll()
+  const roleName = (id: string) => roles.find((role) => role.id === id)?.name ?? '—'
   const [name, setName] = useState(admin?.name ?? '')
   const [login, setLogin] = useState(admin?.login ?? '')
   const [phone, setPhone] = useState(admin?.phone ?? '')
@@ -58,7 +60,6 @@ export function AdminModal({
   const [passwordRepeat, setPasswordRepeat] = useState('')
   const [status, setStatus] = useState<AdminStatus>(admin?.status ?? 'active')
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
   const rolesFor = (workspace: Workspace) => roles.filter((role) => role.brands.includes(workspace))
   const grants: Grant[] = brands.map((workspace) => ({
     workspace,
@@ -66,11 +67,21 @@ export function AdminModal({
       ? roleOf[workspace]!
       : '',
   }))
+  const grantText = (list: Grant[]) =>
+    sortGrants(list)
+      .map((grant) => `${WORKSPACE_INFO[grant.workspace].name}: ${roleName(grant.roleId)}`)
+      .join(', ') || '—'
+
+  const taken = adminsStore
+    .getAll()
+    .some((other) => other.id !== admin?.id && other.login === login.trim().toLowerCase())
   const errors = {
     name: name.trim().split(/\s+/).length < 2 ? t('admin.error.name') : undefined,
     login: !/^[a-z][a-z0-9._]{2,}$/.test(login.trim().toLowerCase())
       ? t('merchant.error.login')
-      : undefined,
+      : taken
+        ? t('admin.error.loginTaken')
+        : undefined,
     phone: phone.length !== PHONE_DIGITS ? t('error.required') : undefined,
     email: !isEmail(email) ? t('admin.error.email') : undefined,
     brands: brands.length === 0 ? t('admin.error.brands') : undefined,
@@ -84,7 +95,7 @@ export function AdminModal({
     passwordRepeat: password !== passwordRepeat ? t('admin.error.passwordMismatch') : undefined,
   }
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (Object.values(errors).some(Boolean)) return
     const data = {
@@ -94,17 +105,49 @@ export function AdminModal({
       phone,
       grants,
       status,
-      password,
     }
-    setSaving(true)
-    // The server writes the activity log; a taken login, phone or email comes back as its message
-    const ok = await attempt(
-      () => (admin ? updateAdmin(admin.id, data) : createAdmin(data)),
-      () =>
-        toast(t(admin ? (password ? 'admin.savedWithPassword' : 'toast.saved') : 'admin.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    if (admin) {
+      adminsStore.update(admin.id, data)
+      toast(t(password ? 'admin.savedWithPassword' : 'toast.saved'))
+      logAction({
+        section: 'admins',
+        kind: 'update',
+        action: 'audit.a.adminSaved',
+        target: data.name,
+        // Role, status and password are what an audit asks about; the rest is in the record
+        changes: [
+          ...(grantText(admin.grants) !== grantText(data.grants)
+            ? [
+                {
+                  field: 'audit.f.role' as const,
+                  from: grantText(admin.grants),
+                  to: grantText(data.grants),
+                },
+              ]
+            : []),
+          ...(admin.status !== data.status
+            ? [
+                {
+                  field: 'audit.f.status' as const,
+                  from: t(`admin.status.${admin.status}`),
+                  to: t(`admin.status.${data.status}`),
+                },
+              ]
+            : []),
+          ...(password ? [{ field: 'admin.password' as const, from: '••••••', to: '••••••' }] : []),
+        ],
+      })
+    } else {
+      adminsStore.save({ id: newId(), ...data, createdAt: new Date() })
+      toast(t('admin.created'))
+      logAction({
+        section: 'admins',
+        kind: 'create',
+        action: 'audit.a.adminCreated',
+        target: data.name,
+      })
+    }
+    onClose()
   }
 
   return (
@@ -118,7 +161,7 @@ export function AdminModal({
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(admin ? 'common.save' : 'admin.create')}
           </Button>
         </>

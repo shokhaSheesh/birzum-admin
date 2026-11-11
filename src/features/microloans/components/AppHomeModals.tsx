@@ -1,10 +1,15 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { type InfoTile, type MenuSlot } from '@/entities/microloans/appHome'
-import { saveMenuSlot, tilesApi } from '@/entities/microloans/appHomeApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { logAction } from '@/entities/audit/audit'
+import {
+  infoTilesStore,
+  menuSlotsStore,
+  type InfoTile,
+  type MenuSlot,
+} from '@/entities/microloans/appHome'
 import type { Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { ImageField } from '@/shared/ui/ImageField'
@@ -22,18 +27,18 @@ export function MenuSlotModal({ slot, onClose }: { slot: MenuSlot; onClose: () =
   const [visible, setVisible] = useState(slot.visible)
   const [submitted, setSubmitted] = useState(false)
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (!filled(label)) return
-    const ok = await attempt(
-      () =>
-        saveMenuSlot(slot, {
-          label: { uz: label.uz.trim(), ru: label.ru.trim() },
-          visible: slot.locked ? true : visible,
-        }),
-      () => toast(t('toast.saved')),
-    )
-    if (ok) onClose()
+    menuSlotsStore.update(slot.id, { label, visible: slot.locked ? true : visible })
+    logAction({
+      section: 'mlOnboarding',
+      kind: 'update',
+      action: 'audit.a.appMenuSaved',
+      target: tl(label),
+    })
+    toast(t('toast.saved'))
+    onClose()
   }
 
   return (
@@ -47,7 +52,7 @@ export function MenuSlotModal({ slot, onClose }: { slot: MenuSlot; onClose: () =
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t('common.save')}
           </Button>
         </>
@@ -92,23 +97,32 @@ export function InfoTileModal({
   const [visible, setVisible] = useState(tile?.visible ?? true)
   const [submitted, setSubmitted] = useState(false)
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (!filled(title) || !filled(text)) return
     const next = { title, text, image, visible }
-    const ok = await attempt(
-      () => (tile ? tilesApi.update(brand, tile.id, next) : tilesApi.create(brand, next)),
-      () => toast(t(tile ? 'toast.saved' : 'appHome.tile.created')),
-    )
-    if (ok) onClose()
+    if (tile) infoTilesStore.update(tile.id, next)
+    else infoTilesStore.replaceAll([...infoTilesStore.getAll(), { id: newId(), brand, ...next }])
+    logAction({
+      section: 'mlOnboarding',
+      kind: tile ? 'update' : 'create',
+      action: tile ? 'audit.a.tileSaved' : 'audit.a.tileCreated',
+      target: tl(title),
+    })
+    toast(t(tile ? 'toast.saved' : 'appHome.tile.created'))
+    onClose()
   }
-  const remove = async () => {
+  const remove = () => {
     if (!tile) return
-    const ok = await attempt(
-      () => tilesApi.remove(brand, tile.id),
-      () => toast(t('appHome.tile.deleted')),
-    )
-    if (ok) onClose()
+    infoTilesStore.remove(tile.id)
+    logAction({
+      section: 'mlOnboarding',
+      kind: 'delete',
+      action: 'audit.a.tileDeleted',
+      target: tl(tile.title),
+    })
+    toast(t('appHome.tile.deleted'))
+    onClose()
   }
 
   return (
@@ -120,12 +134,7 @@ export function InfoTileModal({
       footer={
         <>
           {tile && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="mr-auto text-danger!"
-              onClick={() => void remove()}
-            >
+            <Button size="sm" variant="ghost" className="mr-auto text-danger!" onClick={remove}>
               <Trash2 size={18} />
               {t('common.delete')}
             </Button>
@@ -133,7 +142,7 @@ export function InfoTileModal({
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(tile ? 'common.save' : 'common.add')}
           </Button>
         </>

@@ -1,15 +1,15 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { type Faq } from '@/entities/faq/faq'
-import { faqApi } from '@/entities/faq/faqApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { faqStore, type Faq } from '@/entities/faq/faq'
 import { emptyText, isComplete } from '@/shared/i18n/localized'
-import { type Workspace } from '@/shared/config/workspaces'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** Whose app's questions. */
@@ -26,25 +26,40 @@ export function FaqModal({ app, item, onClose, onDelete }: Props) {
   const [question, setQuestion] = useState(item?.question ?? emptyText())
   const [answer, setAnswer] = useState(item?.answer ?? emptyText())
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
 
-  const save = async () => {
+  const ml = app !== 'birzum'
+  const audit = {
+    section: ml ? 'mlFaq' : 'faq',
+    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
+  } as const
+  const save = () => {
     setSubmitted(true)
     if (!isComplete(question) || !isComplete(answer)) return
     const clean = (v: typeof question) => ({ uz: v.uz.trim(), ru: v.ru.trim() })
-    const input = {
-      question: clean(question),
-      answer: clean(answer),
-      // A new question is shown; an edited one keeps its switch
-      visible: item?.visible ?? true,
+    if (item) {
+      faqStore.update(item.id, { question: clean(question), answer: clean(answer) })
+      toast(t('toast.saved'))
+      logAction({
+        ...audit,
+        kind: 'update',
+        action: ml ? 'audit.a.loanFaqSaved' : 'audit.a.faqSaved',
+        target: tl(clean(question)),
+      })
+    } else {
+      // New questions go to the end of the list; drag them up if they matter more
+      faqStore.replaceAll([
+        ...faqStore.getAll(),
+        { id: newId(), app, question: clean(question), answer: clean(answer), visible: true },
+      ])
+      toast(t('faq.created'))
+      logAction({
+        ...audit,
+        kind: 'create',
+        action: ml ? 'audit.a.loanFaqCreated' : 'audit.a.faqCreated',
+        target: tl(clean(question)),
+      })
     }
-    setSaving(true)
-    const ok = await attempt(
-      () => (item ? faqApi.update(app, item.id, input) : faqApi.create(app, input)),
-      () => toast(t(item ? 'toast.saved' : 'faq.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    onClose()
   }
 
   return (
@@ -69,7 +84,7 @@ export function FaqModal({ app, item, onClose, onDelete }: Props) {
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(item ? 'common.save' : 'common.add')}
           </Button>
         </>

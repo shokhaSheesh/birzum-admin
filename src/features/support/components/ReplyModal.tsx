@@ -1,17 +1,17 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { topicsOf } from '@/entities/support/chats'
-import { type QuickReply } from '@/entities/support/replies'
-import { repliesApi } from '@/entities/support/repliesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
-import { type Workspace } from '@/shared/config/workspaces'
+import { repliesStore, type QuickReply } from '@/entities/support/replies'
+import { WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { emptyText, isComplete } from '@/shared/i18n/localized'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
 import { SelectField } from '@/shared/ui/SelectField'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** Whose answers: Birzum's or a microloan brand's. */
@@ -29,20 +29,36 @@ export function ReplyModal({ app, reply, onClose, onDelete }: Props) {
   const [title, setTitle] = useState(reply?.title ?? emptyText())
   const [text, setText] = useState(reply?.text ?? emptyText())
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
 
-  const save = async () => {
+  const ml = app !== 'birzum'
+  const audit = {
+    section: ml ? 'mlReplies' : 'quickReplies',
+    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
+  } as const
+  const save = () => {
     setSubmitted(true)
     if (!isComplete(title) || !isComplete(text)) return
     const clean = (value: typeof title) => ({ uz: value.uz.trim(), ru: value.ru.trim() })
-    const input = { topic, title: clean(title), text: clean(text) }
-    setSaving(true)
-    const ok = await attempt(
-      () => (reply ? repliesApi.update(app, reply.id, input) : repliesApi.create(app, input)),
-      () => toast(t(reply ? 'toast.saved' : 'replies.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    if (reply) {
+      repliesStore.update(reply.id, { topic, title: clean(title), text: clean(text) })
+      toast(t('toast.saved'))
+      logAction({
+        ...audit,
+        kind: 'update',
+        action: ml ? 'audit.a.loanReplySaved' : 'audit.a.replySaved',
+        target: tl(clean(title)),
+      })
+    } else {
+      repliesStore.save({ id: newId(), app, topic, title: clean(title), text: clean(text) })
+      toast(t('replies.created'))
+      logAction({
+        ...audit,
+        kind: 'create',
+        action: ml ? 'audit.a.loanReplyCreated' : 'audit.a.replyCreated',
+        target: tl(clean(title)),
+      })
+    }
+    onClose()
   }
 
   return (
@@ -67,7 +83,7 @@ export function ReplyModal({ app, reply, onClose, onDelete }: Props) {
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(reply ? 'common.save' : 'common.add')}
           </Button>
         </>

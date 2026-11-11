@@ -12,8 +12,13 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { type InfoTile, type MenuSlot } from '@/entities/microloans/appHome'
-import { menuStoreOf, orderMenu, tilesApi } from '@/entities/microloans/appHomeApi'
+import { logAction } from '@/entities/audit/audit'
+import {
+  infoTilesStore,
+  menuSlotsStore,
+  type InfoTile,
+  type MenuSlot,
+} from '@/entities/microloans/appHome'
 import type { Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
@@ -70,15 +75,27 @@ function Block({
  */
 export function AppHomePage({ brand }: { brand: Brand }) {
   const { t, tl } = useI18n()
-  const tiles = tilesApi.storeOf(brand).useAll()
-  const allSlots = menuStoreOf(brand).useAll()
-  const actions = allSlots.filter((slot) => slot.place === 'action')
-  const tabs = allSlots.filter((slot) => slot.place === 'tab')
+  const allTiles = infoTilesStore.useAll()
+  const allSlots = menuSlotsStore.useAll()
+  const tiles = allTiles.filter((tile) => tile.brand === brand)
+  const actions = allSlots.filter((slot) => slot.brand === brand && slot.place === 'action')
+  const tabs = allSlots.filter((slot) => slot.brand === brand && slot.place === 'tab')
   const [slot, setSlot] = useState<MenuSlot | null>(null)
   const [tile, setTile] = useState<InfoTile | null | undefined>(undefined)
 
-  const placeSlots = (ordered: MenuSlot[]) => void orderMenu(brand, ordered)
-  const placeTiles = (ordered: InfoTile[]) => void tilesApi.order(brand, ordered)
+  // Puts one list's new order back into its store, everything else where it is
+  const placeSlots = (ordered: MenuSlot[]) => {
+    const queue = [...ordered]
+    const ids = new Set(ordered.map((item) => item.id))
+    menuSlotsStore.replaceAll(allSlots.map((item) => (ids.has(item.id) ? queue.shift()! : item)))
+    logAction({ section: 'mlOnboarding', kind: 'update', action: 'audit.a.appMenuOrdered' })
+  }
+  const placeTiles = (ordered: InfoTile[]) => {
+    const queue = [...ordered]
+    infoTilesStore.replaceAll(
+      allTiles.map((item) => (item.brand === brand ? queue.shift()! : item)),
+    )
+  }
 
   const slotRow = (item: MenuSlot) => {
     const Icon = ICONS[item.key]

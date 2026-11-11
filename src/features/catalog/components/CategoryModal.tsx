@@ -1,10 +1,9 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { childrenOf, rootsOf, type Category } from '@/entities/catalog/categories'
-import { categoriesStore, createCategory, updateCategory } from '@/entities/catalog/categoriesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import { categoriesStore, childrenOf, rootsOf, type Category } from '@/entities/catalog/categories'
 import type { Lang } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { newId } from '@/shared/lib/createStore'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
 import { ImageField } from '@/shared/ui/ImageField'
@@ -13,6 +12,7 @@ import { SelectField } from '@/shared/ui/SelectField'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 import { CategoryThumb } from './CategoryThumb'
+import { logAction } from '@/entities/audit/audit'
 
 type Props = {
   /** The category to edit, or null to create one. */
@@ -37,7 +37,6 @@ export function CategoryModal({ category, parentId: presetParent, onClose, onDel
   const [name, setName] = useState(category?.name ?? { uz: '', ru: '' })
   const [visible, setVisible] = useState(category?.visible ?? true)
   const [submitted, setSubmitted] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   // Names only need to differ among siblings: two parents may each have "Aksessuarlar"
   const taken = (lang: Lang) =>
@@ -52,7 +51,7 @@ export function CategoryModal({ category, parentId: presetParent, onClose, onDel
     if (taken(lang)) return t('category.error.taken')
   }
 
-  const save = async () => {
+  const save = () => {
     setSubmitted(true)
     if (!name.uz.trim() || !name.ru.trim() || taken('uz') || taken('ru')) return
     const record = {
@@ -61,14 +60,27 @@ export function CategoryModal({ category, parentId: presetParent, onClose, onDel
       image,
       visible,
     }
-    setSaving(true)
-    const ok = await attempt(
-      () => (category ? updateCategory(category.id, record) : createCategory(record)),
-      () =>
-        toast(t(category ? 'toast.saved' : parentId ? 'subcategory.created' : 'category.created')),
-    )
-    setSaving(false)
-    if (ok) onClose()
+    if (category) {
+      categoriesStore.update(category.id, record)
+      toast(t('toast.saved'))
+      logAction({
+        section: 'categories',
+        kind: 'update',
+        action: 'audit.a.categorySaved',
+        target: tl(record.name),
+      })
+    } else {
+      // A new category goes to the end of the list
+      categoriesStore.replaceAll([...all, { id: newId(), products: 0, ...record }])
+      toast(t(parentId ? 'subcategory.created' : 'category.created'))
+      logAction({
+        section: 'categories',
+        kind: 'create',
+        action: 'audit.a.categoryCreated',
+        target: tl(record.name),
+      })
+    }
+    onClose()
   }
 
   return (
@@ -93,7 +105,7 @@ export function CategoryModal({ category, parentId: presetParent, onClose, onDel
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
+          <Button size="sm" className="px-4!" onClick={save}>
             {t(category ? 'common.save' : 'common.add')}
           </Button>
         </>

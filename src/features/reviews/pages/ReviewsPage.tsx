@@ -1,13 +1,18 @@
 import { Eye, EyeOff, RotateCcw, Search, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { type Review } from '@/entities/reviews/reviews'
-import { loadReviews } from '@/entities/reviews/reviewsApi'
-import { useResource } from '@/shared/api/useResource'
-import { useServerPager } from '@/shared/api/useServerPager'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { clientsStore, initialsOf } from '@/entities/clients/clients'
+import { merchantsStore } from '@/entities/merchants/merchants'
+import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
+import { ratingOf, reviewsStore, type Review } from '@/entities/reviews/reviews'
+import { applicationPath, clientPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
+import { inRange } from '@/shared/lib/dates'
 import { formatDate, formatDateTime, groupDigits } from '@/shared/lib/format'
-import { thisMonth, type Period } from '@/shared/lib/period'
+import { boundsOf, thisMonth, type Period } from '@/shared/lib/period'
+import { usePagination } from '@/shared/lib/usePagination'
+import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -35,47 +40,57 @@ const score = (n: number) => n.toFixed(1).replace('.', ',')
  */
 export function ReviewsPage() {
   const { t } = useI18n()
+  const reviews = reviewsStore.useAll()
+  const merchants = merchantsStore.useAll()
+  const clients = clientsStore.useAll()
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
   const [tab, setTab] = useState<Tab>('all')
   const [query, setQuery] = useState('')
-  const [search, setSearch] = useState('')
   const [merchant, setMerchant] = useState('')
   const [stars, setStars] = useState('')
   const [hiding, setHiding] = useState<Review | null>(null)
   const [restoring, setRestoring] = useState<Review | null>(null)
   const [deleting, setDeleting] = useState<Review | null>(null)
 
-  useEffect(() => {
-    const id = setTimeout(() => setSearch(query.trim()), 350)
-    return () => clearTimeout(id)
-  }, [query])
+  const inPeriod = reviews.filter((review) => inRange(review.at, boundsOf(period)))
+  const { count, average } = ratingOf(inPeriod)
+  const published = inPeriod.filter((review) => review.status === 'published')
+  const negative = published.filter((review) => review.rating <= 2)
+  const moderated = inPeriod.filter((review) => review.status !== 'published')
+  const spread = [5, 4, 3, 2, 1].map((n) => ({
+    n,
+    count: published.filter((review) => review.rating === n).length,
+  }))
+  const byMerchant = merchants
+    .map((item) => {
+      const own = inPeriod.filter((review) => review.merchantId === item.id)
+      return {
+        merchant: item,
+        ...ratingOf(own),
+        negative: own.filter((r) => r.status === 'published' && r.rating <= 2).length,
+        removed: own.filter((r) => r.status === 'removed').length,
+      }
+    })
+    .filter((row) => row.count > 0 || row.removed > 0)
+    .sort((a, b) => b.average - a.average)
 
-  // Everything is counted by the server; the tab only picks the rows. The figures follow the
-  // period, search, shop and stars, not the tab
-  const filters = JSON.stringify([tab, search, merchant, stars, period])
-  const { page, limit, pager: pagerOf } = useServerPager(filters)
-  const { data, loading, reload } = useResource(
-    () =>
-      loadReviews({
-        period,
-        status: tab,
-        q: search,
-        merchantId: merchant,
-        rating: stars,
-        page,
-        limit,
-      }),
-    JSON.stringify([filters, page, limit]),
+  const needle = query.trim().toLowerCase()
+  const inTab = (review: Review, which: Tab) =>
+    which === 'all' ||
+    (which === 'negative'
+      ? review.status === 'published' && review.rating <= 2
+      : review.status === which)
+  const filtered = inPeriod.filter(
+    (review) =>
+      (needle === '' ||
+        review.text.toLowerCase().includes(needle) ||
+        review.author.toLowerCase().includes(needle) ||
+        review.productName.toLowerCase().includes(needle)) &&
+      (!merchant || review.merchantId === merchant) &&
+      (!stars || review.rating === Number(stars)),
   )
-  const rows = data?.items ?? []
-  const pager = pagerOf(data?.total ?? 0)
-  const counts = data?.counts ?? { all: 0, published: 0, negative: 0, hidden: 0, removed: 0 }
-  const count = counts.published
-  const average = data?.average ?? 0
-  const negativeCount = counts.negative
-  const moderatedCount = counts.hidden + counts.removed
-  const spread = [5, 4, 3, 2, 1].map((n, i) => ({ n, count: data?.distribution[i] ?? 0 }))
-  const byMerchant = data?.merchants ?? []
+  const rows = filtered.filter((review) => inTab(review, tab))
+  const pager = usePagination(rows, JSON.stringify([tab, query, merchant, stars, period]))
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -85,7 +100,7 @@ export function ReviewsPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label={t('reviews.stat.count')}
-          value={groupDigits(counts.all)}
+          value={groupDigits(inPeriod.length)}
           hint={t('reviews.stat.countHint', { count: groupDigits(count) })}
         />
         <StatCard
@@ -95,21 +110,21 @@ export function ReviewsPage() {
         />
         <StatCard
           label={t('reviews.tab.negative')}
-          value={groupDigits(negativeCount)}
+          value={groupDigits(negative.length)}
           hint={
             count
               ? t('reviews.stat.share', {
-                  share: String(Math.round((negativeCount / count) * 100)),
+                  share: String(Math.round((negative.length / count) * 100)),
                 })
               : undefined
           }
         />
         <StatCard
           label={t('reviews.stat.moderated')}
-          value={groupDigits(moderatedCount)}
+          value={groupDigits(moderated.length)}
           hint={t('reviews.stat.moderatedHint', {
-            hidden: String(counts.hidden),
-            removed: String(counts.removed),
+            hidden: String(moderated.filter((r) => r.status === 'hidden').length),
+            removed: String(moderated.filter((r) => r.status === 'removed').length),
           })}
         />
       </div>
@@ -167,19 +182,20 @@ export function ReviewsPage() {
           ) : (
             <ul className="-mx-2 flex flex-col">
               {byMerchant.map((row) => (
-                <li key={row.merchantId}>
+                <li key={row.merchant.id}>
                   <button
                     type="button"
-                    onClick={() => setMerchant(merchant === row.merchantId ? '' : row.merchantId)}
+                    onClick={() => setMerchant(merchant === row.merchant.id ? '' : row.merchant.id)}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-control p-2 text-left hover:bg-surface',
-                      merchant === row.merchantId && 'bg-surface',
+                      merchant === row.merchant.id && 'bg-surface',
                     )}
                   >
+                    <MerchantLogo merchant={row.merchant} size="sm" />
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate font-semibold">{row.merchantName}</span>
+                      <span className="truncate font-semibold">{row.merchant.name}</span>
                       <span className="truncate text-xs text-ink-muted">
-                        {t('reviews.stat.countHint', { count: String(row.published) })}
+                        {t('reviews.stat.countHint', { count: String(row.count) })}
                         {row.negative > 0 &&
                           ` · ${t('reviews.merchants.negative', { count: String(row.negative) })}`}
                       </span>
@@ -192,7 +208,7 @@ export function ReviewsPage() {
                     <span className="flex items-center gap-2">
                       <Stars rating={row.average} size={14} label={score(row.average)} />
                       <span className="w-7 text-right font-bold tabular-nums">
-                        {row.published ? score(row.average) : '—'}
+                        {row.count ? score(row.average) : '—'}
                       </span>
                     </span>
                   </button>
@@ -210,7 +226,7 @@ export function ReviewsPage() {
             options={(['all', 'negative', 'hidden', 'removed'] as const).map((value) => ({
               value,
               label: t(`reviews.tab.${value}`),
-              count: counts[value],
+              count: filtered.filter((review) => inTab(review, value)).length,
             }))}
             value={tab}
             onChange={setTab}
@@ -231,7 +247,7 @@ export function ReviewsPage() {
             label={t('products.col.merchant')}
             options={[
               { value: '', label: t('products.allMerchants') },
-              ...byMerchant.map((item) => ({ value: item.merchantId, label: item.merchantName })),
+              ...merchants.map((item) => ({ value: item.id, label: item.name })),
             ]}
             value={merchant}
             onChange={setMerchant}
@@ -250,14 +266,14 @@ export function ReviewsPage() {
           />
         </div>
 
-        {loading && !data ? (
-          <EmptyState title={t('common.loading')} />
-        ) : rows.length === 0 ? (
+        {rows.length === 0 ? (
           <EmptyState title={t('reviews.empty')} />
         ) : (
           <>
             <ul className="flex flex-col border-t border-line">
-              {rows.map((review) => {
+              {pager.rows.map((review) => {
+                const shop = merchants.find((item) => item.id === review.merchantId)
+                const author = clients.find((item) => item.id === review.clientId)
                 return (
                   <li
                     key={review.id}
@@ -314,16 +330,37 @@ export function ReviewsPage() {
                           ? t('review.removedBy', { date: formatDate(review.moderation.at) })
                           : t('review.hiddenBy', {
                               reason: t(`review.reason.${review.moderation.reason ?? 'other'}`),
-                              by: review.moderation.by.slice(0, 8),
+                              by: review.moderation.by,
                               date: formatDate(review.moderation.at),
                             })}
                         {review.moderation.comment && ` — ${review.moderation.comment}`}
                       </p>
                     )}
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                      <span className="font-medium">{review.author}</span>
-                      <span className="text-ink-muted">{review.merchantName}</span>
+                      <Link
+                        to={clientPath(review.clientId)}
+                        className="flex items-center gap-2 font-medium hover:underline"
+                      >
+                        <Avatar
+                          size="sm"
+                          initials={author ? initialsOf(author) : review.author[0]}
+                          photoUrl={author?.photoUrl}
+                        />
+                        {review.author}
+                      </Link>
+                      {shop && (
+                        <span className="flex items-center gap-2 text-ink-muted">
+                          <MerchantLogo merchant={shop} size="xs" />
+                          {shop.name}
+                        </span>
+                      )}
                       <span className="text-ink-muted">{review.productName}</span>
+                      <Link
+                        to={applicationPath(review.applicationId)}
+                        className="font-medium text-brand tabular-nums hover:underline"
+                      >
+                        № {groupDigits(review.applicationId)}
+                      </Link>
                     </div>
                   </li>
                 )
@@ -334,19 +371,9 @@ export function ReviewsPage() {
         )}
       </div>
 
-      {hiding && (
-        <HideReviewModal review={hiding} onClose={() => setHiding(null)} onDone={reload} />
-      )}
-      {restoring && (
-        <RestoreReviewDialog
-          review={restoring}
-          onClose={() => setRestoring(null)}
-          onDone={reload}
-        />
-      )}
-      {deleting && (
-        <DeleteReviewDialog review={deleting} onClose={() => setDeleting(null)} onDone={reload} />
-      )}
+      {hiding && <HideReviewModal review={hiding} onClose={() => setHiding(null)} />}
+      {restoring && <RestoreReviewDialog review={restoring} onClose={() => setRestoring(null)} />}
+      {deleting && <DeleteReviewDialog review={deleting} onClose={() => setDeleting(null)} />}
     </div>
   )
 }

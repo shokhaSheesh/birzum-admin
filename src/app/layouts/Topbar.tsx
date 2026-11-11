@@ -1,9 +1,9 @@
-import { Check, ChevronDown, KeyRound, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
+import { Check, ChevronDown, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { adminsStore } from '@/entities/admins/admins'
 import { useAdmin } from '@/entities/session/session'
-import { signOut } from '@/features/auth/api/auth'
-import { ChangePasswordModal } from '@/features/auth/components/ChangePasswordModal'
+import { signOut } from '@/features/auth/api/mockAuth'
 import { WORKSPACE_INFO, WORKSPACES, workspaceOf } from '@/shared/config/workspaces'
 import { LANG_NAMES, LANGS } from '@/shared/i18n/dictionaries'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -23,17 +23,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { theme, setTheme } = useTheme()
   const admin = useAdmin()
   const [menu, setMenu] = useState(false)
-  const [changing, setChanging] = useState(false)
   const navigate = useNavigate()
   const workspace = workspaceOf(useLocation().pathname)
-  // The businesses the admin has a role in (`me`); one with no membership is not offered
-  const workspaces = WORKSPACES.filter((value) =>
-    admin?.memberships.some((m) => m.company_code === value),
-  )
-  const roleName =
-    admin?.memberships.find((m) => m.company_code === workspace)?.role_name ??
-    admin?.memberships[0]?.role_name ??
-    t('topbar.role')
+  // The businesses the signed-in admin has a role in; all of them for a sample session
+  const record = adminsStore.useAll().find((item) => item.login === admin?.username)
+  const workspaces = record
+    ? WORKSPACES.filter((value) => record.grants.some((grant) => grant.workspace === value))
+    : WORKSPACES
   const dark =
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -96,7 +92,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             <Avatar initials={admin?.initials ?? ''} />
             <span className="hidden flex-col text-left leading-tight md:flex">
               <span className="text-sm font-semibold">{admin?.name}</span>
-              <span className="text-xs text-ink-muted">{roleName}</span>
+              <span className="text-xs text-ink-muted">{t('topbar.role')}</span>
             </span>
             <ChevronDown size={16} className="hidden text-ink-subtle md:block" />
           </button>
@@ -144,18 +140,6 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setMenu(false)
-                    setChanging(true)
-                  }}
-                  className="flex h-10 w-full items-center gap-2.5 rounded-control px-3 text-sm font-semibold hover:bg-surface"
-                >
-                  <KeyRound size={18} />
-                  {t('password.change')}
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
                   onClick={signOut}
                   className="flex h-10 w-full items-center gap-2.5 rounded-control px-3 text-sm font-semibold text-danger hover:bg-danger-soft"
                 >
@@ -167,7 +151,6 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           )}
         </div>
       </div>
-      {changing && <ChangePasswordModal onClose={() => setChanging(false)} />}
     </header>
   )
 }

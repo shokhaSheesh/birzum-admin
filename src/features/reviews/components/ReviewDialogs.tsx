@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import { HIDE_REASONS, type HideReason, type Review } from '@/entities/reviews/reviews'
-import { deleteReview, hideReview, restoreReview } from '@/entities/reviews/reviewsApi'
-import { attempt } from '@/shared/api/createRemoteStore'
+import {
+  HIDE_REASONS,
+  reviewsStore,
+  type HideReason,
+  type Review,
+} from '@/entities/reviews/reviews'
+import { useAdmin } from '@/entities/session/session'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/Button'
@@ -9,33 +13,35 @@ import { ChoiceGrid } from '@/shared/ui/ChoiceGrid'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Modal } from '@/shared/ui/Modal'
 import { TextAreaField } from '@/shared/ui/TextAreaField'
+import { logAction } from '@/entities/audit/audit'
+
+const now = () => new Date()
 
 /** Takes a review off the shop page and out of its rating, with a reason. */
-export function HideReviewModal({
-  review,
-  onClose,
-  onDone,
-}: {
-  review: Review
-  onClose: () => void
-  onDone: () => void
-}) {
+export function HideReviewModal({ review, onClose }: { review: Review; onClose: () => void }) {
   const { t } = useI18n()
-  const [saving, setSaving] = useState(false)
+  const admin = useAdmin()
   const [reason, setReason] = useState<HideReason>('abuse')
   const [comment, setComment] = useState('')
 
-  const hide = async () => {
-    setSaving(true)
-    const ok = await attempt(
-      () => hideReview(review.id, reason, comment.trim()),
-      () => toast(t('review.hidden')),
-    )
-    setSaving(false)
-    if (ok) {
-      onDone()
-      onClose()
-    }
+  const hide = () => {
+    reviewsStore.update(review.id, {
+      status: 'hidden',
+      moderation: {
+        at: now(),
+        by: admin?.name ?? '—',
+        reason,
+        comment: comment.trim() || undefined,
+      },
+    })
+    toast(t('review.hidden'))
+    logAction({
+      section: 'reviews',
+      kind: 'update',
+      action: 'audit.a.reviewHidden',
+      target: review.author,
+    })
+    onClose()
   }
 
   return (
@@ -49,13 +55,7 @@ export function HideReviewModal({
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            className="px-4!"
-            loading={saving}
-            onClick={() => void hide()}
-          >
+          <Button size="sm" variant="danger" className="px-4!" onClick={hide}>
             {t('review.hide')}
           </Button>
         </>
@@ -82,15 +82,7 @@ export function HideReviewModal({
 }
 
 /** Puts a hidden or merchant-removed review back on the shop page, after a confirm. */
-export function RestoreReviewDialog({
-  review,
-  onClose,
-  onDone,
-}: {
-  review: Review
-  onClose: () => void
-  onDone: () => void
-}) {
+export function RestoreReviewDialog({ review, onClose }: { review: Review; onClose: () => void }) {
   const { t } = useI18n()
   return (
     <ConfirmDialog
@@ -99,12 +91,15 @@ export function RestoreReviewDialog({
       tone="primary"
       title={t('review.restore.title')}
       confirmLabel={t('review.restore')}
-      onConfirm={async () => {
-        const ok = await attempt(
-          () => restoreReview(review.id),
-          () => toast(t('review.restored')),
-        )
-        if (ok) onDone()
+      onConfirm={() => {
+        reviewsStore.update(review.id, { status: 'published', moderation: undefined })
+        toast(t('review.restored'))
+        logAction({
+          section: 'reviews',
+          kind: 'update',
+          action: 'audit.a.reviewRestored',
+          target: review.author,
+        })
         onClose()
       }}
     >
@@ -114,15 +109,7 @@ export function RestoreReviewDialog({
 }
 
 /** Deletes a review for good, after a confirm. */
-export function DeleteReviewDialog({
-  review,
-  onClose,
-  onDone,
-}: {
-  review: Review
-  onClose: () => void
-  onDone: () => void
-}) {
+export function DeleteReviewDialog({ review, onClose }: { review: Review; onClose: () => void }) {
   const { t } = useI18n()
   return (
     <ConfirmDialog
@@ -130,12 +117,15 @@ export function DeleteReviewDialog({
       onClose={onClose}
       title={t('review.delete.title')}
       confirmLabel={t('common.delete')}
-      onConfirm={async () => {
-        const ok = await attempt(
-          () => deleteReview(review.id),
-          () => toast(t('review.deleted')),
-        )
-        if (ok) onDone()
+      onConfirm={() => {
+        reviewsStore.remove(review.id)
+        toast(t('review.deleted'))
+        logAction({
+          section: 'reviews',
+          kind: 'delete',
+          action: 'audit.a.reviewDeleted',
+          target: review.author,
+        })
         onClose()
       }}
     >

@@ -1,12 +1,11 @@
 import { Fragment, useState } from 'react'
+import { logAction } from '@/entities/audit/audit'
 import {
   MERCHANT_PERMISSION_GROUPS,
+  merchantRolesStore,
   type MerchantPermission,
   type MerchantRole,
 } from '@/entities/merchants/merchantRoles'
-import { merchantRolesStore, saveMerchantRoles } from '@/entities/merchants/merchantRolesApi'
-import { attempt } from '@/shared/api/createRemoteStore'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
@@ -27,19 +26,6 @@ const toDraft = (roles: MerchantRole[]) =>
 export function MerchantRolesPage() {
   const { t } = useI18n()
   const saved = merchantRolesStore.useAll()
-  const loading = merchantRolesStore.useLoading()
-  // The checkboxes start from the saved roles, so the table opens once they are here
-  if (saved.length === 0)
-    return (
-      <div className="mx-auto flex w-full max-w-page flex-col gap-4 px-4 py-8 lg:px-8">
-        <EmptyState title={t(loading ? 'common.loading' : 'products.empty')} />
-      </div>
-    )
-  return <MerchantRolesTable saved={saved} />
-}
-
-function MerchantRolesTable({ saved }: { saved: MerchantRole[] }) {
-  const { t } = useI18n()
   const [draft, setDraft] = useState<Draft>(() => toDraft(saved))
   const roles = saved.map((role) => role.id)
   const dirty = roles.some(
@@ -54,11 +40,11 @@ function MerchantRolesTable({ saved }: { saved: MerchantRole[] }) {
       [id]: all[id].includes(key) ? all[id].filter((k) => k !== key) : [...all[id], key],
     }))
 
-  const save = () =>
-    attempt(
-      () => saveMerchantRoles(roles.map((id) => ({ id, permissions: draft[id] }))),
-      () => toast(t('mrole.saved')),
-    )
+  const save = () => {
+    roles.forEach((id) => merchantRolesStore.save({ id, permissions: draft[id] }))
+    toast(t('mrole.saved'))
+    logAction({ section: 'merchantRoles', kind: 'update', action: 'audit.a.merchantRolesSaved' })
+  }
 
   return (
     <>
@@ -72,7 +58,7 @@ function MerchantRolesTable({ saved }: { saved: MerchantRole[] }) {
         >
           {t('common.cancel')}
         </Button>
-        <Button size="sm" className="px-4!" disabled={!dirty} onClick={() => void save()}>
+        <Button size="sm" className="px-4!" disabled={!dirty} onClick={save}>
           {t('common.save')}
         </Button>
       </ActionBar>
