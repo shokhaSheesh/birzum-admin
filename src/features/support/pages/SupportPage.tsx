@@ -31,6 +31,7 @@ import { repliesApi } from '@/entities/support/repliesApi'
 import { attempt } from '@/shared/api/createRemoteStore'
 import { toastError } from '@/shared/api/errors'
 import { uploadFile } from '@/shared/api/upload'
+import { useChatEvents } from '@/entities/support/chatSocket'
 import { useResource } from '@/shared/api/useResource'
 import { ROUTES } from '@/shared/config/routes'
 import { brandPath, WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
@@ -60,7 +61,10 @@ const initialsOf = (name: string) =>
     .join('')
     .toUpperCase() || '?'
 
-/** Calls `reload` every few seconds while the tab is visible: the backend has no push. */
+/**
+ * Calls `reload` every few seconds while the tab is visible. With the live socket up the page
+ * hears every change, so this is only a slow safety net.
+ */
 function usePoll(reload: () => void, ms: number) {
   useEffect(() => {
     const id = setInterval(() => {
@@ -73,8 +77,9 @@ function usePoll(reload: () => void, ms: number) {
 /**
  * Where support staff answer chats from an app (admin doc 5.15a): the chats on the left (queue,
  * mine, all open, closed; the server says who sees which), the conversation in the middle with a
- * reply or an internal note, and who the client is on the right. The list is read again every 10
- * seconds, an open chat every 5.
+ * reply or an internal note, and who the client is on the right. A socket says which chat changed
+ * and the page reads it again; while the socket is down the list is polled every 10 seconds and
+ * an open chat every 5.
  */
 export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
@@ -93,7 +98,18 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
     () => loadChats(app, { box, q: search }),
     JSON.stringify([app, box, search]),
   )
-  usePoll(list.reload, 10_000)
+  const openId = params.get('chat')
+  // A signal for the open chat bumps `signal`, which makes Conversation read it again
+  const [signal, setSignal] = useState(0)
+  const pendingList = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const live = useChatEvents(app, (event) => {
+    if (event.type === 'reconnected' || event.chatId === openId) setSignal((n) => n + 1)
+    // Several signals in a burst read the list once
+    clearTimeout(pendingList.current)
+    pendingList.current = setTimeout(list.reload, 300)
+  })
+  useEffect(() => () => clearTimeout(pendingList.current), [])
+  usePoll(list.reload, live ? 60_000 : 10_000)
   const topics = useResource(() => loadTopics(app), app)
   const rows = list.data?.items ?? []
   const counts = list.data?.counts
@@ -102,7 +118,6 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
     const found = topics.data?.find((topic) => topic.code === code)
     return found ? tl(found.label) : code
   }
-  const openId = params.get('chat')
   const open = (id: string) => setParams({ chat: id }, { replace: true })
 
   const when = (date: Date) =>
@@ -232,6 +247,8 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
           app={app}
           id={openId}
           topicName={topicName}
+          live={live}
+          signal={signal}
           onChanged={list.reload}
           onBack={() => setParams({}, { replace: true })}
         />
@@ -250,19 +267,29 @@ function Conversation({
   app,
   id,
   topicName,
+  live,
+  signal,
   onChanged,
   onBack,
 }: {
   app: Workspace
   id: string
   topicName: (code: string) => string
+  /** The socket is up: polling slows down. */
+  live: boolean
+  /** Goes up when the socket says this chat changed. */
+  signal: number
   /** The list should be read again (a chat moved box or its count changed). */
   onChanged: () => void
   onBack: () => void
 }) {
   const { t, lang } = useI18n()
   const chatRes = useResource(() => loadChat(app, id), `${app}/${id}`)
-  usePoll(chatRes.reload, 5000)
+  usePoll(chatRes.reload, live ? 30_000 : 5000)
+  const reloadChat = chatRes.reload
+  useEffect(() => {
+    if (signal) reloadChat()
+  }, [signal, reloadChat])
   const chat = chatRes.data
   const operators = useResource(() => loadOperators(app).catch(() => []), app).data ?? []
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
