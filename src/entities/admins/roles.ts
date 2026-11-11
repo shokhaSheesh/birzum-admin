@@ -1,6 +1,5 @@
 import type { Workspace } from '@/shared/config/workspaces'
 import type { TranslationKey } from '@/shared/i18n/dictionaries'
-import { createStore } from '@/shared/lib/createStore'
 
 /** The four things a role may do on a page: see it, add, change, delete. */
 export const OPS = ['read', 'create', 'update', 'delete'] as const
@@ -87,6 +86,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
       { key: 'admins', label: 'nav.admins', ops: ALL },
       { key: 'roles', label: 'nav.roles', ops: ALL },
       { key: 'audit', label: 'nav.audit', ops: ['read'] },
+      { key: 'integrations', label: 'nav.integrations', ops: ALL },
     ],
   },
   {
@@ -167,6 +167,7 @@ export const keysFor = (brands: Workspace[]) => {
 export const SPECIAL_ACTIONS = [
   { key: 'chargeCard', section: 'collections', op: 'create' },
   { key: 'blockClient', section: 'customers', op: 'update' },
+  { key: 'viewPinfl', section: 'customers', op: 'read' },
   { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
   { key: 'mlBlockClient', section: 'mlClients', op: 'update' },
   { key: 'mlSendBroadcast', section: 'mlBroadcasts', op: 'create' },
@@ -189,109 +190,9 @@ export type Role = {
   actions: SpecialAction[]
   /** The owners' role: everything, cannot be changed or deleted. */
   system?: boolean
+  /** How many admins hold it. */
+  holders?: number
 }
-
-/**
- * Full rights on `manage` pages (whatever each page offers), Koʻrish only on `view` ones, and
- * exactly `exact` where given.
- */
-const grant = (manage: string[], view: string[] = [], exact: Record<string, Op[]> = {}) =>
-  Object.fromEntries(
-    SECTION_KEYS.map((key) => [
-      key,
-      exact[key] ?? (manage.includes(key) ? [...opsOf(key)] : view.includes(key) ? ['read'] : []),
-    ]),
-  ) as Record<string, Op[]>
-
-// The roles Birzum works with today. Replace with the API.
-export const rolesStore = createStore<Role>([
-  {
-    id: 'owner',
-    brands: ['birzum', 'fortuna', 'vodiy'],
-    name: 'Bosh admin',
-    description: 'Hamma narsa, rollar va adminlar ham.',
-    access: grant(SECTION_KEYS),
-    actions: SPECIAL_ACTIONS.map((a) => a.key),
-    system: true,
-  },
-  {
-    id: 'finance',
-    brands: ['birzum'],
-    name: 'Moliya',
-    description: 'Klientlardan tushum va toʻlovlar.',
-    access: grant(
-      ['collections'],
-      ['dashboard', 'applications', 'customers', 'merchants', 'pricing'],
-    ),
-    actions: ['chargeCard'],
-  },
-  {
-    id: 'collections',
-    brands: ['birzum'],
-    name: 'Undiruvchi',
-    description: 'Qarzdorlar bilan ishlash: qoʻngʻiroq, eslatma, kartadan yechish.',
-    access: grant(['collections'], ['applications', 'customers']),
-    actions: ['chargeCard'],
-  },
-  {
-    id: 'support',
-    brands: ['birzum', 'fortuna', 'vodiy'],
-    name: 'Operator',
-    description: 'Yordam chatida klientlarga javob beradi.',
-    access: grant(
-      ['support', 'quickReplies', 'mlSupport', 'mlReplies'],
-      [
-        'applications',
-        'customers',
-        'products',
-        'faq',
-        'mlApplications',
-        'mlLoans',
-        'mlClients',
-        'mlFaq',
-      ],
-    ),
-    actions: [],
-  },
-  {
-    id: 'content',
-    brands: ['birzum'],
-    name: 'Kontent menejer',
-    description: 'Katalog, xabarnomalar, savol-javoblar, sharhlar.',
-    access: grant(
-      ['categories', 'brands', 'broadcasts', 'faq', 'reviews', 'quickReplies'],
-      ['dashboard', 'products', 'merchants', 'documents'],
-    ),
-    actions: ['sendBroadcast'],
-  },
-  {
-    id: 'credit',
-    brands: ['fortuna', 'vodiy'],
-    name: 'Kredit mutaxassisi',
-    description: 'Arizalarni qoʻlda koʻrib chiqadi, qarzlar va mijozlarni koʻradi.',
-    access: grant(
-      ['mlApplications'],
-      ['mlDashboard', 'mlLoans', 'mlPayments', 'mlClients', 'mlProducts'],
-    ),
-    actions: [],
-  },
-  {
-    id: 'loanCollector',
-    brands: ['fortuna', 'vodiy'],
-    name: 'Mikroqarz undiruvchisi',
-    description: 'Kechikkanlar bilan ishlaydi: qoʻngʻiroq, vaʼda, eslatma.',
-    access: grant(['mlOverdue'], ['mlLoans', 'mlPayments', 'mlClients']),
-    actions: [],
-  },
-  {
-    id: 'loanManager',
-    brands: ['fortuna', 'vodiy'],
-    name: 'Filial rahbari',
-    description: 'Brendning hamma sahifasi: qoidalar, mahsulotlar, xabarnomalar.',
-    access: grant(keysFor(['fortuna'])),
-    actions: ['mlBlockClient', 'mlSendBroadcast', 'mlPauseIntake'],
-  },
-])
 
 /**
  * How many pages a role can open, and on how many it can also add, change or delete, within the

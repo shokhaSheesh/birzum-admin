@@ -11,8 +11,10 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState, type DragEvent, type KeyboardEvent } from 'react'
-import { contactsInfoStore, faqStore, type Faq } from '@/entities/faq/faq'
-import { brandPath, WORKSPACE_INFO, type Workspace } from '@/shared/config/workspaces'
+import { type Faq, type SupportContacts } from '@/entities/faq/faq'
+import { contactsInfoStore, faqApi } from '@/entities/faq/faqApi'
+import { attempt } from '@/shared/api/createRemoteStore'
+import { brandPath, type Workspace } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { formatPhone } from '@/shared/lib/phone'
@@ -25,7 +27,6 @@ import { RowActions } from '@/shared/ui/RowActions'
 import { Switch } from '@/shared/ui/Switch'
 import { ContactsModal } from '../components/ContactsModal'
 import { FaqModal } from '../components/FaqModal'
-import { logAction } from '@/entities/audit/audit'
 
 type Drop = { id: string; after: boolean }
 
@@ -36,12 +37,6 @@ function reorder(all: Faq[], moved: Faq, target: Faq, after: boolean) {
   return [...rest.slice(0, at), moved, ...rest.slice(at)]
 }
 
-/** One app's list moved in the whole store, the other apps' questions kept where they are. */
-function placeBack(store: Faq[], app: Workspace, list: Faq[]) {
-  const queue = [...list]
-  return store.map((item) => (item.app === app ? queue.shift()! : item))
-}
-
 /**
  * An app's Savol-javoblar (Birzum's client app, or a microloan brand's): the questions in the
  * order people see them, dragged by their handle to reorder, each with a switch to show or hide
@@ -50,14 +45,9 @@ function placeBack(store: Faq[], app: Workspace, list: Faq[]) {
  */
 export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
   const { t, tl } = useI18n()
-  const store = faqStore.useAll()
-  const all = store.filter((item) => item.app === app)
+  const all = faqApi.storeOf(app).useAll()
   const ml = app !== 'birzum'
-  const audit = {
-    section: ml ? 'mlFaq' : 'faq',
-    params: ml ? { brand: WORKSPACE_INFO[app].name } : undefined,
-  } as const
-  const contacts = contactsInfoStore.useAll()[0]
+  const contacts = contactsInfoStore.useAll()[0] as SupportContacts | undefined
   const [query, setQuery] = useState('')
   // undefined: closed; null: adding; a question: editing it
   const [editing, setEditing] = useState<Faq | null | undefined>(undefined)
@@ -86,7 +76,7 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
   }
   const dropOn = (target: Faq) => {
     if (dragged && drop && dragged !== target)
-      faqStore.replaceAll(placeBack(store, app, reorder(all, dragged, target, drop.after)))
+      void faqApi.order(app, reorder(all, dragged, target, drop.after))
     setDragged(null)
     setDrop(null)
   }
@@ -95,19 +85,13 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const target = all[all.indexOf(item) + (e.key === 'ArrowUp' ? -1 : 1)]
-    if (target)
-      faqStore.replaceAll(placeBack(store, app, reorder(all, item, target, e.key === 'ArrowDown')))
+    if (target) void faqApi.order(app, reorder(all, item, target, e.key === 'ArrowDown'))
   }
-  const toggle = (item: Faq) => {
-    faqStore.update(item.id, { visible: !item.visible })
-    toast(t(item.visible ? 'faq.hidden' : 'faq.shown'))
-    logAction({
-      ...audit,
-      kind: 'update',
-      action: ml ? 'audit.a.loanFaqSaved' : 'audit.a.faqSaved',
-      target: tl(item.question),
-    })
-  }
+  const toggle = (item: Faq) =>
+    attempt(
+      () => faqApi.setVisible(app, item.id, !item.visible),
+      () => toast(t(item.visible ? 'faq.hidden' : 'faq.shown')),
+    )
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -197,7 +181,7 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
                   <span className="pt-1.5" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={item.visible}
-                      onChange={() => toggle(item)}
+                      onChange={() => void toggle(item)}
                       label={t('faq.visible', { question: tl(item.question) })}
                     />
                   </span>
@@ -245,25 +229,32 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
             <section className="flex flex-col gap-3 rounded-card border border-line bg-canvas p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-bold">{t('faq.contacts')}</p>
-                <Button size="sm" variant="ghost" onClick={() => setEditingContacts(true)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={!contacts}
+                  onClick={() => setEditingContacts(true)}
+                >
                   <Pencil size={16} />
                   {t('common.edit')}
                 </Button>
               </div>
-              <dl className="flex flex-col gap-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-muted">{t('faq.contacts.phone')}</dt>
-                  <dd className="font-semibold tabular-nums">{formatPhone(contacts.phone)}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-muted">{t('faq.contacts.hours')}</dt>
-                  <dd className="text-right font-semibold">{tl(contacts.hours)}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-muted">Telegram</dt>
-                  <dd className="font-semibold">@{contacts.telegram}</dd>
-                </div>
-              </dl>
+              {contacts && (
+                <dl className="flex flex-col gap-2 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">{t('faq.contacts.phone')}</dt>
+                    <dd className="font-semibold tabular-nums">{formatPhone(contacts.phone)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">{t('faq.contacts.hours')}</dt>
+                    <dd className="text-right font-semibold">{tl(contacts.hours)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">Telegram</dt>
+                    <dd className="font-semibold">@{contacts.telegram}</dd>
+                  </div>
+                </dl>
+              )}
             </section>
           )}
         </aside>
@@ -280,7 +271,7 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
           }}
         />
       )}
-      {editingContacts && (
+      {editingContacts && contacts && (
         <ContactsModal contacts={contacts} onClose={() => setEditingContacts(false)} />
       )}
       <ConfirmDialog
@@ -288,16 +279,13 @@ export function FaqPage({ app = 'birzum' }: { app?: Workspace }) {
         onClose={() => setDeleting(null)}
         title={t('faq.delete.title')}
         confirmLabel={t('common.delete')}
-        onConfirm={() => {
-          if (deleting) faqStore.remove(deleting.id)
+        onConfirm={async () => {
+          if (deleting)
+            await attempt(
+              () => faqApi.remove(app, deleting.id),
+              () => toast(t('faq.deleted')),
+            )
           setDeleting(null)
-          toast(t('faq.deleted'))
-          logAction({
-            ...audit,
-            kind: 'delete',
-            action: ml ? 'audit.a.loanFaqDeleted' : 'audit.a.faqDeleted',
-            target: deleting ? tl(deleting.question) : undefined,
-          })
         }}
       >
         <p>{t('faq.delete.message')}</p>

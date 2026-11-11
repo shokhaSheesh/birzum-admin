@@ -1,6 +1,5 @@
 import type { AppId } from '@/entities/onboarding/slides'
 import type { Lang, LocalizedText } from '@/shared/i18n/dictionaries'
-import { createStore } from '@/shared/lib/createStore'
 import { parseDate } from '@/shared/lib/dates'
 
 /**
@@ -40,6 +39,8 @@ export type Banner = {
   /** "16.10.2026", or empty for no limit. Both days are included. */
   startsOn: string
   endsOn: string
+  /** Worked out by the server (Tashkent's today); the list shows this one. */
+  state?: BannerState
 }
 
 /** Where a banner stands today: hidden by its switch, waiting for its start, over, or live. */
@@ -54,76 +55,3 @@ export function bannerState(banner: Banner, today = new Date()): BannerState {
   if (to && day > to) return 'ended'
   return 'live'
 }
-
-const seeded = (
-  id: string,
-  title: LocalizedText,
-  target: BannerTargetKind,
-  ids: string[] = [],
-  app: AppId = 'birzum',
-): Banner => ({
-  id,
-  app,
-  title,
-  builtIn: true,
-  target,
-  ids,
-  visible: true,
-  startsOn: '',
-  endsOn: '',
-})
-
-/** A microloan app's seeded banner: one loan product, drawn by the app from its card. */
-const loanBanner = (app: AppId, productId: string, title: LocalizedText) =>
-  seeded(`${app}-${productId}`, title, 'loanProducts', [productId], app)
-
-// The banners the client app ships with. 1 and 2 are the client's texts, 3 and 4 placeholders.
-export const bannersStore = createStore<Banner>([
-  seeded(
-    'b1',
-    { uz: 'Sizga eng yaqin doʻkondan xarid qiling', ru: 'Покупайте в ближайшем к вам магазине' },
-    'nearest',
-  ),
-  seeded(
-    'b2',
-    {
-      uz: 'Xaridni amalga oshiring va toʻlovni boʻlib toʻlang',
-      ru: 'Совершите покупку и платите частями',
-    },
-    'products',
-    ['p1', 'p2', 'p3', 'p4'],
-  ),
-  seeded(
-    'b3',
-    { uz: 'Telefon va noutbuklar nasiyaga', ru: 'Телефоны и ноутбуки в рассрочку' },
-    'categories',
-    ['phones', 'laptops'],
-  ),
-  seeded(
-    'b4',
-    {
-      uz: 'Mediapark va iSpace doʻkonlaridan xarid qiling',
-      ru: 'Покупайте в магазинах Mediapark и iSpace',
-    },
-    'merchants',
-    ['m1', 'm2'],
-  ),
-  loanBanner('fortuna', 'rivoj', {
-    uz: 'Rivoj: tadbirkorlar uchun 50 mln soʻmgacha',
-    ru: 'Ривож: для предпринимателей до 50 млн сум',
-  }),
-  loanBanner('fortuna', 'tezkor', {
-    uz: 'Tezkor: rasmiy daromadi borlar uchun, garovsiz',
-    ru: 'Тезкор: при официальном доходе, без залога',
-  }),
-  loanBanner('fortuna', 'ishonch', {
-    uz: 'Ishonch: takroriy mijozlar uchun',
-    ru: 'Ишонч: для повторных клиентов',
-  }),
-  loanBanner('vodiy', 'zar', {
-    uz: 'Zar: 100 mln soʻmgacha mikroqarz',
-    ru: 'Зар: микрозайм до 100 млн сум',
-  }),
-  loanBanner('vodiy', 'komak', { uz: 'Koʻmak mikroqarzi', ru: 'Микрозайм Кўмак' }),
-  loanBanner('vodiy', 'imkoniyat', { uz: 'Imkoniyat mikroqarzi', ru: 'Микрозайм Имконият' }),
-])

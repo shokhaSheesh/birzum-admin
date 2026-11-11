@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { applicationsStore, handedAtOf, isOpen } from '@/entities/applications/applications'
-import { categoriesStore } from '@/entities/catalog/categories'
+import { categoriesStore } from '@/entities/catalog/categoriesApi'
 import { productsStore } from '@/entities/catalog/products'
 import { clientsStore } from '@/entities/clients/clients'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'

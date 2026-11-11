@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { contactsInfoStore, type SupportContacts } from '@/entities/faq/faq'
+import { type SupportContacts } from '@/entities/faq/faq'
+import { saveSupportContacts } from '@/entities/faq/faqApi'
+import { attempt } from '@/shared/api/createRemoteStore'
 import { isComplete } from '@/shared/i18n/localized'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { PHONE_DIGITS } from '@/shared/lib/phone'
@@ -9,7 +11,6 @@ import { LocalizedTextField } from '@/shared/ui/LocalizedTextField'
 import { Modal } from '@/shared/ui/Modal'
 import { PhoneField } from '@/shared/ui/PhoneField'
 import { TextField } from '@/shared/ui/TextField'
-import { logAction } from '@/entities/audit/audit'
 
 /** Edit how shoppers reach support: the call-centre number, its hours and the Telegram account. */
 export function ContactsModal({
@@ -24,23 +25,28 @@ export function ContactsModal({
   const [hours, setHours] = useState(contacts.hours)
   const [telegram, setTelegram] = useState(contacts.telegram)
   const [submitted, setSubmitted] = useState(false)
+  const [saving, setSaving] = useState(false)
   const handle = telegram.trim().replace(/^@/, '')
   const errors = {
     phone: phone.length !== PHONE_DIGITS ? t('error.required') : undefined,
     telegram: !/^[a-zA-Z0-9_]{5,32}$/.test(handle) ? t('faq.contacts.telegram.error') : undefined,
   }
 
-  const save = () => {
+  const save = async () => {
     setSubmitted(true)
     if (errors.phone || errors.telegram || !isComplete(hours)) return
-    contactsInfoStore.update('contacts', {
-      phone,
-      hours: { uz: hours.uz.trim(), ru: hours.ru.trim() },
-      telegram: handle,
-    })
-    toast(t('toast.saved'))
-    logAction({ section: 'faq', kind: 'update', action: 'audit.a.contactsSaved' })
-    onClose()
+    setSaving(true)
+    const ok = await attempt(
+      () =>
+        saveSupportContacts({
+          phone,
+          hours: { uz: hours.uz.trim(), ru: hours.ru.trim() },
+          telegram: handle,
+        }),
+      () => toast(t('toast.saved')),
+    )
+    setSaving(false)
+    if (ok) onClose()
   }
 
   return (
@@ -54,7 +60,7 @@ export function ContactsModal({
           <Button size="sm" variant="ghost" className="ml-auto px-4!" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" className="px-4!" onClick={save}>
+          <Button size="sm" className="px-4!" loading={saving} onClick={() => void save()}>
             {t('common.save')}
           </Button>
         </>

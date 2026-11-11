@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
-import { productsStore, statusOf } from '@/entities/catalog/products'
-import { chatsStore } from '@/entities/support/chats'
+import { hasPermission, useAdmin } from '@/entities/session/session'
+import { loadChats } from '@/entities/support/chatsApi'
+import { useResource } from '@/shared/api/useResource'
+import { isWiredPath } from '@/shared/api/wired'
 import logoMark from '@/shared/assets/logo-mark.svg'
 import logoOnDark from '@/shared/assets/logo-on-dark.svg'
 import logo from '@/shared/assets/logo.svg'
@@ -10,7 +13,7 @@ import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { brandPath, WORKSPACE_INFO, workspaceOf } from '@/shared/config/workspaces'
-import { navOf } from '../nav'
+import { navOf, sectionOfNav } from '../nav'
 
 type Props = {
   onNavigate?: () => void
@@ -32,12 +35,53 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
   const pending = applicationsStore
     .useAll()
     .filter((application) => application.status === 'pending').length
-  // Yordam chati counts open chats with messages nobody has read
-  // New products waiting for the admin's check
-  const toReview = productsStore.useAll().filter((product) => statusOf(product) === 'review').length
-  const unread = chatsStore
-    .useAll()
-    .filter((chat) => chat.app === workspace && chat.status === 'open' && chat.unread > 0).length
+  const admin = useAdmin()
+  // The pages the admin's role in this business can open (`<page>.read`); the rest are left out
+  const groups = navOf(workspace)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const section = sectionOfNav(workspace, item.to)
+        return !section || hasPermission(admin, workspace, `${section}.read`)
+      }),
+    }))
+    .filter((group) => group.items.length > 0)
+  // Two parts: the pages that talk to the backend, then the ones still on sample data; each keeps
+  // its groups, so a tester sees at once what is real
+  const partOf = (wired: boolean) =>
+    groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => isWiredPath(item.to) === wired),
+      }))
+      .filter((group) => group.items.length > 0)
+  // The sample panel has no backend, so it shows only the sample part
+  const parts = [
+    {
+      key: 'wired',
+      title: 'navPart.wired',
+      dot: 'bg-green-500',
+      groups: admin?.demo ? [] : partOf(true),
+    },
+    { key: 'sample', title: 'navPart.sample', dot: 'bg-amber-400', groups: partOf(false) },
+  ] as const
+  // Yordam chati's badge: chats waiting in the queue, read again every 30 seconds
+  const canSee =
+    !admin?.demo &&
+    hasPermission(admin, workspace, workspace === 'birzum' ? 'support.read' : 'mlSupport.read')
+  const queue = useResource(
+    () =>
+      canSee ? loadChats(workspace, { box: 'queue', q: '', limit: 1 }) : Promise.resolve(undefined),
+    `${workspace}${canSee}`,
+  )
+  const reloadQueue = queue.reload
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) reloadQueue()
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [reloadQueue])
+  const unread = queue.data?.counts.queue ?? 0
 
   return (
     <nav aria-label={t('common.menu')} className="flex h-full flex-col">
@@ -71,68 +115,88 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
           </div>
         )}
 
-        {navOf(workspace).map((group, i) => (
-          <div key={group.title ?? i} className="flex flex-col gap-0.5">
-            {group.title &&
-              (collapsed ? (
-                <hr className="mx-2 mb-2 border-line" />
-              ) : (
-                <p className="px-3 pb-1 text-xs font-semibold tracking-wider whitespace-nowrap text-ink-subtle uppercase">
-                  {t(group.title)}
-                </p>
-              ))}
-            {group.items.map(({ to, icon: Icon, label, badge: fixed }) => {
-              const badge =
-                to === ROUTES.applications
-                  ? pending
-                  : to === ROUTES.products
-                    ? toReview
-                    : to ===
-                        (workspace === 'birzum' ? ROUTES.support : brandPath(workspace, 'support'))
-                      ? unread
-                      : fixed
-              return (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === home}
-                  onClick={onNavigate}
-                  title={collapsed ? t(label) : undefined}
-                  aria-label={collapsed ? t(label) : undefined}
-                  className={({ isActive }) =>
-                    cn(
-                      'relative flex h-10 items-center gap-3 rounded-control text-[15px] font-medium transition-colors',
-                      collapsed ? 'justify-center' : 'px-3',
-                      isActive
-                        ? 'bg-primary text-on-primary'
-                        : 'text-ink-muted hover:bg-surface hover:text-ink',
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <Icon size={19} className="shrink-0" />
-                      {!collapsed && <span className="min-w-0 flex-1 truncate">{t(label)}</span>}
-                      {!!badge &&
-                        (collapsed ? (
-                          <span className="absolute top-1.5 right-2 size-2 rounded-full bg-green-500" />
-                        ) : (
-                          <span
-                            className={cn(
-                              'grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold',
-                              isActive ? 'bg-on-primary/20' : 'bg-green-500 text-navy-950',
-                            )}
-                          >
-                            {badge}
-                          </span>
-                        ))}
-                    </>
-                  )}
-                </NavLink>
-              )
-            })}
-          </div>
-        ))}
+        {parts.map(
+          (part) =>
+            part.groups.length > 0 && (
+              <div key={part.key} className="flex flex-col gap-4">
+                {collapsed ? (
+                  <span
+                    className={cn('mx-auto size-2 rounded-full', part.dot)}
+                    title={t(part.title)}
+                  />
+                ) : (
+                  <p className="flex items-center gap-2 border-b border-line px-3 pb-2 text-[13px] font-bold whitespace-nowrap text-ink">
+                    <span className={cn('size-2 shrink-0 rounded-full', part.dot)} />
+                    {t(part.title)}
+                  </p>
+                )}
+                {part.groups.map((group, i) => (
+                  <div key={group.title ?? i} className="flex flex-col gap-0.5">
+                    {group.title &&
+                      (collapsed ? (
+                        <hr className="mx-2 mb-2 border-line" />
+                      ) : (
+                        <p className="px-3 pb-1 text-xs font-semibold tracking-wider whitespace-nowrap text-ink-subtle uppercase">
+                          {t(group.title)}
+                        </p>
+                      ))}
+                    {group.items.map(({ to, icon: Icon, label, badge: fixed }) => {
+                      const badge =
+                        to === ROUTES.applications
+                          ? pending
+                          : to ===
+                              (workspace === 'birzum'
+                                ? ROUTES.support
+                                : brandPath(workspace, 'support'))
+                            ? unread
+                            : fixed
+                      return (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end={to === home}
+                          onClick={onNavigate}
+                          title={collapsed ? t(label) : undefined}
+                          aria-label={collapsed ? t(label) : undefined}
+                          className={({ isActive }) =>
+                            cn(
+                              'relative flex h-10 items-center gap-3 rounded-control text-[15px] font-medium transition-colors',
+                              collapsed ? 'justify-center' : 'px-3',
+                              isActive
+                                ? 'bg-primary text-on-primary'
+                                : 'text-ink-muted hover:bg-surface hover:text-ink',
+                            )
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              <Icon size={19} className="shrink-0" />
+                              {!collapsed && (
+                                <span className="min-w-0 flex-1 truncate">{t(label)}</span>
+                              )}
+                              {!!badge &&
+                                (collapsed ? (
+                                  <span className="absolute top-1.5 right-2 size-2 rounded-full bg-green-500" />
+                                ) : (
+                                  <span
+                                    className={cn(
+                                      'grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold',
+                                      isActive ? 'bg-on-primary/20' : 'bg-green-500 text-navy-950',
+                                    )}
+                                  >
+                                    {badge}
+                                  </span>
+                                ))}
+                            </>
+                          )}
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            ),
+        )}
       </div>
 
       {onToggle && (
