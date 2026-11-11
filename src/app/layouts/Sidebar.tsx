@@ -55,16 +55,20 @@ export function Sidebar({ onNavigate, collapsed = false, onToggle }: Props) {
         items: group.items.filter((item) => isWiredPath(item.to) === wired),
       }))
       .filter((group) => group.items.length > 0)
+  // The sample panel has no backend, so it shows only the sample part
   const parts = [
-    { key: 'wired', title: 'navPart.wired', dot: 'bg-green-500', groups: partOf(true) },
+    {
+      key: 'wired',
+      title: 'navPart.wired',
+      dot: 'bg-green-500',
+      groups: admin?.demo ? [] : partOf(true),
+    },
     { key: 'sample', title: 'navPart.sample', dot: 'bg-amber-400', groups: partOf(false) },
   ] as const
   // Yordam chati's badge: chats waiting in the queue, read again every 30 seconds
-  const canSee = hasPermission(
-    admin,
-    workspace,
-    workspace === 'birzum' ? 'support.read' : 'mlSupport.read',
-  )
+  const canSee =
+    !admin?.demo &&
+    hasPermission(admin, workspace, workspace === 'birzum' ? 'support.read' : 'mlSupport.read')
   const queue = useResource(
     () =>
       canSee ? loadChats(workspace, { box: 'queue', q: '', limit: 1 }) : Promise.resolve(undefined),

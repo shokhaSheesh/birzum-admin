@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { toastError } from './errors'
+import { getTokens } from './tokens'
 
 /**
  * A list that lives on the backend: read with `load` the first time a page uses it, and again on
@@ -22,6 +23,8 @@ export function createRemoteStore<T extends { id: string }>(load: () => Promise<
   let inflight: Promise<void> | null = null
   let loadedAt = 0
   const reload = () => {
+    // Signed out, or the sample panel: there is no token to read with, so the list stays empty
+    if (!getTokens()) return Promise.resolve()
     inflight ??= (async () => {
       status = { ...status, loading: true }
       emit()

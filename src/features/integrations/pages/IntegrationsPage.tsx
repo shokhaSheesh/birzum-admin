@@ -18,7 +18,7 @@ import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
 import { Switch } from '@/shared/ui/Switch'
 import { TextField } from '@/shared/ui/TextField'
 
-const KINDS = ['suggest', 'geocoder', 'maps', 'mapkit'] as const
+const KINDS = ['suggest', 'geocoder', 'mapkit'] as const
 type Kind = (typeof KINDS)[number]
 
 type GeoKey = {
