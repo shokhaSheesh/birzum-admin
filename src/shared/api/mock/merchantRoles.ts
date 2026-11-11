@@ -2,42 +2,55 @@ import { logMock } from './audit'
 import { mockRoutes } from './index'
 import { ACTOR, asBody, invalid, nowIso, text, type Text } from './util'
 
-const GROUPS: { key: string; label: Text; permissions: { key: string; label: Text }[] }[] = [
+const ALL = ['read', 'create', 'update', 'delete']
+const page = (key: string, uz: string, ru: string, ops: string[]) => ({
+  key,
+  label: text(uz, ru),
+  ops,
+})
+
+// The merchant app's pages and what each offers, as GET /admin/merchant-roles returns them
+const GROUPS: {
+  key: string
+  label: Text
+  permissions: { key: string; label: Text; ops: string[] }[]
+}[] = [
   {
     key: 'sales',
     label: text('Savdo', 'Продажи'),
     permissions: [
-      {
-        key: 'clients',
-        label: text('Klientlarni qoʻshish va tahrirlash', 'Добавлять и редактировать клиентов'),
-      },
-      { key: 'approve', label: text('Arizalarni tasdiqlash', 'Подтверждать заявки') },
-      { key: 'status', label: text('Buyurtma holatini oʻzgartirish', 'Менять статус заказа') },
+      page('clients', 'Klientlar', 'Клиенты', ['read', 'create', 'update']),
+      page('applications', 'Arizalar', 'Заявки', ['read', 'create', 'update']),
+      page('calculator', 'Kalkulyator', 'Калькулятор', ['read']),
     ],
   },
   {
     key: 'catalog',
     label: text('Katalog', 'Каталог'),
     permissions: [
-      { key: 'products', label: text('Mahsulotlarni boshqarish', 'Управлять товарами') },
-      { key: 'inventory', label: text('Ombor qoldigʻi', 'Остатки на складе') },
+      page('products', 'Mahsulotlar', 'Товары', ALL),
+      page('attributes', 'Variant turlari', 'Типы вариантов', ALL),
+      page('inventory', 'Ombor', 'Склад', ['read', 'update']),
     ],
   },
   {
     key: 'shop',
     label: text('Doʻkon', 'Магазин'),
     permissions: [
-      { key: 'locations', label: text('Filiallarni boshqarish', 'Управлять филиалами') },
-      { key: 'staff', label: text('Xodimlarni boshqarish', 'Управлять сотрудниками') },
+      page('locations', 'Filiallar', 'Филиалы', ALL),
+      page('staff', 'Xodimlar', 'Сотрудники', ALL),
+      page('reviews', 'Sharhlar', 'Отзывы', ['read', 'update']),
     ],
   },
   {
     key: 'reports',
     label: text('Hisobotlar', 'Отчёты'),
-    permissions: [{ key: 'analytics', label: text('Tahlil va hisobotlar', 'Аналитика и отчёты') }],
+    permissions: [page('analytics', 'Hisobotlar', 'Отчёты', ['read'])],
   },
 ]
-const KEYS = GROUPS.flatMap((g) => g.permissions.map((p) => p.key))
+const KEYS = GROUPS.flatMap((g) =>
+  g.permissions.flatMap((p) => p.ops.map((op) => `${p.key}.${op}`)),
+)
 
 type Role = {
   id: 'admin' | 'seller'
@@ -50,7 +63,17 @@ const roles: Role[] = [
   { id: 'admin', permissions: [...KEYS], updated_by: '', updated_at: '' },
   {
     id: 'seller',
-    permissions: ['clients', 'approve', 'status', 'inventory'],
+    permissions: [
+      'clients.read',
+      'clients.create',
+      'clients.update',
+      'applications.read',
+      'applications.create',
+      'applications.update',
+      'calculator.read',
+      'inventory.read',
+      'inventory.update',
+    ],
     updated_by: '',
     updated_at: '',
   },
@@ -73,6 +96,8 @@ mockRoutes(
       for (const sent of input) {
         if (sent.permissions.some((key) => !KEYS.includes(key)))
           throw invalid({ permissions: 'unknown key' })
+        if (sent.permissions.some((key) => !sent.permissions.includes(`${key.split('.')[0]}.read`)))
+          throw invalid({ permissions: 'a write needs read' })
         const role = roles.find((r) => r.id === sent.id)!
         const next = KEYS.filter((key) => sent.permissions.includes(key))
         const added = next.filter((k) => !role.permissions.includes(k))

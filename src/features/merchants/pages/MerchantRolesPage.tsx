@@ -1,28 +1,40 @@
 import { Fragment, useState } from 'react'
+import { OPS, type Op } from '@/entities/admins/roles'
 import {
-  MERCHANT_PERMISSION_GROUPS,
-  type MerchantPermission,
+  MERCHANT_PAGE_GROUPS,
+  MERCHANT_PAGES,
+  type MerchantPage,
   type MerchantRole,
 } from '@/entities/merchants/merchantRoles'
 import { merchantRolesStore, saveMerchantRoles } from '@/entities/merchants/merchantRolesApi'
 import { attempt } from '@/shared/api/createRemoteStore'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { useI18n } from '@/shared/i18n/useI18n'
+import { cn } from '@/shared/lib/cn'
 import { toast } from '@/shared/lib/toast'
 import { ActionBar } from '@/shared/ui/ActionBar'
 import { Button } from '@/shared/ui/Button'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { TableCheckbox } from '@/shared/ui/TableCheckbox'
 
-const th = 'w-40 px-4 py-3 text-center text-xs font-semibold tracking-wide text-ink-muted uppercase'
-
-type Draft = Record<MerchantRole['id'], MerchantPermission[]>
+type RoleId = MerchantRole['id']
+type Draft = Record<RoleId, MerchantRole['access']>
 const toDraft = (roles: MerchantRole[]) =>
-  Object.fromEntries(roles.map((role) => [role.id, role.permissions])) as Draft
+  Object.fromEntries(roles.map((role) => [role.id, role.access])) as Draft
+
+// Adding, changing or deleting needs seeing: ticking one ticks Koʻrish, unticking Koʻrish clears the row
+const withOp = (current: Op[], op: Op, on: boolean): Op[] => {
+  if (op === 'read') return on ? ['read', ...current.filter((o) => o !== 'read')] : []
+  const next = on ? [...current, op] : current.filter((o) => o !== op)
+  return on && !next.includes('read') ? ['read', ...next] : next
+}
+const sameOps = (a: Op[], b: Op[]) => a.length === b.length && a.every((op) => b.includes(op))
+const opsOf = (key: MerchantPage) => MERCHANT_PAGES.find((page) => page.key === key)!.ops
 
 /**
  * What FlexSoft's two merchant roles, Administrator and Sotuvchi, may do in the merchant app:
- * every permission as a row, a checkbox per role. The roles themselves come from FlexSoft at
- * sign-in and cannot be added or renamed here. Changes apply after Saqlash.
+ * every page as a row and, under each role, Koʻrish · Yaratish · Tahrirlash · Oʻchirish, with a
+ * checkbox where the page offers that action and a dash where it does not. The roles themselves
+ * come from FlexSoft at sign-in and cannot be added or renamed here. Changes apply after Saqlash.
  */
 export function MerchantRolesPage() {
   const { t } = useI18n()
@@ -42,23 +54,40 @@ function MerchantRolesTable({ saved }: { saved: MerchantRole[] }) {
   const { t } = useI18n()
   const [draft, setDraft] = useState<Draft>(() => toDraft(saved))
   const roles = saved.map((role) => role.id)
-  const dirty = roles.some(
-    (id) =>
-      draft[id].length !== saved.find((role) => role.id === id)!.permissions.length ||
-      draft[id].some((key) => !saved.find((role) => role.id === id)!.permissions.includes(key)),
+  const dirty = saved.some((role) =>
+    MERCHANT_PAGES.some((page) => !sameOps(draft[role.id][page.key], role.access[page.key])),
   )
 
-  const toggle = (id: MerchantRole['id'], key: MerchantPermission) =>
-    setDraft((all) => ({
-      ...all,
-      [id]: all[id].includes(key) ? all[id].filter((k) => k !== key) : [...all[id], key],
-    }))
+  const toggle = (id: RoleId, key: MerchantPage, op: Op) =>
+    setDraft((all) => {
+      const current = all[id][key]
+      return { ...all, [id]: { ...all[id], [key]: withOp(current, op, !current.includes(op)) } }
+    })
+
+  const toggleColumn = (id: RoleId, keys: MerchantPage[], op: Op) =>
+    setDraft((all) => {
+      const able = keys.filter((key) => opsOf(key).includes(op))
+      const allOn = able.every((key) => all[id][key].includes(op))
+      const next = { ...all[id] }
+      for (const key of able) next[key] = withOp(next[key], op, !allOn)
+      return { ...all, [id]: next }
+    })
+
+  const columnState = (id: RoleId, keys: MerchantPage[], op: Op) => {
+    const able = keys.filter((key) => opsOf(key).includes(op))
+    const on = able.filter((key) => draft[id][key].includes(op)).length
+    return on === 0 ? false : on === able.length ? true : 'mixed'
+  }
 
   const save = () =>
     attempt(
-      () => saveMerchantRoles(roles.map((id) => ({ id, permissions: draft[id] }))),
+      () => saveMerchantRoles(roles.map((id) => ({ id, access: draft[id] }))),
       () => toast(t('mrole.saved')),
     )
+
+  // A line between the roles, on each role's first column
+  const roleEdge = (i: number) => (i === 0 ? 'border-l border-line' : '')
+  const cell = 'w-24 px-2 text-center'
 
   return (
     <>
@@ -80,48 +109,94 @@ function MerchantRolesTable({ saved }: { saved: MerchantRole[] }) {
       <div className="mx-auto flex w-full max-w-page flex-col gap-4 px-4 py-8 lg:px-8">
         <p className="text-sm text-ink-muted">{t('mrole.note')}</p>
         <section className="overflow-x-auto rounded-card border border-line bg-canvas">
-          <table className="w-full min-w-[560px]">
+          <table className="w-full min-w-[960px]">
             <thead>
-              <tr className="border-b border-line">
-                <th className="px-6 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase">
-                  {t('mrole.permission')}
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="border-b border-line px-6 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase"
+                >
+                  {t('mrole.page')}
                 </th>
                 {roles.map((id) => (
-                  <th key={id} className={th}>
+                  <th
+                    key={id}
+                    colSpan={OPS.length}
+                    className="border-l border-line px-2 pt-3 pb-1 text-center text-sm font-bold"
+                  >
                     {t(`mrole.role.${id}`)}
                   </th>
                 ))}
               </tr>
+              <tr className="border-b border-line">
+                {roles.flatMap((id) =>
+                  OPS.map((op, i) => (
+                    <th
+                      key={`${id}-${op}`}
+                      className={cn(
+                        cell,
+                        'pt-1 pb-3 text-[11px] font-semibold tracking-wide text-ink-muted uppercase',
+                        roleEdge(i),
+                      )}
+                    >
+                      {t(`op.${op}`)}
+                    </th>
+                  )),
+                )}
+              </tr>
             </thead>
             <tbody>
-              {MERCHANT_PERMISSION_GROUPS.map((group) => (
-                <Fragment key={group.title}>
-                  <tr className="bg-surface/60">
-                    <td
-                      colSpan={roles.length + 1}
-                      className="px-6 py-2 text-xs font-bold tracking-wide text-ink-muted uppercase"
-                    >
-                      {t(group.title)}
-                    </td>
-                  </tr>
-                  {group.permissions.map((key) => (
-                    <tr key={key} className="border-b border-line last:border-b-0">
-                      <td className="px-6 py-3 font-medium">{t(`mrole.perm.${key}`)}</td>
-                      {roles.map((id) => (
-                        <td key={id} className="px-4 py-3 text-center">
-                          <span className="inline-flex">
-                            <TableCheckbox
-                              label={`${t(`mrole.role.${id}`)}: ${t(`mrole.perm.${key}`)}`}
-                              checked={draft[id].includes(key)}
-                              onChange={() => toggle(id, key)}
-                            />
-                          </span>
-                        </td>
-                      ))}
+              {MERCHANT_PAGE_GROUPS.map((group) => {
+                const keys = group.pages.map((page) => page.key)
+                return (
+                  <Fragment key={group.title}>
+                    <tr className="bg-surface/60">
+                      <td className="px-6 py-2 text-xs font-bold tracking-wide text-ink-muted uppercase">
+                        {t(group.title)}
+                      </td>
+                      {roles.flatMap((id) =>
+                        OPS.map((op, i) => (
+                          <td key={`${id}-${op}`} className={cn(cell, 'py-2', roleEdge(i))}>
+                            {keys.length > 1 && keys.some((key) => opsOf(key).includes(op)) && (
+                              <span className="inline-flex">
+                                <TableCheckbox
+                                  label={`${t(`mrole.role.${id}`)}: ${t(group.title)}: ${t(`op.${op}`)}`}
+                                  checked={columnState(id, keys, op)}
+                                  onChange={() => toggleColumn(id, keys, op)}
+                                />
+                              </span>
+                            )}
+                          </td>
+                        )),
+                      )}
                     </tr>
-                  ))}
-                </Fragment>
-              ))}
+                    {group.pages.map((page) => (
+                      <tr key={page.key} className="border-b border-line last:border-b-0">
+                        <td className="px-6 py-3 font-medium">{t(`mrole.page.${page.key}`)}</td>
+                        {roles.flatMap((id) =>
+                          OPS.map((op, i) => (
+                            <td key={`${id}-${op}`} className={cn(cell, 'py-3', roleEdge(i))}>
+                              {page.ops.includes(op) ? (
+                                <span className="inline-flex">
+                                  <TableCheckbox
+                                    label={`${t(`mrole.role.${id}`)}: ${t(`mrole.page.${page.key}`)}: ${t(`op.${op}`)}`}
+                                    checked={draft[id][page.key].includes(op)}
+                                    onChange={() => toggle(id, page.key, op)}
+                                  />
+                                </span>
+                              ) : (
+                                <span className="text-ink-subtle" title={t('op.unavailable')}>
+                                  —
+                                </span>
+                              )}
+                            </td>
+                          )),
+                        )}
+                      </tr>
+                    ))}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </section>
