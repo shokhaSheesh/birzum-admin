@@ -27,7 +27,7 @@ const MAX_BACKOFF_MS = 30_000
  * Keeps one socket open for the app's chats while mounted: a one-time ticket, then the socket;
  * after any close (the server ends every socket after an hour) it reconnects with a backoff of
  * 1 to 30 seconds. `live` is false while it is down, so the page polls faster meanwhile. The
- * sample panel has no backend and opens nothing.
+ * socket opens only for a signed-in admin.
  */
 export function useChatEvents(app: Workspace, onEvent: (event: ChatEvent) => void) {
   const [live, setLive] = useState(false)
@@ -37,7 +37,7 @@ export function useChatEvents(app: Workspace, onEvent: (event: ChatEvent) => voi
   })
 
   useEffect(() => {
-    if (getAdmin()?.demo) return
+    if (!getAdmin()) return
     let socket: WebSocket | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
     let stopped = false
