@@ -13,10 +13,14 @@ export type HideReason = (typeof HIDE_REASONS)[number]
 export type ReviewStatus = 'published' | 'hidden' | 'removed'
 export const REVIEW_STATUSES: ReviewStatus[] = ['published', 'hidden', 'removed']
 
-/** What a shopper said about a shop after a purchase, from the client app. */
+/**
+ * What a shopper said about one product they bought, from the client app (one review per product
+ * per ariza). The shop's rating is the average of its products' reviews.
+ */
 export type Review = {
   id: string
   applicationId: string
+  productId?: string
   merchantId: string
   clientId: string
   author: string
@@ -26,6 +30,8 @@ export type Review = {
   productName: string
   at: Date
   status: ReviewStatus
+  /** The merchant's public answer, written in the merchant app. */
+  reply?: { text: string; at: Date }
   /** Who changed the status, when and why. */
   moderation?: { at: Date; by: string; reason?: HideReason; comment?: string }
 }
@@ -67,6 +73,17 @@ const TEXTS: Record<number, string[]> = {
     'Oʻn kun kutdim, keyin buyurtmani bekor qilishdi. Endi bu yerdan olmayman.',
   ],
 }
+const REPLIES: Record<'good' | 'bad', string[]> = {
+  good: [
+    'Rahmat! Sizni yana kutib qolamiz.',
+    'Fikringiz uchun rahmat, xaridingiz muborak boʻlsin!',
+    'Спасибо за отзыв! Будем рады видеть вас снова.',
+  ],
+  bad: [
+    'Uzr soʻraymiz. Menejerimiz siz bilan bugun bogʻlanadi.',
+    'Kechikish uchun uzr. Yetkazib berishni tezlashtirish ustida ishlayapmiz.',
+  ],
+}
 // Two that broke the rules, so the hidden tab has something to show
 const ABUSE = 'Sotuvchilar umuman ishlashni bilmaydi, ****lar! Pulingizni bermang.'
 const SPAM = 'Arzon iPhone kerakmi? Telegram: @arzon_telefon_uz ga yozing!'
@@ -80,23 +97,36 @@ function seed(): Review[] {
   for (const application of applicationsStore.getAll()) {
     const handed = handedAtOf(application)
     if (!handed || rand() > 0.55) continue
-    const at = new Date(handed.getTime() + (1 + rand() * 5) * 86_400_000)
-    if (at > sampledAt) continue
-    const roll = rand()
-    const rating = roll < 0.55 ? 5 : roll < 0.78 ? 4 : roll < 0.88 ? 3 : roll < 0.94 ? 2 : 1
-    const texts = TEXTS[rating]
     const client = clientsStore.get(application.clientId)
-    out.push({
-      id: `r${application.id}`,
-      applicationId: application.id,
-      merchantId: application.merchantId,
-      clientId: application.clientId,
-      author: client ? fullName(client) : application.client.name,
-      rating,
-      text: texts[Math.floor(rand() * texts.length)],
-      productName: application.lines[0].name,
-      at,
-      status: 'published',
+    application.lines.forEach((line, index) => {
+      const at = new Date(handed.getTime() + (1 + rand() * 5) * 86_400_000)
+      if (at > sampledAt) return
+      const roll = rand()
+      const rating = roll < 0.55 ? 5 : roll < 0.78 ? 4 : roll < 0.88 ? 3 : roll < 0.94 ? 2 : 1
+      const texts = TEXTS[rating]
+      // About half of the reviews have the shop's answer, a day or so later
+      const replies = REPLIES[rating <= 2 ? 'bad' : 'good']
+      const reply =
+        rand() < 0.5
+          ? {
+              text: replies[Math.floor(rand() * replies.length)],
+              at: new Date(at.getTime() + (2 + rand() * 30) * 3_600_000),
+            }
+          : undefined
+      out.push({
+        id: `r${application.id}-${index}`,
+        applicationId: application.id,
+        productId: line.productId,
+        merchantId: application.merchantId,
+        clientId: application.clientId,
+        author: client ? fullName(client) : application.client.name,
+        rating,
+        text: texts[Math.floor(rand() * texts.length)],
+        productName: line.name,
+        at,
+        status: 'published',
+        reply: reply && reply.at <= sampledAt ? reply : undefined,
+      })
     })
   }
   out.sort((a, b) => b.at.getTime() - a.at.getTime())

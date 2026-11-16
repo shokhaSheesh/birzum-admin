@@ -133,3 +133,32 @@ export function DeleteReviewDialog({ review, onClose }: { review: Review; onClos
     </ConfirmDialog>
   )
 }
+
+/**
+ * Removes the merchant's answer under a review (e.g. it is rude or leaks personal data). The review
+ * itself stays.
+ */
+export function DeleteReplyDialog({ review, onClose }: { review: Review; onClose: () => void }) {
+  const { t } = useI18n()
+  return (
+    <ConfirmDialog
+      open
+      onClose={onClose}
+      title={t('review.reply.delete.title')}
+      confirmLabel={t('common.delete')}
+      onConfirm={() => {
+        reviewsStore.update(review.id, { reply: undefined })
+        toast(t('review.reply.deleted'))
+        logAction({
+          section: 'reviews',
+          kind: 'delete',
+          action: 'audit.a.reviewReplyDeleted',
+          target: review.author,
+        })
+        onClose()
+      }}
+    >
+      <p>{t('review.reply.delete.message')}</p>
+    </ConfirmDialog>
+  )
+}

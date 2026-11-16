@@ -1,11 +1,11 @@
-import { Eye, EyeOff, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, MessageSquareReply, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { clientsStore, initialsOf } from '@/entities/clients/clients'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { ratingOf, reviewsStore, type Review } from '@/entities/reviews/reviews'
-import { applicationPath, clientPath } from '@/shared/config/routes'
+import { applicationPath, clientPath, productPath } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { cn } from '@/shared/lib/cn'
 import { inRange } from '@/shared/lib/dates'
@@ -24,6 +24,7 @@ import { Stars } from '@/shared/ui/Stars'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import {
+  DeleteReplyDialog,
   DeleteReviewDialog,
   HideReviewModal,
   RestoreReviewDialog,
@@ -34,9 +35,10 @@ const card = 'flex min-w-0 flex-col gap-5 rounded-card border border-line bg-can
 const score = (n: number) => n.toFixed(1).replace('.', ',')
 
 /**
- * Every review shoppers left on shops, for the period: figures, how the stars spread, each
- * merchant's rating, then the reviews as cards. The admin hides one that breaks the rules,
- * brings back one a merchant deleted, or deletes one for good.
+ * Every review shoppers left on products, for the period: figures, how the stars spread, each
+ * merchant's rating, then the reviews as cards with the product and the merchant's answer. The
+ * admin hides one that breaks the rules, brings back one a merchant deleted, deletes one for good,
+ * or removes a merchant's answer that breaks the rules.
  */
 export function ReviewsPage() {
   const { t } = useI18n()
@@ -48,6 +50,8 @@ export function ReviewsPage() {
   const [query, setQuery] = useState('')
   const [merchant, setMerchant] = useState('')
   const [stars, setStars] = useState('')
+  const [product, setProduct] = useState('')
+  const [replyDeleting, setReplyDeleting] = useState<Review | null>(null)
   const [hiding, setHiding] = useState<Review | null>(null)
   const [restoring, setRestoring] = useState<Review | null>(null)
   const [deleting, setDeleting] = useState<Review | null>(null)
@@ -87,10 +91,19 @@ export function ReviewsPage() {
         review.author.toLowerCase().includes(needle) ||
         review.productName.toLowerCase().includes(needle)) &&
       (!merchant || review.merchantId === merchant) &&
+      (!product || review.productId === product) &&
       (!stars || review.rating === Number(stars)),
   )
   const rows = filtered.filter((review) => inTab(review, tab))
-  const pager = usePagination(rows, JSON.stringify([tab, query, merchant, stars, period]))
+  const pager = usePagination(rows, JSON.stringify([tab, query, merchant, product, stars, period]))
+  // Only products that have reviews in the period, of the chosen merchant if one is chosen
+  const reviewedProducts = [
+    ...new Map(
+      inPeriod
+        .filter((review) => review.productId && (!merchant || review.merchantId === merchant))
+        .map((review) => [review.productId!, review.productName]),
+    ),
+  ].sort((a, b) => a[1].localeCompare(b[1]))
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 py-8 lg:px-8">
@@ -253,6 +266,15 @@ export function ReviewsPage() {
             onChange={setMerchant}
           />
           <FilterSelect
+            label={t('reviews.product')}
+            options={[
+              { value: '', label: t('reviews.product.all') },
+              ...reviewedProducts.map(([value, label]) => ({ value, label })),
+            ]}
+            value={product}
+            onChange={setProduct}
+          />
+          <FilterSelect
             label={t('reviews.rating')}
             options={[
               { value: '', label: t('reviews.rating.all') },
@@ -324,6 +346,27 @@ export function ReviewsPage() {
                     >
                       {review.text}
                     </p>
+                    {review.reply && (
+                      <div className="flex max-w-4xl flex-col gap-1 rounded-control bg-surface px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <MessageSquareReply size={16} className="text-ink-muted" />
+                            {t('review.reply', { merchant: shop?.name ?? '' })}
+                          </span>
+                          <span className="text-ink-muted tabular-nums">
+                            {formatDateTime(review.reply.at)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setReplyDeleting(review)}
+                            className="ml-auto font-medium text-danger hover:underline"
+                          >
+                            {t('review.reply.delete')}
+                          </button>
+                        </div>
+                        <p className="text-sm">{review.reply.text}</p>
+                      </div>
+                    )}
                     {review.moderation && (
                       <p className="text-sm text-ink-muted">
                         {review.status === 'removed'
@@ -354,7 +397,16 @@ export function ReviewsPage() {
                           {shop.name}
                         </span>
                       )}
-                      <span className="text-ink-muted">{review.productName}</span>
+                      {review.productId ? (
+                        <Link
+                          to={productPath(review.productId)}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {review.productName}
+                        </Link>
+                      ) : (
+                        <span className="text-ink-muted">{review.productName}</span>
+                      )}
                       <Link
                         to={applicationPath(review.applicationId)}
                         className="font-medium text-brand tabular-nums hover:underline"
@@ -374,6 +426,9 @@ export function ReviewsPage() {
       {hiding && <HideReviewModal review={hiding} onClose={() => setHiding(null)} />}
       {restoring && <RestoreReviewDialog review={restoring} onClose={() => setRestoring(null)} />}
       {deleting && <DeleteReviewDialog review={deleting} onClose={() => setDeleting(null)} />}
+      {replyDeleting && (
+        <DeleteReplyDialog review={replyDeleting} onClose={() => setReplyDeleting(null)} />
+      )}
     </div>
   )
 }

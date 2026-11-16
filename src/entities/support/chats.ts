@@ -26,6 +26,8 @@ export type ChatMessage = {
   text: string
   at: Date
   image?: string
+  /** A client's voice message: its length in seconds. Admins can't send these. */
+  voice?: number
 }
 
 export type Chat = {
@@ -240,6 +242,7 @@ export const chatsStore = createStore<Chat>([
         at(18, 8, 40),
       ),
       msg('client', '', at(18, 8, 41), { image: product3 }),
+      msg('client', '', at(18, 8, 42), { voice: 9 }),
     ],
   },
   {
@@ -268,6 +271,7 @@ export const chatsStore = createStore<Chat>([
         },
       ),
       msg('client', 'Xoʻp, unda qachon qayta urinsam boʻladi?', at(18, 7, 55)),
+      msg('client', '', at(18, 7, 56), { voice: 17 }),
     ],
   },
   {

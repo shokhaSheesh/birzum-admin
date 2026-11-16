@@ -51,6 +51,7 @@ import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { logAction } from '@/entities/audit/audit'
 import { loanClientsStore, type LoanClient } from '@/entities/microloans/loanClients'
 import { LoanClientPanel } from '@/features/microloans/components/LoanClientPanel'
+import { VoiceMessage, voiceClock } from '../components/VoiceMessage'
 
 type Box = 'queue' | 'mine' | 'open' | 'closed'
 const BOXES: Box[] = ['queue', 'mine', 'open', 'closed']
@@ -227,7 +228,12 @@ export function SupportPage({ app = 'birzum' }: { app?: Workspace }) {
                           )}
                         >
                           {last.from === 'operator' && `${t('support.you')}: `}
-                          {last.image && !last.text ? t('support.photo') : last.text}
+                          {last.text ||
+                            (last.voice
+                              ? t('support.voice', { time: voiceClock(last.voice) })
+                              : last.image
+                                ? t('support.photo')
+                                : '')}
                         </span>
                         {chat.unread > 0 && (
                           <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-xs font-bold text-on-primary">
@@ -635,6 +641,9 @@ function Bubble({ message, person }: { message: ChatMessage; person?: Person }) 
           )}
           {message.image && (
             <img src={message.image} alt="" className="max-h-56 rounded-control object-cover" />
+          )}
+          {message.voice && (
+            <VoiceMessage duration={message.voice} seed={Number(message.id.slice(1)) || 1} />
           )}
           {message.text && <p className="whitespace-pre-line">{message.text}</p>}
         </div>

@@ -37,7 +37,14 @@ export type RejectReason = (typeof REJECT_REASONS)[number] | 'timeout'
 export type Actor = { kind: 'staff' | 'customer' | 'system'; name: string }
 export type HistoryEntry = { status: ApplicationStatus; at: Date; by: Actor; comment?: string }
 
-export type ApplicationLine = { name: string; variant?: string; price: number; quantity: number }
+export type ApplicationLine = {
+  name: string
+  variant?: string
+  price: number
+  quantity: number
+  /** The catalogue product, for lines picked from the catalogue. */
+  productId?: string
+}
 
 export type Application = {
   id: string
@@ -190,6 +197,7 @@ function seed(): Application[] {
         const variant = pick(product.variants)
         return {
           name: product.name.uz,
+          productId: product.id,
           variant: variant.label.uz || undefined,
           price: variant.price,
           quantity: 1,
