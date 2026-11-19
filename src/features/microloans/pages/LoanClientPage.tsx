@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   Ban,
   ChevronRight,
+  CreditCard,
   LockOpen,
   MonitorSmartphone,
   ShieldCheck,
@@ -9,10 +10,16 @@ import {
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { loanApplicationsStore, loanAppStatusTone, sumOf } from '@/entities/microloans/applications'
+import {
+  loanApplicationsStore,
+  loanAppStatusTone,
+  sumOf,
+  type LoanAppStatus,
+} from '@/entities/microloans/applications'
 import { sessionsOf } from '@/entities/microloans/clientSessions'
 import { loanClientsStore, segmentOf, segmentTone } from '@/entities/microloans/loanClients'
 import {
+  cardBalanceOf,
   cardText,
   lateOf,
   loansStore,
@@ -28,10 +35,13 @@ import { formatDate, formatDateTime, formatSum, groupDigits } from '@/shared/lib
 import { formatPhone } from '@/shared/lib/phone'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { LineChart } from '@/shared/ui/charts/LineChart'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { LoanClientBlockModal, LoanClientUnblockDialog } from '../components/LoanClientBlockDialogs'
 
+/** Arizalar that got an offer, whatever the borrower did with it then. */
+const OFFERED: LoanAppStatus[] = ['approved', 'counter', 'signed', 'paidOut', 'expired', 'refused']
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
 
 /** Label and value rows inside a card. */
@@ -85,6 +95,8 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
   }
 
   const apps = allApps.filter((app) => app.borrower.passport === client.passport)
+  // Oldest first, for the chart of asked and offered sums
+  const byDate = [...apps].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
   const loans = allLoans.filter((loan) => loan.borrower.passport === client.passport)
   const segment = segmentOf(client, allApps, allLoans)
   const open = loans.filter((loan) => !loan.closedAt)
@@ -216,6 +228,37 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
             )}
           </section>
 
+          {apps.length > 1 && (
+            <section className="flex flex-col gap-4 rounded-card border border-line bg-canvas p-5">
+              <h2 className="text-lg font-bold">{t('mlClients.offers')}</h2>
+              <LineChart
+                label={t('mlClients.offers')}
+                legend="last"
+                now={today}
+                buckets={byDate.map((app) => ({
+                  start: app.createdAt,
+                  end: app.createdAt,
+                  size: 'event' as const,
+                }))}
+                series={[
+                  {
+                    key: 'offered',
+                    label: t('loanApp.offered'),
+                    color: 'var(--color-brand)',
+                    values: byDate.map((app) => (OFFERED.includes(app.status) ? sumOf(app) : null)),
+                    area: true,
+                  },
+                  {
+                    key: 'asked',
+                    label: t('loanApp.asked'),
+                    color: 'var(--color-green-600)',
+                    values: byDate.map((app) => app.amount),
+                  },
+                ]}
+              />
+            </section>
+          )}
+
           <section className="flex flex-col rounded-card border border-line bg-canvas">
             <h2 className="p-5 pb-3 text-lg font-bold">{t('nav.applications')}</h2>
             {apps.length === 0 ? (
@@ -273,6 +316,33 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
           </section>
           <section className={card}>
             <h2 className="flex items-center gap-2 font-bold">
+              <CreditCard size={18} className="text-brand" />
+              {t('mlClients.cards')}
+            </h2>
+            {cards.length === 0 ? (
+              <p className="text-sm text-ink-muted">—</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-line">
+                {cards.map((item) => (
+                  <li key={item.last4} className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold tabular-nums">{cardText(item)}</span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {formatSum(cardBalanceOf(item))}
+                      </span>
+                    </div>
+                    <p className="flex items-center gap-1.5 text-sm text-success">
+                      <ShieldCheck size={14} className="shrink-0" />
+                      {t('mlClients.card.owner')}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-ink-subtle">{t('mlClients.card.hint')}</p>
+          </section>
+          <section className={card}>
+            <h2 className="flex items-center gap-2 font-bold">
               <Smartphone size={18} className="text-brand" />
               {t('mlClients.app')}
             </h2>
@@ -291,7 +361,6 @@ export function LoanClientPage({ brand }: { brand: Brand }) {
                   `${client.device.os === 'ios' ? 'iOS' : 'Android'} · ${client.device.app}`,
                 ],
                 [t('mlClients.lastSeen'), formatDateTime(client.lastSeenAt)],
-                [t('mlClients.cards'), cards.length ? cards.map(cardText).join(', ') : '—'],
               ]}
             />
           </section>

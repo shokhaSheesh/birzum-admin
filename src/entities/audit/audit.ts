@@ -78,19 +78,11 @@ function seed(): AuditEntry[] {
     () => ({
       section: 'collections',
       kind: 'money',
-      action: 'audit.a.charged',
-      params: { sum: sum(400_000, 2_500_000) },
-      ...client(),
-    }),
-    () => ({
-      section: 'collections',
-      kind: 'money',
       action: 'audit.a.paymentEntered',
       params: { sum: sum(300_000, 3_000_000) },
       ...client(),
     }),
     () => ({ section: 'collections', kind: 'update', action: 'audit.a.contactSaved', ...client() }),
-    () => ({ section: 'collections', kind: 'update', action: 'audit.a.reminded', ...client() }),
     () => ({
       section: 'customers',
       kind: 'update',

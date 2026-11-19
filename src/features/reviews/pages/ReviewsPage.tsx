@@ -1,7 +1,8 @@
 import { Eye, EyeOff, MessageSquareReply, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { clientsStore, initialsOf } from '@/entities/clients/clients'
+import { productsStore } from '@/entities/catalog/products'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
 import { ratingOf, reviewsStore, type Review } from '@/entities/reviews/reviews'
@@ -45,12 +46,19 @@ export function ReviewsPage() {
   const reviews = reviewsStore.useAll()
   const merchants = merchantsStore.useAll()
   const clients = clientsStore.useAll()
-  const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
+  // From a product page: that product's reviews, of all time
+  const [params] = useSearchParams()
+  const fromProduct = params.get('product') ?? ''
+  const [period, setPeriod] = useState<Period>(() =>
+    fromProduct ? { ...thisMonth(new Date()), unit: 'all' } : thisMonth(new Date()),
+  )
   const [tab, setTab] = useState<Tab>('all')
   const [query, setQuery] = useState('')
-  const [merchant, setMerchant] = useState('')
+  const [merchant, setMerchant] = useState(
+    () => (fromProduct && productsStore.get(fromProduct)?.merchantId) || '',
+  )
   const [stars, setStars] = useState('')
-  const [product, setProduct] = useState('')
+  const [product, setProduct] = useState(fromProduct)
   const [replyDeleting, setReplyDeleting] = useState<Review | null>(null)
   const [hiding, setHiding] = useState<Review | null>(null)
   const [restoring, setRestoring] = useState<Review | null>(null)

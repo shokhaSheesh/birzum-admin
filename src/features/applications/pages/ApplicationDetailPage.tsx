@@ -42,6 +42,8 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
  * One ariza, read-only: what was bought and on what terms, its full history, the shopper, the
  * merchant and filial.
  */
+const ADDRESS_PARTS = ['house', 'apartment', 'entrance', 'floor', 'note'] as const
+
 export function ApplicationDetailPage() {
   const { t, tl } = useI18n()
   const navigate = useNavigate()
@@ -298,6 +300,12 @@ export function ApplicationDetailPage() {
                   t('application.address'),
                   application.fulfilment.address ?? (filial ? tl(filial.address) : '—'),
                 ],
+                ...ADDRESS_PARTS.flatMap((part) => {
+                  const value = application.fulfilment[part]
+                  return value
+                    ? [[t(`application.address.${part}`), value] as [string, string]]
+                    : []
+                }),
               ]}
             />
           </section>

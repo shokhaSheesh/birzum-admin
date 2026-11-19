@@ -43,6 +43,8 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
       { key: 'applications', label: 'nav.applications', ops: ['read'] },
       { key: 'customers', label: 'nav.customers', ops: ['read', 'update'] },
       { key: 'collections', label: 'nav.collections', ops: ['read', 'create', 'update'] },
+      { key: 'planFact', label: 'nav.planFact', ops: ['read'] },
+      { key: 'debts', label: 'nav.debts', ops: ['read', 'update'] },
     ],
   },
   {
@@ -113,7 +115,13 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
         short: 'nav.loanPayments',
         ops: ['read', 'create'],
       },
-      { key: 'mlOverdue', label: 'nav.mlOverdue', short: 'nav.overdue', ops: ['read', 'update'] },
+      {
+        key: 'mlPlanFact',
+        label: 'nav.mlPlanFact',
+        short: 'nav.planFact',
+        ops: ['read'],
+      },
+      { key: 'mlOverdue', label: 'nav.mlOverdue', short: 'nav.debts', ops: ['read', 'update'] },
       { key: 'mlClients', label: 'nav.mlClients', short: 'nav.borrowers', ops: ['read', 'update'] },
     ],
   },
@@ -148,6 +156,11 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
       { key: 'mlContacts', label: 'nav.mlContacts', short: 'nav.contacts', ops: ALL },
     ],
   },
+  {
+    scope: 'microloans',
+    title: 'navGroup.system',
+    sections: [{ key: 'mlAudit', label: 'nav.mlAudit', short: 'nav.audit', ops: ['read'] }],
+  },
 ]
 export const SECTIONS = PERMISSION_GROUPS.flatMap((group) => group.sections)
 export const SECTION_KEYS = SECTIONS.map((s) => s.key)
@@ -165,7 +178,6 @@ export const keysFor = (brands: Workspace[]) => {
  * (e.g. Yaratish on Toʻlovlar va qarzlar) and is granted on its own on top of it.
  */
 export const SPECIAL_ACTIONS = [
-  { key: 'chargeCard', section: 'collections', op: 'create' },
   { key: 'blockClient', section: 'customers', op: 'update' },
   { key: 'sendBroadcast', section: 'broadcasts', op: 'create' },
   { key: 'mlBlockClient', section: 'mlClients', op: 'update' },
@@ -220,18 +232,26 @@ export const rolesStore = createStore<Role>([
     name: 'Moliya',
     description: 'Klientlardan tushum va toʻlovlar.',
     access: grant(
-      ['collections'],
+      ['collections', 'debts', 'planFact'],
       ['dashboard', 'applications', 'customers', 'merchants', 'pricing'],
     ),
-    actions: ['chargeCard'],
+    actions: [],
   },
   {
     id: 'collections',
     brands: ['birzum'],
     name: 'Undiruvchi',
-    description: 'Qarzdorlar bilan ishlash: qoʻngʻiroq, eslatma, kartadan yechish.',
-    access: grant(['collections'], ['applications', 'customers']),
-    actions: ['chargeCard'],
+    description: 'Qarzdorlar bilan ishlash: qoʻngʻiroqlar, holatlar va vaʼdalar.',
+    access: grant(['collections', 'debts'], ['applications', 'customers', 'planFact']),
+    actions: [],
+  },
+  {
+    id: 'mlCollections',
+    brands: ['fortuna', 'vodiy'],
+    name: 'Undiruvchi (mikroqarz)',
+    description: 'Kechikkan qarzlar bilan ishlash: qoʻngʻiroqlar, holatlar va vaʼdalar.',
+    access: grant(['mlOverdue', 'mlPlanFact'], ['mlLoans', 'mlPayments', 'mlClients']),
+    actions: [],
   },
   {
     id: 'support',

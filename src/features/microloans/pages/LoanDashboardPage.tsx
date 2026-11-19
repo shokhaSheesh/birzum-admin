@@ -288,10 +288,10 @@ export function LoanDashboardPage({ brand }: { brand: Brand }) {
             </span>
           </div>
           <Link
-            to={brandPath(brand, 'overdue')}
+            to={brandPath(brand, 'debts')}
             className="flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
           >
-            {t('nav.overdue')}
+            {t('nav.debts')}
             <ChevronRight size={16} />
           </Link>
         </div>

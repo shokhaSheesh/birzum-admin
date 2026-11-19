@@ -23,6 +23,7 @@ import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { ModerationCard } from '../components/ModerationCard'
+import { ProductReviewsCard } from '../components/ProductReviewsCard'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
@@ -217,6 +218,8 @@ export function ProductDetailPage() {
               </dl>
             </section>
           )}
+
+          <ProductReviewsCard productId={product.id} />
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">

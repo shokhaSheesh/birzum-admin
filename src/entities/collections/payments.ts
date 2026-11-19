@@ -15,7 +15,7 @@ export type PaymentKind = (typeof PAYMENT_KINDS)[number]
  * `charge`: an admin took it from the card by hand. `cash` and `transfer`: paid outside the
  * apps (at a shop, or to Birzum's bank account) and entered by an admin.
  */
-export const PAYMENT_METHODS = ['auto', 'app', 'charge', 'cash', 'transfer'] as const
+export const PAYMENT_METHODS = ['auto', 'app', 'cash', 'transfer'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 /** Methods an admin enters by hand, with a document number. */
 export const MANUAL_METHODS = ['cash', 'transfer'] as const
@@ -249,19 +249,4 @@ export function recordPayment(application: Application, entry: Entry, today: Dat
         { status: 'closed', at: entry.at, by: { kind: 'system', name: 'Birzum' } },
       ],
     })
-}
-
-/** Records a failed charge an admin tried, so it shows among the payments. */
-export function recordFailedCharge(
-  application: Application,
-  entry: Entry & { failed: FailReason },
-) {
-  paymentsStore.save({
-    id: newId(),
-    applicationId: application.id,
-    clientId: application.clientId,
-    merchantId: application.merchantId,
-    kind: 'monthly',
-    ...entry,
-  })
 }

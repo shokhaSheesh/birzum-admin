@@ -3,7 +3,6 @@ import {
   Banknote,
   BanknoteX,
   ChartColumn,
-  CircleAlert,
   CalendarDays,
   MapPin,
   FileText,
@@ -17,8 +16,10 @@ import {
   MessageCircleQuestion,
   MessageSquareText,
   Package,
+  PhoneCall,
   ReceiptText,
   ShieldCheck,
+  TableProperties,
   Smartphone,
   Star,
   Store,
@@ -78,6 +79,13 @@ export const NAV: NavGroup[] = [
         label: 'nav.collections',
         about: 'about.collections',
       },
+      {
+        to: ROUTES.planFact,
+        icon: TableProperties,
+        label: 'nav.planFact',
+        about: 'about.planFact',
+      },
+      { to: ROUTES.debts, icon: PhoneCall, label: 'nav.debts', about: 'about.debts' },
     ],
   },
   {
@@ -174,12 +182,18 @@ export function brandNav(brand: Brand): NavGroup[] {
         { to: to('loans'), icon: Banknote, label: 'nav.loans', about: 'about.ml.loans' },
         { to: to('payments'), icon: Wallet, label: 'nav.loanPayments', about: 'about.ml.payments' },
         {
+          to: to('plan-fact'),
+          icon: TableProperties,
+          label: 'nav.planFact',
+          about: 'about.ml.planFact',
+        },
+        {
           to: to('payouts'),
           icon: BanknoteX,
           label: 'nav.failedPayouts',
           about: 'about.ml.payouts',
         },
-        { to: to('overdue'), icon: CircleAlert, label: 'nav.overdue', about: 'about.ml.overdue' },
+        { to: to('debts'), icon: PhoneCall, label: 'nav.debts', about: 'about.ml.debts' },
         { to: to('customers'), icon: Users, label: 'nav.borrowers', about: 'about.ml.customers' },
       ],
     },
@@ -227,6 +241,10 @@ export function brandNav(brand: Brand): NavGroup[] {
         },
         { to: to('contacts'), icon: MapPin, label: 'nav.contacts', about: 'about.ml.contacts' },
       ],
+    },
+    {
+      title: 'navGroup.system',
+      items: [{ to: to('audit'), icon: History, label: 'nav.audit', about: 'about.ml.audit' }],
     },
   ]
 }

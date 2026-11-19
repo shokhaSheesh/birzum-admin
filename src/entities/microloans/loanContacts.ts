@@ -1,12 +1,11 @@
-import { CONTACT_RESULTS, type ContactResult } from '@/entities/collections/contacts'
+import type { CallResult } from '@/entities/collections/contacts'
+import type { DebtStatus } from '@/entities/collections/debtCases'
 import { loansStore } from '@/entities/microloans/loans'
 import { createStore } from '@/shared/lib/createStore'
 
-export { CONTACT_RESULTS, type ContactResult }
-
 /**
- * One step of working with a late loan: a call and what came of it, or a reminder sent to the
- * borrower's phone and app. The same results as Birzum's Undiruv.
+ * One step of working with a late loan: a call and what came of it, or the automatic reminder the
+ * brand sends. The same results as Birzum's Qarzdorlar.
  */
 export type LoanContact = {
   id: string
@@ -15,10 +14,18 @@ export type LoanContact = {
   /** The admin who called or sent it; the brand's name for the automatic reminder. */
   by: string
   channel: 'call' | 'reminder'
-  result?: ContactResult
-  /** The day the borrower promised to pay by. */
+  result?: CallResult
+  /** The day the borrower promised to pay by (a promise or a delay they asked for). */
   promiseDate?: Date
+  /** What the person said, in the operator's words. */
+  clientAnswer?: string
+  /** The operator's own note. */
   comment?: string
+  nextCall?: Date
+  /** The status the call moved the debt to. */
+  statusAfter?: DebtStatus
+  /** Who picked up when it was not the borrower: one of their contacts, e.g. "Dilnoza (opa-singil)". */
+  whom?: string
 }
 
 /** The newest first. */
@@ -30,14 +37,21 @@ export const contactsOfLoan = (contacts: LoanContact[], loanId: string) =>
 /** The promise from the latest call, if it ended in one. */
 export const promiseOfLoan = (contacts: LoanContact[], loanId: string) => {
   const call = contactsOfLoan(contacts, loanId).find((contact) => contact.channel === 'call')
-  return call?.result === 'promised' ? (call.promiseDate ?? null) : null
+  return call?.promiseDate ?? null
 }
 
-const NOTES: Record<ContactResult, string> = {
-  promised: 'Maosh kechikdi, juma kuni toʻlashini aytdi.',
-  noAnswer: 'Ikki marta qoʻngʻiroq qildim, koʻtarmadi.',
-  refused: 'Biznesi yopilganini aytdi, hozircha toʻlay olmaydi.',
-  wrongNumber: 'Raqam boshqa odamga tegishli ekan.',
+const NOTES: Partial<Record<CallResult, { answer?: string; comment: string }>> = {
+  promised: {
+    answer: 'Maosh kechikdi, juma kuni toʻlayman.',
+    comment: 'Vaʼdasiga ishonsa boʻladi.',
+  },
+  noAnswer: { comment: 'Ikki marta qoʻngʻiroq qildim, koʻtarmadi.' },
+  refused: {
+    answer: 'Biznesim yopildi, hozir toʻlay olmayman.',
+    comment: 'Kontaktlariga qoʻngʻiroq qilish kerak.',
+  },
+  askedDelay: { answer: 'Ikki hafta muhlat bering, mol sotilyapti.', comment: 'Muhlat soʻradi.' },
+  unavailable: { comment: 'Raqam oʻchiq, qoʻshimcha kontaktga qoʻngʻiroq qilish kerak.' },
 }
 
 const DAY = 86_400_000
@@ -47,7 +61,7 @@ const BRAND_NAME = { fortuna: 'Fortuna Biznes', vodiy: 'Vodiy Taraqqiyot' } as c
 // call. Replace with the API.
 function seed(): LoanContact[] {
   const out: LoanContact[] = []
-  const results: ContactResult[] = ['promised', 'noAnswer', 'promised', 'refused', 'noAnswer']
+  const results: CallResult[] = ['promised', 'noAnswer', 'refused', 'askedDelay', 'unavailable']
   loansStore
     .getAll()
     .filter((loan) => loan.overdueSince && !loan.closedAt)
@@ -72,15 +86,20 @@ function seed(): LoanContact[] {
         id: `${loan.id}-c`,
         loanId: loan.id,
         at,
-        by: i % 2 ? 'Malika Rasulova' : 'Sardor Nematov',
+        by: i % 2 ? 'Dilshod Karimov' : 'Sardor Saidov',
         channel: 'call',
         result,
         // The first promise was for two days later and has passed; the others are still ahead
         promiseDate:
-          result === 'promised'
-            ? new Date(i === 0 ? at.getTime() + 2 * DAY : Date.now() + 3 * DAY)
+          result === 'promised' || result === 'askedDelay'
+            ? new Date(
+                i === 0
+                  ? at.getTime() + 2 * DAY
+                  : Date.now() + (result === 'askedDelay' ? 12 : 3) * DAY,
+              )
             : undefined,
-        comment: NOTES[result],
+        clientAnswer: NOTES[result]?.answer,
+        comment: NOTES[result]?.comment,
       })
     })
   return out

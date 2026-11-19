@@ -16,6 +16,7 @@ export const APPLICATION_STATUSES = [
   'pending',
   'creating',
   'processing',
+  'received',
   'handed',
   'closed',
   'rejected',
@@ -24,7 +25,8 @@ export const APPLICATION_STATUSES = [
 /**
  * `pending`: a shopper's order from the client app; the merchant has 24 hours to accept or
  * reject it, or it is rejected by itself. `creating`: accepted, FlexSoft is making the contract.
- * `processing`: the contract is made, the goods wait to be handed over. `handed`: goods given,
+ * `processing`: the contract is made, the goods wait to be handed over. `received`: the client
+ * pressed «Mahsulotni qabul qildim» in the app, so the shop can finish the hand-over. `handed`: goods given,
  * nasiya running. `closed`: fully paid. `rejected` and `cancelled` are final.
  */
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number]
@@ -36,6 +38,18 @@ export type RejectReason = (typeof REJECT_REASONS)[number] | 'timeout'
 /** Who made a change: merchant staff, the shopper, or a system (Birzum, FlexSoft). */
 export type Actor = { kind: 'staff' | 'customer' | 'system'; name: string }
 export type HistoryEntry = { status: ApplicationStatus; at: Date; by: Actor; comment?: string }
+
+/** How the goods reach the client. The delivery address parts are the ones the client app asks. */
+export type Fulfilment = {
+  method: 'pickup' | 'delivery'
+  address?: string
+  house?: string
+  apartment?: string
+  entrance?: string
+  floor?: string
+  /** A landmark or a note for the courier. */
+  note?: string
+}
 
 export type ApplicationLine = {
   name: string
@@ -69,7 +83,7 @@ export type Application = {
   monthlyPayment: number
   /** Day of the month the payment is taken, 1 to 10. */
   paymentDay: number
-  fulfilment: { method: 'pickup' | 'delivery'; address?: string }
+  fulfilment: Fulfilment
   contractNumber?: string
   rejection?: { reason: RejectReason; comment: string }
   cancelComment?: string
@@ -94,7 +108,7 @@ export const financedOf = (application: Application) =>
 
 /** Still moving: waiting for the shop, for the contract, or for the hand-over. */
 export const isOpen = (status: ApplicationStatus) =>
-  status === 'pending' || status === 'creating' || status === 'processing'
+  status === 'pending' || status === 'creating' || status === 'processing' || status === 'received'
 
 /** How long the shop has to answer a shopper's order. */
 export const CONFIRM_HOURS = 24
@@ -126,11 +140,24 @@ const FILIALS: Record<string, string[]> = {
   m3: ['f6'],
   m4: ['f7', 'f8'],
 }
-const ADDRESSES = [
-  'Toshkent, Chilonzor 19-kvartal, 7-uy',
-  'Toshkent, Yunusobod 11-mavze, 23-uy',
-  'Samarqand, Rudakiy koʻchasi, 44',
-  'Toshkent, Mirzo Ulugʻbek, Buyuk Ipak Yoʻli 150',
+const ADDRESSES: Omit<Fulfilment, 'method'>[] = [
+  {
+    address: 'Toshkent, Chilonzor 19-kvartal',
+    house: '7',
+    apartment: '42',
+    entrance: '3',
+    floor: '5',
+    note: 'Korzinka yonida',
+  },
+  { address: 'Toshkent, Yunusobod 11-mavze', house: '23', apartment: '15', floor: '4' },
+  { address: 'Samarqand, Rudakiy koʻchasi', house: '44', note: 'Darvoza koʻk rangda' },
+  {
+    address: 'Toshkent, Mirzo Ulugʻbek, Buyuk Ipak Yoʻli',
+    house: '150',
+    apartment: '8',
+    entrance: '1',
+    floor: '2',
+  },
 ]
 const HANDOVER_PHOTOS = [
   [user1Photo, product1Photo],
@@ -226,7 +253,9 @@ function seed(): Application[] {
       let status: ApplicationStatus
       if (age < 0.25 || (day === lastDay && roll < 0.6))
         status = source === 'client' ? 'pending' : roll < 0.15 ? 'creating' : 'processing'
-      else if (age < 1.5) status = roll < 0.5 ? 'processing' : roll < 0.9 ? 'handed' : 'rejected'
+      else if (age < 1.5)
+        status =
+          roll < 0.35 ? 'processing' : roll < 0.5 ? 'received' : roll < 0.9 ? 'handed' : 'rejected'
       else
         status =
           roll < 0.74
@@ -271,6 +300,9 @@ function seed(): Application[] {
         history.push({ status: 'rejected', at: at(1), by: staff, comment: NOTES[reason] })
       if (status === 'cancelled')
         history.push({ status: 'cancelled', at: at(2), by: cancelBy, comment: cancelNote })
+      // The client confirms in the app that the goods are in hand, then the shop hands over
+      if (status === 'received' || status === 'handed' || status === 'closed')
+        history.push({ status: 'received', at: at(1.25), by: customer })
       if (status === 'handed' || status === 'closed')
         history.push({ status: 'handed', at: at(1.5), by: staff })
       if (returned)
@@ -298,7 +330,7 @@ function seed(): Application[] {
         installmentTotal,
         monthlyPayment: Math.floor(installmentTotal / rate.term),
         paymentDay: 1 + Math.floor(rand() * 10),
-        fulfilment: method === 'delivery' ? { method, address: pick(ADDRESSES) } : { method },
+        fulfilment: method === 'delivery' ? { method, ...pick(ADDRESSES) } : { method },
         contractNumber: contracted ? `NS-${number}` : undefined,
         rejection: timedOut
           ? { reason: 'timeout', comment: '' }

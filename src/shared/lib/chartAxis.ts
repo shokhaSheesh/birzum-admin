@@ -22,7 +22,7 @@ export function compactSum(value: number, unit: (key: 'mln' | 'mlrd', n: string)
 export const bucketName = ({ start, size }: Bucket, lang: Lang) =>
   size === 'hour'
     ? `${formatDate(start)}, ${String(start.getHours()).padStart(2, '0')}:00`
-    : size === 'day'
+    : size === 'day' || size === 'event'
       ? formatDate(start)
       : `${MONTHS[lang][start.getMonth()]} ${start.getFullYear()}`
 
@@ -35,6 +35,7 @@ export function bucketTick(
   now: Date,
 ) {
   if (size === 'hour') return i % 3 === 0 ? String(start.getHours()).padStart(2, '0') : ''
+  if (size === 'event') return count > 12 && i % 2 ? '' : formatDate(start).slice(0, 5)
   if (size === 'month') return count > 14 && i % 2 ? '' : MONTHS[lang][start.getMonth()].slice(0, 3)
   if (count <= 7) return `${WEEKDAYS[lang][(start.getDay() + 6) % 7]} ${start.getDate()}`
   const day = start.getDate()
