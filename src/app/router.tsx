@@ -3,6 +3,10 @@ import { ApplicationDetailPage } from '@/features/applications/pages/Application
 import { ApplicationsPage } from '@/features/applications/pages/ApplicationsPage'
 import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage'
 import { ClientsPage } from '@/features/clients/pages/ClientsPage'
+import { LoanPlanFactPage } from '@/features/microloans/pages/LoanPlanFactPage'
+import { DebtPage } from '@/features/debts/pages/DebtPage'
+import { DebtsPage } from '@/features/debts/pages/DebtsPage'
+import { PlanFactPage } from '@/features/collections/pages/PlanFactPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { AdminsPage } from '@/features/admins/pages/AdminsPage'
@@ -36,7 +40,8 @@ import { LoanPage } from '@/features/microloans/pages/LoanPage'
 import { PayDayRulesPage } from '@/features/microloans/pages/PayDayRulesPage'
 import { LoanClientPage } from '@/features/microloans/pages/LoanClientPage'
 import { LoanClientsPage } from '@/features/microloans/pages/LoanClientsPage'
-import { LoanOverduePage } from '@/features/microloans/pages/LoanOverduePage'
+import { LoanDebtPage } from '@/features/microloans/debts/LoanDebtPage'
+import { LoanDebtsPage } from '@/features/microloans/debts/LoanDebtsPage'
 import { AppHomePage } from '@/features/microloans/pages/AppHomePage'
 import { FailedPayoutsPage } from '@/features/microloans/pages/FailedPayoutsPage'
 import { LoanPaymentsPage } from '@/features/microloans/pages/LoanPaymentsPage'
@@ -83,6 +88,7 @@ const DESIGNED: string[] = [
 function brandRoutes(brand: Brand) {
   const designed = [
     { path: brandPath(brand), element: <LoanDashboardPage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'audit'), element: <AuditLogPage key={brand} workspace={brand} /> },
     { path: brandPath(brand, 'broadcasts'), element: <BroadcastsPage key={brand} app={brand} /> },
     {
       path: brandPath(brand, 'broadcasts/new'),
@@ -116,8 +122,17 @@ function brandRoutes(brand: Brand) {
       path: brandPath(brand, 'customers/:id'),
       element: <LoanClientPage key={brand} brand={brand} />,
     },
-    { path: brandPath(brand, 'overdue'), element: <LoanOverduePage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'debts'), element: <LoanDebtsPage key={brand} brand={brand} /> },
+    { path: brandPath(brand, 'debts/:id'), element: <LoanDebtPage key={brand} brand={brand} /> },
+    {
+      path: brandPath(brand, 'overdue'),
+      element: <Navigate to={brandPath(brand, 'debts')} replace />,
+    },
     { path: brandPath(brand, 'payments'), element: <LoanPaymentsPage key={brand} brand={brand} /> },
+    {
+      path: brandPath(brand, 'plan-fact'),
+      element: <LoanPlanFactPage key={brand} brand={brand} />,
+    },
     { path: brandPath(brand, 'payouts'), element: <FailedPayoutsPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'loans'), element: <LoansPage key={brand} brand={brand} /> },
     { path: brandPath(brand, 'loans/:id'), element: <LoanPage key={brand} brand={brand} /> },
@@ -157,6 +172,9 @@ export const router = createBrowserRouter([
           { path: ROUTES.customers, element: <ClientsPage /> },
           { path: ROUTES.customer, element: <ClientDetailPage /> },
           { path: ROUTES.collections, element: <CollectionsPage /> },
+          { path: ROUTES.planFact, element: <PlanFactPage /> },
+          { path: ROUTES.debts, element: <DebtsPage /> },
+          { path: ROUTES.debt, element: <DebtPage /> },
           { path: ROUTES.merchants, element: <MerchantsPage /> },
           { path: ROUTES.merchant, element: <MerchantDetailPage /> },
           { path: ROUTES.reviews, element: <ReviewsPage /> },

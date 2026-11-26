@@ -250,6 +250,9 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
                   <p className="text-sm text-ink-muted">
                     {formatDateTime(entry.at)} · {actor(entry.by)}
                   </p>
+                  {entry.status === 'signed' && (
+                    <p className="text-sm">{t('loanApp.signedMyId')}</p>
+                  )}
                   {entry.note && <p className="text-sm">{entry.note}</p>}
                 </li>
               ))}
@@ -283,6 +286,7 @@ export function LoanApplicationPage({ brand }: { brand: Brand }) {
           </section>
           <section className={card}>
             <h2 className="font-bold">{t('loanApp.told')}</h2>
+            <p className="-mt-2 text-sm text-ink-muted">{t('loanApp.told.hint')}</p>
             <Rows
               rows={[
                 [t('loanApp.income'), formatSum(app.income)],

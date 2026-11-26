@@ -1,23 +1,32 @@
 import { ArrowLeft, Palette } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { applicationsStore } from '@/entities/applications/applications'
+import { productsStore } from '@/entities/catalog/products'
 import { useFilialsOf } from '@/entities/merchants/filials'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { staffOfFilial, staffStore } from '@/entities/merchants/staff'
 import { merchantStatusTone } from '@/entities/merchants/merchantStatus'
 import { MerchantLogo } from '@/entities/merchants/ui/MerchantLogo'
+import { reviewsStore } from '@/entities/reviews/reviews'
 import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
-import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
+import { formatDate } from '@/shared/lib/format'
 import { formatPhone } from '@/shared/lib/phone'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { MerchantLookModal } from '../components/MerchantLookModal'
+import { MerchantDashboard } from '../components/MerchantDashboard'
+import {
+  MerchantApplications,
+  MerchantProducts,
+  MerchantReviews,
+} from '../components/MerchantLists'
 import { MerchantStaff } from '../components/MerchantStaff'
 
+type Tab = 'filials' | 'staff' | 'products' | 'applications' | 'reviews'
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 
 /** One card of the details column: a title, then label and value rows. */
@@ -38,8 +47,10 @@ function Details({ title, rows }: { title: string; rows: [string, ReactNode][] }
 }
 
 /**
- * One merchant as the admin sees it: who it is, its figures, the filials it runs, and every
- * detail from its form. Edit opens the form; delete asks first.
+ * One merchant as the admin sees it. The merchant's data comes from FlexSoft and is read-only
+ * here: a dashboard for a period (sales, arizalar, rating, sales over time), then tabs with its
+ * filials, staff, products, arizalar and reviews, and every detail from its form on the right.
+ * Only the shop's look in the client app is set here.
  */
 export function MerchantDetailPage() {
   const { t, tl } = useI18n()
@@ -48,8 +59,13 @@ export function MerchantDetailPage() {
   const merchant = merchantsStore.useAll().find((item) => item.id === id)
   const filials = useFilialsOf(id)
   const [editingLook, setEditingLook] = useState(false)
-  const [tab, setTab] = useState<'filials' | 'staff'>('filials')
+  const [tab, setTab] = useState<Tab>('filials')
   const staff = staffStore.useAll().filter((user) => user.merchantId === id)
+  const productCount = productsStore.useAll().filter((p) => p.merchantId === id).length
+  const applicationCount = applicationsStore.useAll().filter((a) => a.merchantId === id).length
+  const reviewCount = reviewsStore
+    .useAll()
+    .filter((r) => r.merchantId === id && r.status === 'published').length
 
   const back = (
     <button
@@ -95,12 +111,7 @@ export function MerchantDetailPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={t('merchant.filials')} value={String(filials.length)} />
-        <StatCard label={t('merchants.col.products')} value={String(merchant.products)} />
-        <StatCard label={t('merchants.stat.nasiya')} value={groupDigits(merchant.activeNasiya)} />
-        <StatCard label={t('merchants.stat.sales')} value={formatSum(merchant.salesThisMonth)} />
-      </div>
+      <MerchantDashboard merchant={merchant} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex flex-col rounded-card border border-line bg-canvas">
@@ -110,6 +121,9 @@ export function MerchantDetailPage() {
               options={[
                 { value: 'filials', label: t('merchant.filials'), count: filials.length },
                 { value: 'staff', label: t('staff.title'), count: staff.length },
+                { value: 'products', label: t('nav.products'), count: productCount },
+                { value: 'applications', label: t('nav.applications'), count: applicationCount },
+                { value: 'reviews', label: t('nav.reviews'), count: reviewCount },
               ]}
               value={tab}
               onChange={setTab}
@@ -117,6 +131,12 @@ export function MerchantDetailPage() {
           </div>
           {tab === 'staff' ? (
             <MerchantStaff merchant={merchant} />
+          ) : tab === 'products' ? (
+            <MerchantProducts merchantId={merchant.id} />
+          ) : tab === 'applications' ? (
+            <MerchantApplications merchantId={merchant.id} />
+          ) : tab === 'reviews' ? (
+            <MerchantReviews merchantId={merchant.id} />
           ) : filials.length === 0 ? (
             <EmptyState
               title={t('merchant.filials.empty')}

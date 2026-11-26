@@ -1,12 +1,4 @@
-import {
-  ArrowLeft,
-  BellRing,
-  ChevronRight,
-  CircleAlert,
-  FileText,
-  PhoneCall,
-  ReceiptText,
-} from 'lucide-react'
+import { ArrowLeft, ChevronRight, CircleAlert, FileText, PhoneCall } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { loanApplicationsStore } from '@/entities/microloans/applications'
@@ -21,7 +13,7 @@ import {
   type Loan,
 } from '@/entities/microloans/loans'
 import { contactsOfLoan, loanContactsStore } from '@/entities/microloans/loanContacts'
-import { paymentsOf, type LoanPayment } from '@/entities/microloans/loanPayments'
+import { paymentsOf } from '@/entities/microloans/loanPayments'
 import { loanProductsStore } from '@/entities/microloans/products'
 import { brandClientPath, brandPath, loanAppPath, type Brand } from '@/shared/config/workspaces'
 import { useI18n } from '@/shared/i18n/useI18n'
@@ -33,8 +25,7 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge, type StatusTone } from '@/shared/ui/StatusBadge'
-import { LoanCallModal, LoanReminderDialog } from '../components/LoanContactDialogs'
-import { LoanReceiptModal } from '../components/LoanReceiptModal'
+import { loanDebtPath } from '../debts/rows'
 
 const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 const card = 'flex flex-col gap-4 rounded-card border border-line bg-canvas p-5'
@@ -86,9 +77,6 @@ export function LoanPage({ brand }: { brand: Brand }) {
   const product = loanProductsStore.useAll().find((p) => p.id === loan?.productId)
   const app = loanApplicationsStore.useAll().find((item) => item.id === loan?.applicationId)
   const [today] = useState(() => new Date())
-  const [receipt, setReceipt] = useState<LoanPayment | null>(null)
-  const [calling, setCalling] = useState(false)
-  const [reminding, setReminding] = useState(false)
   const contacts = contactsOfLoan(loanContactsStore.useAll(), id ?? '')
 
   const back = (
@@ -281,17 +269,6 @@ export function LoanPage({ brand }: { brand: Brand }) {
                     >
                       {formatSum(payment.amount)}
                     </span>
-                    {payment.ok && (
-                      <button
-                        type="button"
-                        onClick={() => setReceipt(payment)}
-                        aria-label={t('receipt.show')}
-                        title={t('receipt.show')}
-                        className="grid size-9 shrink-0 place-items-center rounded-full text-ink-subtle hover:bg-surface hover:text-ink"
-                      >
-                        <ReceiptText size={18} />
-                      </button>
-                    )}
                   </li>
                 ))}
               </ul>
@@ -303,16 +280,14 @@ export function LoanPage({ brand }: { brand: Brand }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-bold">{t('overdue.log')}</h2>
                 {state === 'overdue' && (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setReminding(true)}>
-                      <BellRing size={18} />
-                      {t('contact.remind')}
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => setCalling(true)}>
-                      <PhoneCall size={18} />
-                      {t('contact.call')}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => navigate(loanDebtPath(brand, loan.id))}
+                  >
+                    <PhoneCall size={18} />
+                    {t('debts.openFile')}
+                  </Button>
                 )}
               </div>
               {contacts.length === 0 ? (
@@ -401,16 +376,6 @@ export function LoanPage({ brand }: { brand: Brand }) {
           )}
         </aside>
       </div>
-      {receipt && <LoanReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
-      {calling && <LoanCallModal loan={loan} onClose={() => setCalling(false)} />}
-      {reminding && (
-        <LoanReminderDialog
-          loan={loan}
-          amount={lateOf(loan, today).amount}
-          days={daysLate(loan, today)}
-          onClose={() => setReminding(false)}
-        />
-      )}
     </div>
   )
 }

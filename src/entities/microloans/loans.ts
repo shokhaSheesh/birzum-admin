@@ -64,6 +64,13 @@ export type EnteredPayment = {
 export const cardText = (card: Loan['card']) =>
   `${card.brand === 'humo' ? 'Humo' : 'Uzcard'} •••• ${card.last4}`
 
+/**
+ * The card's balance as Atmos returns it when the app asks. A stand-in figure until the Atmos
+ * integration is in.
+ */
+export const cardBalanceOf = (card: Loan['card']) =>
+  ((Number(card.last4) * 7919) % 9000) * 1000 + 250_000
+
 export const LOAN_STATES = ['active', 'overdue', 'closed'] as const
 export type LoanState = (typeof LOAN_STATES)[number]
 export const loanStateTone: Record<LoanState, StatusTone> = {

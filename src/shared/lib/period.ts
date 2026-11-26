@@ -56,7 +56,8 @@ export function shiftPeriod(period: Period, by: number): Period {
 }
 
 /** One bar of a chart over the period: [start, end). */
-export type Bucket = { start: Date; end: Date; size: 'hour' | 'day' | 'month' }
+/** `event`: one point per thing that happened (a scoring, an ariza), not a stretch of time. */
+export type Bucket = { start: Date; end: Date; size: 'hour' | 'day' | 'month' | 'event' }
 
 /**
  * Bars for a chart over the period: hours for a day, days for a week, month or a short range,

@@ -23,34 +23,50 @@ export type LimitChange = {
   comment?: string
 }
 
-// Sample history: each limit came from scoring a day after sign-up, and a few were changed by
-// hand since. Replace with the API.
+// Sample history: the first limit came from scoring a day after sign-up, and the shopper took a
+// new one (FlexSoft scored again) about every two months, the sum growing as they paid on time.
+// A few were changed by hand since. Replace with the API.
+const RESCORE_DAYS = 60
+const round = (sum: number) => Math.max(500_000, Math.round(sum / 500_000) * 500_000)
+
 function seed(): LimitChange[] {
   const out: LimitChange[] = []
+  const today = new Date()
   clientsStore.getAll().forEach((client, i) => {
     if (!client.limit) return
     const first = new Date(client.registeredAt.getTime() + 86_400_000)
+    const dates: Date[] = []
+    for (let at = first; at < today; at = new Date(at.getTime() + RESCORE_DAYS * 86_400_000))
+      dates.push(at)
     const manual = i % 6 === 2
-    const scored = manual
-      ? Math.round((client.limit.amount * 0.75) / 500_000) * 500_000
-      : client.limit.amount
-    out.push({
-      id: `l-${client.id}`,
-      clientId: client.id,
-      at: first,
-      source: 'scoring',
-      from: null,
-      to: scored,
-      validUntil: client.limit.validUntil,
+    const last = manual ? round(client.limit.amount * 0.75) : client.limit.amount
+    let from: number | null = null
+    dates.forEach((at, k) => {
+      // Earlier scorings gave less; a few went down after a late payment
+      const share = dates.length === 1 ? 1 : 0.55 + (0.45 * k) / (dates.length - 1)
+      const dip = k > 0 && k < dates.length - 1 && i % 5 === 1 ? 0.8 : 1
+      const to = k === dates.length - 1 ? last : round(last * share * dip)
+      out.push({
+        id: `l-${client.id}-${k}`,
+        clientId: client.id,
+        at,
+        source: 'scoring',
+        from,
+        to,
+        validUntil: dates[k + 1] ?? client.limit!.validUntil,
+      })
+      from = to
     })
     if (manual)
       out.push({
         id: `l-${client.id}-m`,
         clientId: client.id,
-        at: new Date(first.getTime() + 9 * 86_400_000),
+        at: new Date(
+          Math.min(dates.at(-1)!.getTime() + 9 * 86_400_000, today.getTime() - 3_600_000),
+        ),
         source: 'manual',
         by: i % 4 ? 'Malika Rasulova' : 'Sardor Saidov',
-        from: scored,
+        from: last,
         to: client.limit.amount,
         validUntil: client.limit.validUntil,
         reason: 'income',

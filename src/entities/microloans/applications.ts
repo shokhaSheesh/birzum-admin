@@ -12,7 +12,7 @@ const FLEXSOFT_SAMPLE_RULES = { lateUpTo: 0, approveUpTo: 45, counterOffer: true
  * Where a microloan ariza is, in the order it moves:
  * - review: FlexSoft is checking (credit history, income) and decides by the product's rules
  * - approved / counter: offered as asked, or a smaller sum; waiting for the borrower to sign
- * - signed: signed with the SMS code, money on its way to the card
+ * - signed: signed in the app with a MyID face check, money on its way to the card
  * - paidOut: the money reached the card; the loan is open
  * - declined, expired (the offer was not signed in time), refused (the borrower turned the
  *   offer down in the app, picking a reason)

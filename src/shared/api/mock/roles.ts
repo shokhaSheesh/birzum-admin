@@ -27,6 +27,8 @@ const BIRZUM_PAGES: Record<string, Op[]> = {
   applications: ['read'],
   customers: ['read', 'update'],
   collections: ['read', 'create', 'update'],
+  planFact: ['read'],
+  debts: ['read', 'update'],
   merchants: ['read', 'update'],
   reviews: ['read', 'update', 'delete'],
   merchantRoles: ['read', 'update'],
@@ -50,6 +52,7 @@ const LOAN_PAGES: Record<string, Op[]> = {
   mlApplications: ['read', 'update'],
   mlLoans: ['read'],
   mlPayments: ['read', 'create'],
+  mlPlanFact: ['read'],
   mlOverdue: ['read', 'update'],
   mlClients: ['read', 'update'],
   mlProducts: ALL,
@@ -61,10 +64,10 @@ const LOAN_PAGES: Record<string, Op[]> = {
   mlOnboarding: ALL,
   mlDocuments: ['read', 'update'],
   mlContacts: ALL,
+  mlAudit: ['read'],
 }
 const PAGES = { ...BIRZUM_PAGES, ...LOAN_PAGES }
 const ALL_ACTIONS = [
-  'chargeCard',
   'blockClient',
   'sendBroadcast',
   'mlBlockClient',
@@ -114,16 +117,17 @@ export const roles: SampleRole[] = [
     'Moliya',
     'Klientlardan tushum va toʻlovlar.',
     ['birzum'],
-    grant(['collections'], ['dashboard', 'applications', 'customers', 'merchants', 'pricing']),
-    ['chargeCard'],
+    grant(
+      ['collections', 'debts', 'planFact'],
+      ['dashboard', 'applications', 'customers', 'merchants', 'pricing'],
+    ),
   ),
   role(
     'collections',
     'Undiruvchi',
-    'Qarzdorlar bilan ishlash: qoʻngʻiroq, eslatma, kartadan yechish.',
+    'Qarzdorlar bilan ishlash: qoʻngʻiroqlar, holatlar va vaʼdalar.',
     ['birzum'],
-    grant(['collections'], ['applications', 'customers']),
-    ['chargeCard'],
+    grant(['collections', 'debts'], ['applications', 'customers', 'planFact']),
   ),
   role(
     'support',
@@ -156,9 +160,9 @@ export const roles: SampleRole[] = [
   role(
     'loanCollector',
     'Mikroqarz undiruvchisi',
-    'Kechikkanlar bilan ishlaydi: qoʻngʻiroq, vaʼda, eslatma.',
+    'Kechikkan qarzlar bilan ishlash: qoʻngʻiroqlar, holatlar va vaʼdalar.',
     ['fortuna', 'vodiy'],
-    grant(['mlOverdue'], ['mlLoans', 'mlPayments', 'mlClients']),
+    grant(['mlOverdue', 'mlPlanFact'], ['mlLoans', 'mlPayments', 'mlClients']),
   ),
   role(
     'loanManager',

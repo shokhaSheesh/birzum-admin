@@ -1,10 +1,9 @@
-import { BellRing, CreditCard, Eye, PhoneCall, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applicationsStore } from '@/entities/applications/applications'
-import { clientsStore, fullName, initialsOf, type Client } from '@/entities/clients/clients'
+import { clientsStore, fullName } from '@/entities/clients/clients'
 import { AGE_BUCKETS, ageBucketOf, type AgeBucket } from '@/entities/clients/debt'
-import { contactsOf, contactsStore } from '@/entities/collections/contacts'
 import {
   daysLate,
   PAYMENT_KINDS,
@@ -15,31 +14,25 @@ import {
   type PaymentMethod,
 } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
-import { clientPath } from '@/shared/config/routes'
+import { ROUTES } from '@/shared/config/routes'
 import { useI18n } from '@/shared/i18n/useI18n'
 import { usePagination } from '@/shared/lib/usePagination'
 import { cn } from '@/shared/lib/cn'
 import { inRange, startOfDay } from '@/shared/lib/dates'
 import { boundsOf, bucketsOf, thisMonth, type Period } from '@/shared/lib/period'
-import { formatDate, formatSum, groupDigits } from '@/shared/lib/format'
-import { formatPhone } from '@/shared/lib/phone'
-import { Avatar } from '@/shared/ui/Avatar'
+import { formatSum, groupDigits } from '@/shared/lib/format'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterSelect } from '@/shared/ui/FilterSelect'
 import { ExportMenu } from '@/shared/ui/ExportMenu'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { Pagination } from '@/shared/ui/Pagination'
 import { PeriodFilter } from '@/shared/ui/PeriodFilter'
-import { RowActions } from '@/shared/ui/RowActions'
 import { StatCard } from '@/shared/ui/StatCard'
-import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
-import { CallResultModal, ReminderDialog } from '../components/ContactDialogs'
+import { CollectionReports } from '../components/CollectionReports'
 import { IncomeChart, type Expected } from '../components/IncomeChart'
-import { ChargeModal } from '../components/PaymentDialogs'
 import { PaymentsTable } from '../components/PaymentsTable'
 
-const th = 'px-4 py-3 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase'
 /** Darker the later; each group also has its name, so colour is never the only cue. */
 const AGE_SHADES: Record<AgeBucket, string> = {
   d7: 'bg-danger/30',
@@ -47,12 +40,11 @@ const AGE_SHADES: Record<AgeBucket, string> = {
   d30: 'bg-danger/80',
   d30plus: 'bg-danger',
 }
-type ContactFilter = '' | 'none' | 'promised' | 'broken'
 
 /**
  * Money from shoppers: figures, the daily income chart and how late the debt is, then two
- * tabs. Qarzdorlar is where the admin works with debtors (call result, reminder); Toʻlovlar
- * lists every payment and failed card charge.
+ * tabs: Toʻlovlar lists every payment and failed card charge, Hisobot the collectors' promises and
+ * operators. The work with debtors lives on Qarzdorlar (`/debts`).
  */
 export function CollectionsPage() {
   const { t } = useI18n()
@@ -60,20 +52,11 @@ export function CollectionsPage() {
   const clients = clientsStore.useAll()
   const applications = applicationsStore.useAll()
   const payments = paymentsStore.useAll()
-  const contacts = contactsStore.useAll()
   const merchants = merchantsStore.useAll()
   const [today] = useState(() => new Date())
-  const [tab, setTab] = useState<'debtors' | 'payments'>('debtors')
-  const [calling, setCalling] = useState<Client | null>(null)
-  const [reminding, setReminding] = useState<Client | null>(null)
-  const [charging, setCharging] = useState<Client | null>(null)
+  const [tab, setTab] = useState<'payments' | 'reports'>('payments')
   const [period, setPeriod] = useState<Period>(() => thisMonth(new Date()))
 
-  // Debtors' filters
-  const [query, setQuery] = useState('')
-  const [age, setAge] = useState<'' | AgeBucket>('')
-  const [merchant, setMerchant] = useState('')
-  const [contactState, setContactState] = useState<ContactFilter>('')
   // Payments' filters
   const [payQuery, setPayQuery] = useState('')
   const [kind, setKind] = useState<'' | PaymentKind>('')
@@ -112,26 +95,12 @@ export function CollectionsPage() {
         (oldest, item) => (!oldest || item.dueDate < oldest ? item.dueDate : oldest),
         null,
       )
-      const contactsOwn = contactsOf(contacts, client.id)
-      const lastCall = contactsOwn.find((contact) => contact.channel === 'call')
-      const promise = lastCall?.result === 'promised' ? lastCall.promiseDate : undefined
-      const state: ContactFilter = !lastCall
-        ? 'none'
-        : promise
-          ? promise < todayStart
-            ? 'broken'
-            : 'promised'
-          : ''
       return {
         client,
         overdue: late.reduce((sum, item) => sum + item.amount - item.paid, 0),
         count: late.length,
         days: since ? daysLate(since, today) : 0,
         remaining: own.reduce((sum, { progress }) => sum + progress.remaining, 0),
-        merchantIds: late.map((item) => item.merchantId),
-        last: contactsOwn[0],
-        promise,
-        state,
       }
     })
     .filter((row) => row.overdue > 0)
@@ -161,19 +130,6 @@ export function CollectionsPage() {
     new Date(Math.max(today.getTime(), ...open.map((item) => item.date.getTime()))),
   )
 
-  // Debtors table
-  const needle = query.trim().toLowerCase()
-  const digits = needle.replace(/\D/g, '')
-  const debtorRows = debtors.filter(
-    ({ client, days, merchantIds, state }) =>
-      (needle === '' ||
-        fullName(client).toLowerCase().includes(needle) ||
-        (digits.length >= 3 && client.phone.includes(digits))) &&
-      (!age || ageBucketOf(days) === age) &&
-      (!merchant || merchantIds.includes(merchant)) &&
-      (!contactState || state === contactState),
-  )
-
   // Payments table
   const payNeedle = payQuery.trim().toLowerCase()
   const payDigits = payNeedle.replace(/\D/g, '')
@@ -192,10 +148,6 @@ export function CollectionsPage() {
     )
   })
 
-  const debtorPager = usePagination(
-    debtorRows,
-    JSON.stringify([query, age, merchant, contactState, period]),
-  )
   const paymentPager = usePagination(
     paymentRows,
     JSON.stringify([payQuery, kind, result, payMerchant, method, period]),
@@ -282,14 +234,8 @@ export function CollectionsPage() {
                     <button
                       type="button"
                       disabled={item.count === 0}
-                      onClick={() => {
-                        setTab('debtors')
-                        setAge(age === item.bucket ? '' : item.bucket)
-                      }}
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-control px-2 py-2 text-left text-sm hover:bg-surface disabled:hover:bg-transparent',
-                        age === item.bucket && 'bg-surface',
-                      )}
+                      onClick={() => navigate(`${ROUTES.debts}?age=${item.bucket}`)}
+                      className="flex w-full items-center gap-3 rounded-control px-2 py-2 text-left text-sm hover:bg-surface disabled:hover:bg-transparent"
                     >
                       <span
                         className={cn('size-2.5 shrink-0 rounded-sm', AGE_SHADES[item.bucket])}
@@ -319,182 +265,20 @@ export function CollectionsPage() {
           <UnderlineTabs
             label={t('nav.collections')}
             options={[
-              { value: 'debtors', label: t('collections.tab.debtors'), count: debtors.length },
               {
                 value: 'payments',
                 label: t('collections.tab.payments'),
                 count: payments.filter((payment) => inPeriod(payment.at)).length,
               },
+              { value: 'reports', label: t('collections.tab.reports') },
             ]}
             value={tab}
             onChange={setTab}
           />
         </div>
 
-        {tab === 'debtors' ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2 p-4">
-              {search(query, setQuery, t('collections.search.debtors'))}
-              <FilterSelect
-                label={t('collections.col.late')}
-                options={[
-                  { value: '', label: t('collections.aging.all') },
-                  ...AGE_BUCKETS.map((value) => ({
-                    value,
-                    label: t(`collections.aging.${value}`),
-                  })),
-                ]}
-                value={age}
-                onChange={setAge}
-              />
-              <FilterSelect
-                label={t('products.col.merchant')}
-                options={merchantOptions}
-                value={merchant}
-                onChange={setMerchant}
-              />
-              <FilterSelect
-                label={t('collections.contact.filter')}
-                options={[
-                  { value: '', label: t('collections.contact.all') },
-                  { value: 'none', label: t('collections.contact.none') },
-                  { value: 'promised', label: t('collections.contact.promised') },
-                  { value: 'broken', label: t('collections.contact.broken') },
-                ]}
-                value={contactState}
-                onChange={setContactState}
-              />
-            </div>
-            {debtorRows.length === 0 ? (
-              <EmptyState title={t('collections.debtors.empty')} />
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[980px] border-t border-line">
-                    <thead>
-                      <tr className="border-b border-line">
-                        <th className={th}>{t('applications.col.client')}</th>
-                        <th className={`${th} text-right`}>{t('client.overdue')}</th>
-                        <th className={th}>{t('collections.col.late')}</th>
-                        <th className={`${th} text-right`}>{t('clients.col.debt')}</th>
-                        <th className={th}>{t('collections.col.lastContact')}</th>
-                        <th className={th}>{t('collections.col.promise')}</th>
-                        <th className="w-44" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {debtorPager.rows.map(
-                        ({ client, overdue, count, days, remaining, last, promise, state }) => (
-                          <tr
-                            key={client.id}
-                            onClick={() => navigate(`${clientPath(client.id)}?tab=contacts`)}
-                            className="cursor-pointer border-b border-line last:border-b-0 hover:bg-surface/60"
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <Avatar initials={initialsOf(client)} photoUrl={client.photoUrl} />
-                                <div className="flex min-w-0 flex-col">
-                                  <span className="truncate font-semibold">{fullName(client)}</span>
-                                  <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
-                                    {formatPhone(client.phone)}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex flex-col">
-                                <span className="font-semibold whitespace-nowrap text-danger tabular-nums">
-                                  {formatSum(overdue)}
-                                </span>
-                                <span className="text-xs text-ink-muted">
-                                  {t('collections.paymentsCount', {
-                                    count: String(count),
-                                  })}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <StatusBadge tone={days > 7 ? 'danger' : 'warning'}>
-                                {t('collections.days', { days: String(days) })}
-                              </StatusBadge>
-                            </td>
-                            <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                              {formatSum(remaining)}
-                            </td>
-                            <td className="px-4 py-3">
-                              {last ? (
-                                <div className="flex flex-col">
-                                  <span className="text-sm">
-                                    {last.channel === 'call'
-                                      ? t(`contact.result.${last.result ?? 'noAnswer'}`)
-                                      : t('contact.reminded')}
-                                  </span>
-                                  <span className="text-xs text-ink-muted tabular-nums">
-                                    {formatDate(last.at)}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-ink-subtle">
-                                  {t('collections.contact.none')}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {promise ? (
-                                <span
-                                  className={cn(
-                                    'text-sm font-medium whitespace-nowrap tabular-nums',
-                                    state === 'broken' ? 'text-danger' : 'text-success',
-                                  )}
-                                >
-                                  {formatDate(promise)}
-                                  {state === 'broken' && (
-                                    <span className="block text-xs font-normal">
-                                      {t('collections.contact.broken')}
-                                    </span>
-                                  )}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-ink-subtle">—</span>
-                              )}
-                            </td>
-                            <td className="pr-3">
-                              <RowActions
-                                actions={[
-                                  {
-                                    icon: Eye,
-                                    label: t('common.view'),
-                                    onClick: () =>
-                                      navigate(`${clientPath(client.id)}?tab=contacts`),
-                                  },
-                                  {
-                                    icon: PhoneCall,
-                                    label: t('contact.call'),
-                                    onClick: () => setCalling(client),
-                                  },
-                                  {
-                                    icon: BellRing,
-                                    label: t('contact.remind'),
-                                    onClick: () => setReminding(client),
-                                  },
-                                  {
-                                    icon: CreditCard,
-                                    label: t('charge.title'),
-                                    onClick: () => setCharging(client),
-                                  },
-                                ]}
-                              />
-                            </td>
-                          </tr>
-                        ),
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination pager={debtorPager} />
-              </>
-            )}
-          </>
+        {tab === 'reports' ? (
+          <CollectionReports bounds={bounds} today={today} />
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2 p-4">
@@ -551,17 +335,6 @@ export function CollectionsPage() {
           </>
         )}
       </div>
-
-      {charging && <ChargeModal client={charging} onClose={() => setCharging(null)} />}
-      {calling && <CallResultModal client={calling} onClose={() => setCalling(null)} />}
-      {reminding && (
-        <ReminderDialog
-          client={reminding}
-          overdue={debtors.find((row) => row.client.id === reminding.id)?.overdue ?? 0}
-          days={debtors.find((row) => row.client.id === reminding.id)?.days ?? 0}
-          onClose={() => setReminding(null)}
-        />
-      )}
     </div>
   )
 }

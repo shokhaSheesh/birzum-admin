@@ -52,11 +52,14 @@ export function LineChart({
   series,
   now,
   label,
+  legend = 'total',
 }: {
   buckets: Bucket[]
   series: LineSeries[]
   now: Date
   label: string
+  /** What the legend shows next to each series: the sum over the period, or the latest value. */
+  legend?: 'total' | 'last'
 }) {
   const { t, lang } = useI18n()
   const [hovered, setActive] = useState<number | null>(null)
@@ -92,7 +95,10 @@ export function LineChart({
     <div className="flex flex-col gap-4">
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-label={label}>
         {series.map((s) => {
-          const total = s.values.reduce<number>((sum, v) => sum + (v ?? 0), 0)
+          const total =
+            legend === 'last'
+              ? (s.values.findLast((v) => v !== null) ?? 0)
+              : s.values.reduce<number>((sum, v) => sum + (v ?? 0), 0)
           return (
             <li key={s.key} className="flex items-center gap-2">
               <span className="h-0.5 w-4 rounded-full" style={{ background: s.color }} />

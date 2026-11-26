@@ -15,6 +15,8 @@ export type WiredPage = {
   endpoints: string
 }
 
+// Audit, reviews and support run on the designer's sample screens (Shohruz's 16 and 19.11 rounds:
+// Telegram chat, voice messages, product reviews with replies), so the API panel does not open them.
 export const WIRED_PAGES: WiredPage[] = [
   {
     label: 'nav.admins',
@@ -29,13 +31,6 @@ export const WIRED_PAGES: WiredPage[] = [
     scope: 'birzum',
     section: '5.2',
     endpoints: 'GET/POST/PUT/DELETE /admin/roles',
-  },
-  {
-    label: 'nav.audit',
-    path: '/audit',
-    scope: 'birzum',
-    section: '5.3',
-    endpoints: 'GET /admin/audit',
   },
   {
     label: 'nav.categories',
@@ -71,13 +66,6 @@ export const WIRED_PAGES: WiredPage[] = [
     scope: 'birzum',
     section: '5.8, 5.9',
     endpoints: '/admin/apps/birzum/slides, /banners',
-  },
-  {
-    label: 'nav.reviews',
-    path: '/reviews',
-    scope: 'birzum',
-    section: '5.13',
-    endpoints: '/admin/reviews (+ hide, restore)',
   },
   {
     label: 'nav.products',
@@ -155,14 +143,6 @@ export const WIRED_PAGES: WiredPage[] = [
     scope: 'ml',
     section: '5.11d',
     endpoints: '/admin/apps/{fortuna|vodiy}/pay-day, /pay-day/history',
-  },
-  {
-    label: 'nav.support',
-    path: '/support',
-    scope: 'ml',
-    section: '5.15a',
-    endpoints:
-      '/admin/apps/{fortuna|vodiy}/chats (+ take, assign, messages, close, reopen, read), /chat-topics',
   },
 ]
 

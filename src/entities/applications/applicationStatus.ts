@@ -5,6 +5,7 @@ export const applicationStatusTone: Record<ApplicationStatus, StatusTone> = {
   pending: 'warning',
   creating: 'info',
   processing: 'info',
+  received: 'info',
   handed: 'success',
   closed: 'neutral',
   rejected: 'danger',

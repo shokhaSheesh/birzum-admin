@@ -1,13 +1,4 @@
-import {
-  ArrowLeft,
-  Ban,
-  BellRing,
-  CircleAlert,
-  CreditCard,
-  PhoneCall,
-  ShieldCheck,
-  ShieldX,
-} from 'lucide-react'
+import { ArrowLeft, Ban, CircleAlert, PhoneCall, ShieldCheck, ShieldX } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { applicationStatusTone } from '@/entities/applications/applicationStatus'
@@ -16,7 +7,9 @@ import { clientStatusTone } from '@/entities/clients/clientStatus'
 import { CARD_LOGOS, clientsStore, fullName, initialsOf } from '@/entities/clients/clients'
 import { clientStatusOf, debtOf } from '@/entities/clients/debt'
 import { limitHistoryOf, limitsStore } from '@/entities/clients/limits'
+import { LineChart } from '@/shared/ui/charts/LineChart'
 import { contactsOf, contactsStore } from '@/entities/collections/contacts'
+import { debtCasesStore } from '@/entities/collections/debtCases'
 import { paymentsStore, progressOf } from '@/entities/collections/payments'
 import { merchantsStore } from '@/entities/merchants/merchants'
 import { applicationPath, ROUTES } from '@/shared/config/routes'
@@ -30,9 +23,10 @@ import { StatCard } from '@/shared/ui/StatCard'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { UnderlineTabs } from '@/shared/ui/UnderlineTabs'
 import { PersonContacts } from '../components/PersonContacts'
-import { CallResultModal, ReminderDialog } from '@/features/collections/components/ContactDialogs'
+import { debtPath } from '@/shared/config/routes'
+import { DebtCallModal } from '@/features/debts/components/DebtDialogs'
+import { birzumTarget, saveBirzumCall } from '@/features/debts/lib/rows'
 import { ContactLog } from '@/features/collections/components/ContactLog'
-import { ChargeModal } from '@/features/collections/components/PaymentDialogs'
 import { PaymentsTable } from '@/features/collections/components/PaymentsTable'
 import { BlockModal, UnblockDialog } from '../components/BlockDialogs'
 import { LimitModal, RecalculateDialog } from '../components/LimitDialogs'
@@ -69,13 +63,12 @@ export function ClientDetailPage() {
   const merchants = merchantsStore.useAll()
   const payments = paymentsStore.useAll()
   const contacts = contactsStore.useAll()
+  const debtCases = debtCasesStore.useAll()
   const [params, setParams] = useSearchParams()
   const tab: Tab = TABS.find((item) => item === params.get('tab')) ?? 'purchases'
   const setTab = (next: Tab) =>
     setParams(next === 'purchases' ? {} : { tab: next }, { replace: true })
   const [calling, setCalling] = useState(false)
-  const [reminding, setReminding] = useState(false)
-  const [charging, setCharging] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [unblocking, setUnblocking] = useState(false)
   const [editingLimit, setEditingLimit] = useState(false)
@@ -108,6 +101,10 @@ export function ClientDetailPage() {
   const status = clientStatusOf(client, debt)
   const ownPayments = payments.filter((payment) => payment.clientId === client.id)
   const ownContacts = contactsOf(contacts, client.id)
+  // The late nasiyalar's files, the worst first, for the call form
+  const openCases = debtCases
+    .filter((file) => file.clientId === client.id && file.status !== 'closed')
+    .sort((a, b) => a.history[0].at.getTime() - b.history[0].at.getTime())
   const expired = !!client.limit && client.limit.validUntil < today
   const limitHistory = limitHistoryOf(limits, client.id)
   // What the running nasiyalar take out of the limit, and what is left for new ones
@@ -190,19 +187,6 @@ export function ClientDetailPage() {
             <PhoneCall size={18} />
             {t('contact.call')}
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-canvas!"
-            onClick={() => setReminding(true)}
-          >
-            <BellRing size={18} />
-            {t('contact.remind')}
-          </Button>
-          <Button size="sm" onClick={() => setCharging(true)}>
-            <CreditCard size={18} />
-            {t('charge.title')}
-          </Button>
         </div>
       )}
 
@@ -271,33 +255,58 @@ export function ClientDetailPage() {
             limitHistory.length === 0 ? (
               <EmptyState title={t('limit.history.empty')} />
             ) : (
-              <ul className="flex flex-col border-t border-line">
-                {limitHistory.map((change) => (
-                  <li
-                    key={change.id}
-                    className="flex flex-wrap items-start gap-x-6 gap-y-1 border-b border-line px-5 py-4 last:border-b-0"
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <p className="font-semibold tabular-nums">
-                        {change.from === null
-                          ? formatSum(change.to)
-                          : `${formatSum(change.from)} → ${formatSum(change.to)}`}
-                      </p>
-                      <p className="text-sm text-ink-muted">
-                        {change.source === 'scoring'
-                          ? t('limit.source.scoring')
-                          : `${change.by} · ${t(`limit.reason.${change.reason!}`)}`}
-                        {' · '}
-                        {t('client.limit.until', { date: formatDate(change.validUntil) })}
-                      </p>
-                      {change.comment && <p className="text-sm">{change.comment}</p>}
-                    </div>
-                    <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
-                      {formatDateTime(change.at)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {limitHistory.length > 1 && (
+                  <div className="border-t border-line p-5">
+                    <LineChart
+                      label={t('limit.chart')}
+                      legend="last"
+                      now={today}
+                      buckets={[...limitHistory].reverse().map((change) => ({
+                        start: change.at,
+                        end: change.at,
+                        size: 'event' as const,
+                      }))}
+                      series={[
+                        {
+                          key: 'limit',
+                          label: t('client.limit'),
+                          color: 'var(--color-brand)',
+                          values: [...limitHistory].reverse().map((change) => change.to),
+                          area: true,
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
+                <ul className="flex flex-col border-t border-line">
+                  {limitHistory.map((change) => (
+                    <li
+                      key={change.id}
+                      className="flex flex-wrap items-start gap-x-6 gap-y-1 border-b border-line px-5 py-4 last:border-b-0"
+                    >
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <p className="font-semibold tabular-nums">
+                          {change.from === null
+                            ? formatSum(change.to)
+                            : `${formatSum(change.from)} → ${formatSum(change.to)}`}
+                        </p>
+                        <p className="text-sm text-ink-muted">
+                          {change.source === 'scoring'
+                            ? t('limit.source.scoring')
+                            : `${change.by} · ${t(`limit.reason.${change.reason!}`)}`}
+                          {' · '}
+                          {t('client.limit.until', { date: formatDate(change.validUntil) })}
+                        </p>
+                        {change.comment && <p className="text-sm">{change.comment}</p>}
+                      </div>
+                      <span className="text-sm whitespace-nowrap text-ink-muted tabular-nums">
+                        {formatDateTime(change.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )
           ) : tab === 'cards' ? (
             <ul className="flex flex-col gap-3 p-5">
@@ -479,14 +488,13 @@ export function ClientDetailPage() {
       )}
       {blocking && <BlockModal client={client} onClose={() => setBlocking(false)} />}
       {unblocking && <UnblockDialog client={client} onClose={() => setUnblocking(false)} />}
-      {charging && <ChargeModal client={client} onClose={() => setCharging(false)} />}
-      {calling && <CallResultModal client={client} onClose={() => setCalling(false)} />}
-      {reminding && (
-        <ReminderDialog
-          client={client}
-          overdue={debt.overdue}
-          days={debt.overdueDays}
-          onClose={() => setReminding(false)}
+      {calling && openCases[0] && (
+        <DebtCallModal
+          file={openCases[0]}
+          target={birzumTarget(fullName(client), openCases[0].id)}
+          others={openCases.slice(1).map((file) => ({ file, href: debtPath(file.id) }))}
+          onSave={saveBirzumCall(client.id)}
+          onClose={() => setCalling(false)}
         />
       )}
     </div>

@@ -10,6 +10,9 @@ export const ROUTES = {
   customers: '/customers',
   customer: '/customers/:id',
   collections: '/collections',
+  planFact: '/plan-fact',
+  debts: '/debts',
+  debt: '/debts/:id',
   merchants: '/merchants',
   products: '/products',
   product: '/products/:id',
@@ -46,6 +49,9 @@ export const productPath = (id: string) => `/products/${id}`
 
 /** An ariza's read-only detail page. */
 export const applicationPath = (id: string) => `/applications/${id}`
+
+/** A late nasiya's file on the Qarzdorlar board. */
+export const debtPath = (id: string) => `/debts/${id}`
 
 /** A shopper's detail page. */
 export const clientPath = (id: string) => `/customers/${id}`
