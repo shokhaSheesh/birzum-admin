@@ -89,6 +89,7 @@ export const PERMISSION_GROUPS: { scope: Scope; title: TranslationKey; sections:
       { key: 'admins', label: 'nav.admins', ops: ALL },
       { key: 'roles', label: 'nav.roles', ops: ALL },
       { key: 'audit', label: 'nav.audit', ops: ['read'] },
+      { key: 'integrations', label: 'nav.integrations', ops: ALL },
     ],
   },
   {
@@ -183,6 +184,7 @@ export const SPECIAL_ACTIONS = [
   { key: 'mlBlockClient', section: 'mlClients', op: 'update' },
   { key: 'mlSendBroadcast', section: 'mlBroadcasts', op: 'create' },
   { key: 'mlPauseIntake', section: 'mlApplications', op: 'update' },
+  { key: 'viewPinfl', section: 'customers', op: 'read' },
 ] as const
 export type SpecialAction = (typeof SPECIAL_ACTIONS)[number]['key']
 
